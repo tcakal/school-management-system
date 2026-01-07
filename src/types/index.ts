@@ -1,0 +1,123 @@
+export interface School {
+    id: string;
+    name: string;
+    address: string;
+    phone: string;
+    logo?: string;
+    defaultPrice?: number;
+    paymentTerms?: string; // e.g. "Monthly", "Termly"
+}
+
+export interface ClassGroup {
+    id: string;
+    schoolId: string;
+    name: string; // e.g. "1. Grup", "Cumartesi Sabah"
+    schedule?: string; // Human readable schedule for now
+    status?: 'active' | 'archived';
+}
+
+export type StudentStatus = 'Active' | 'Left';
+
+export interface Student {
+    id: string;
+    schoolId: string;
+    classGroupId?: string;
+    name: string;
+    phone: string;
+    parentName?: string;
+    parentPhone?: string;
+    parentEmail?: string; // Mandatory in logic, optional in type until migration
+    role?: string; // Removed or unused?
+    status: StudentStatus;
+    joinedDate: string; // ISO Date
+    birthDate?: string; // ISO Date
+    gradeLevel?: number; // 1-12
+    address?: string;
+    medicalNotes?: string;
+    leftDate?: string; // ISO Date
+    leftReason?: string;
+    notes?: string;
+}
+
+export type PaymentType = 'Tuition' | 'Book' | 'Uniform' | 'Other';
+export type PaymentMethod = 'Cash' | 'CreditCard' | 'Transfer';
+
+export interface Payment {
+    id: string;
+    studentId?: string; // Optional now, as we track by school
+    schoolId: string;
+    amount: number;
+    date: string; // ISO Date
+    type: PaymentType;
+    method: PaymentMethod;
+    notes?: string;
+    month?: string; // For tuition tracking "2023-10"
+}
+
+export interface Teacher {
+    id: string;
+    name: string;
+    phone: string;
+    email?: string;
+    specialties?: string[];
+    color?: string; // For calendar visualization
+    role: 'admin' | 'teacher';
+    password?: string; // Optional for now to handle migration, but ideally required
+}
+
+export interface TeacherAssignment {
+    id: string;
+    teacherId: string;
+    schoolId: string;
+    classGroupId?: string;
+    dayOfWeek: number; // 0-6 or 1-7
+    startTime: string; // "09:00"
+    endTime: string; // "10:30"
+}
+
+export interface ActivityLog {
+    id: string;
+    userId: string;
+    userName: string;
+    userRole: string;
+    action: string;
+    details: string;
+    timestamp: string;
+}
+
+export type LessonStatus = 'scheduled' | 'completed' | 'cancelled';
+export type LessonType = 'regular' | 'makeup';
+
+export interface Lesson {
+    id: string;
+    schoolId: string;
+    classGroupId: string;
+    teacherId: string;
+    date: string; // ISO Date "2024-02-14"
+    startTime: string; // "10:00"
+    endTime: string; // "11:00"
+    status: LessonStatus;
+    type: LessonType;
+    cancelReason?: string;
+    topic?: string;
+    notes?: string;
+}
+
+export interface NotificationTemplate {
+    id: string;
+    schoolId: string;
+    classGroupId?: string; // Optional: If set, applies only to this class
+    triggerType: 'lesson_start' | 'lesson_end' | '15_min_before' | 'fixed_time' | 'last_lesson_end';
+    messageTemplate: string;
+    offsetMinutes: number; // For last_lesson_end, this can be offset (e.g. +30 mins after last lesson)
+    triggerTime?: string; // For fixed_time (e.g. "18:00")
+    daysFilter?: number[]; // [1, 2, 3, 4, 5] for Weekdays, [0, 6] for Weekends
+}
+
+export interface Attendance {
+    id: string;
+    lessonId: string;
+    studentId: string;
+    status: 'present' | 'absent' | 'late' | 'excused';
+    note?: string;
+}

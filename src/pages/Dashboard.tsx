@@ -1,0 +1,195 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useStore } from '../store/useStore';
+import { Building2, Users, Banknote, ArrowUpRight } from 'lucide-react';
+import { Modal } from '../components/Modal';
+import type { School } from '../types';
+
+export function Dashboard() {
+    const { schools, students, payments } = useStore();
+
+    // Mock data initialization is no longer needed with Supabase
+
+    const totalRevenue = payments.reduce((acc, p) => acc + p.amount, 0);
+    const activeStudents = students.filter(s => s.status === 'Active').length;
+
+    const [isAddSchoolModalOpen, setIsAddSchoolModalOpen] = useState(false);
+    const [newSchoolName, setNewSchoolName] = useState('');
+    const [newSchoolAddress, setNewSchoolAddress] = useState('');
+    const [newSchoolPhone, setNewSchoolPhone] = useState('');
+    const { addSchool } = useStore();
+
+    const handleAddSchool = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newSchoolName) return;
+
+        const newSchool: School = {
+            id: crypto.randomUUID(),
+            name: newSchoolName,
+            address: newSchoolAddress,
+            phone: newSchoolPhone,
+            defaultPrice: 0,
+            paymentTerms: ''
+        };
+
+        await addSchool(newSchool);
+        setIsAddSchoolModalOpen(false);
+        setNewSchoolName('');
+        setNewSchoolAddress('');
+        setNewSchoolPhone('');
+    };
+
+    return (
+        <div className="space-y-8">
+            <div>
+                <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Genel Bakış</h2>
+                <p className="text-slate-500 mt-2">Okul yönetim sistemine hoş geldiniz.</p>
+            </div>
+
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <StatCard
+                    title="Toplam Okul"
+                    value={schools.length}
+                    icon={Building2}
+                    color="bg-purple-500"
+                />
+                <StatCard
+                    title="Aktif Öğrenci"
+                    value={activeStudents}
+                    icon={Users}
+                    color="bg-blue-500"
+                />
+                <StatCard
+                    title="Toplam Ciro"
+                    value={`${totalRevenue.toLocaleString('tr-TR')} ₺`}
+                    icon={Banknote}
+                    color="bg-emerald-500"
+                />
+            </div>
+
+            {/* Schools Grid */}
+            <div>
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-slate-800">Okullar</h3>
+                    <button
+                        className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium"
+                        onClick={() => setIsAddSchoolModalOpen(true)}
+                    >
+                        + Yeni Okul
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {schools.map(school => (
+                        <SchoolCard key={school.id} school={school} />
+                    ))}
+                </div>
+            </div>
+
+            <Modal
+                isOpen={isAddSchoolModalOpen}
+                onClose={() => setIsAddSchoolModalOpen(false)}
+                title="Yeni Okul Ekle"
+            >
+                <form onSubmit={handleAddSchool} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Okul Adı
+                        </label>
+                        <input
+                            type="text"
+                            required
+                            placeholder="Örn: Atatürk İlkokulu"
+                            value={newSchoolName}
+                            onChange={(e) => setNewSchoolName(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Adres
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="İlçe / Şehir"
+                            value={newSchoolAddress}
+                            onChange={(e) => setNewSchoolAddress(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Telefon
+                        </label>
+                        <input
+                            type="tel"
+                            placeholder="0212 555 5555"
+                            value={newSchoolPhone}
+                            onChange={(e) => setNewSchoolPhone(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={() => setIsAddSchoolModalOpen(false)}
+                            className="px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium text-sm"
+                        >
+                            İptal
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium text-sm"
+                        >
+                            Kaydet
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+        </div>
+    );
+}
+
+function StatCard({ title, value, icon: Icon, color }: { title: string, value: string | number, icon: any, color: string }) {
+    return (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg shadow-gray-200 ${color}`}>
+                <Icon size={24} />
+            </div>
+            <div>
+                <p className="text-sm font-medium text-slate-500">{title}</p>
+                <p className="text-2xl font-bold text-slate-900 mt-1">{value}</p>
+            </div>
+        </div>
+    );
+}
+
+function SchoolCard({ school }: { school: any }) {
+    const { students } = useStore();
+    const navigate = useNavigate();
+    const studentCount = students.filter(s => s.schoolId === school.id && s.status === 'Active').length;
+
+    return (
+        <div
+            onClick={() => navigate(`/school/${school.id}`)}
+            className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow group cursor-pointer"
+        >
+            <div className="h-32 bg-gradient-to-r from-slate-100 to-slate-200 flex items-center justify-center">
+                <Building2 size={48} className="text-slate-300 group-hover:scale-110 transition-transform duration-300" />
+            </div>
+            <div className="p-5">
+                <h4 className="font-bold text-lg text-slate-900 mb-1">{school.name}</h4>
+                <p className="text-sm text-slate-500 mb-4 truncate">{school.address}</p>
+
+                <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                    <div className="flex items-center gap-2">
+                        <Users size={16} className="text-blue-500" />
+                        <span className="text-sm font-medium text-slate-700">{studentCount} Öğrenci</span>
+                    </div>
+                    <ArrowUpRight size={18} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
+                </div>
+            </div>
+        </div>
+    )
+}
