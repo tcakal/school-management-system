@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Sidebar } from '../components/Sidebar';
+import { ModernSidebar } from '../components/ModernSidebar';
 import { useStore } from '../store/useStore';
 
 export function Layout() {
@@ -13,10 +13,10 @@ export function Layout() {
     }, [initialized, fetchData]);
 
     return (
-        <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans">
-            <Sidebar />
-            <main className="flex-1 overflow-auto">
-                <div className="p-8 max-w-7xl mx-auto">
+        <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
+            <ModernSidebar />
+            <main className="flex-1 overflow-auto relative scroll-smooth">
+                <div className="p-8 max-w-7xl mx-auto pb-20">
                     <Outlet />
                 </div>
             </main>
