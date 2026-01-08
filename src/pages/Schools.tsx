@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
-import { Building2, ArrowRight, Plus, MapPin } from 'lucide-react';
+import { Building2, ArrowRight, Plus, MapPin, Image as ImageIcon } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import type { School } from '../types';
 
@@ -15,6 +15,8 @@ export function Schools() {
     const [newSchoolName, setNewSchoolName] = useState('');
     const [newSchoolAddress, setNewSchoolAddress] = useState('');
     const [newSchoolPhone, setNewSchoolPhone] = useState('');
+    const [newSchoolColor, setNewSchoolColor] = useState('#2563eb'); // Default blue-600
+    const [newSchoolImage, setNewSchoolImage] = useState('');
 
     const handleAddSchool = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -24,7 +26,9 @@ export function Schools() {
             name: newSchoolName,
             address: newSchoolAddress,
             phone: newSchoolPhone,
-            defaultPrice: 0 // Default value
+            defaultPrice: 0, // Default value
+            color: newSchoolColor,
+            imageUrl: newSchoolImage
         };
 
         await addSchool(newSchool);
@@ -33,6 +37,8 @@ export function Schools() {
         setNewSchoolName('');
         setNewSchoolAddress('');
         setNewSchoolPhone('');
+        setNewSchoolColor('#2563eb');
+        setNewSchoolImage('');
     };
 
     // Edit School State
@@ -41,12 +47,16 @@ export function Schools() {
     const [editSchoolName, setEditSchoolName] = useState('');
     const [editSchoolAddress, setEditSchoolAddress] = useState('');
     const [editSchoolPhone, setEditSchoolPhone] = useState('');
+    const [editSchoolColor, setEditSchoolColor] = useState('');
+    const [editSchoolImage, setEditSchoolImage] = useState('');
 
     const handleEditSchoolClick = (school: School) => {
         setEditingSchoolId(school.id);
         setEditSchoolName(school.name);
         setEditSchoolAddress(school.address);
         setEditSchoolPhone(school.phone);
+        setEditSchoolColor(school.color || '#2563eb');
+        setEditSchoolImage(school.imageUrl || '');
         setIsEditModalOpen(true);
     };
 
@@ -57,7 +67,9 @@ export function Schools() {
         await useStore.getState().updateSchool(editingSchoolId, {
             name: editSchoolName,
             address: editSchoolAddress,
-            phone: editSchoolPhone
+            phone: editSchoolPhone,
+            color: editSchoolColor,
+            imageUrl: editSchoolImage
         });
 
         setIsEditModalOpen(false);
@@ -101,13 +113,25 @@ export function Schools() {
                             className={`bg-white p-6 rounded-xl hover:shadow-md transition-all cursor-pointer group ${borderColorClass}`}
                         >
                             <div className="flex justify-between items-start mb-4">
-                                <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-                                    <Building2 size={24} />
+                                <div
+                                    className="w-12 h-12 rounded-lg flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform bg-cover bg-center"
+                                    style={{
+                                        backgroundColor: school.color || '#eff6ff',
+                                        color: school.color ? '#fff' : '#2563eb', // text-blue-600 is #2563eb
+                                        backgroundImage: school.imageUrl ? `url(${school.imageUrl})` : undefined
+                                    }}
+                                >
+                                    {!school.imageUrl && <Building2 size={24} />}
                                 </div>
                                 <ArrowRight className="text-slate-300 group-hover:text-blue-500 transition-colors" />
                             </div>
                             <div className="flex justify-between items-start mb-1">
-                                <h3 className="font-bold text-lg text-slate-900">{school.name}</h3>
+                                <h3
+                                    className="font-bold text-lg text-slate-900"
+                                    style={{ color: school.color }}
+                                >
+                                    {school.name}
+                                </h3>
                                 {useAuth.getState().user?.role === 'admin' && (
                                     <button
                                         onClick={(e) => {
@@ -189,6 +213,33 @@ export function Schools() {
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                         />
                     </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Tema Rengi</label>
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="color"
+                                value={newSchoolColor}
+                                onChange={e => setNewSchoolColor(e.target.value)}
+                                className="h-10 w-20 p-1 border border-slate-300 rounded-lg cursor-pointer"
+                            />
+                            <span className="text-sm text-slate-500 uppercase">{newSchoolColor}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                            <div className="flex items-center gap-2">
+                                <ImageIcon size={16} />
+                                <span>Kapak Görseli URL (İsteğe bağlı)</span>
+                            </div>
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="https://..."
+                            value={newSchoolImage}
+                            onChange={e => setNewSchoolImage(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                        />
+                    </div>
                     <button
                         type="submit"
                         className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium"
@@ -233,6 +284,33 @@ export function Schools() {
                             value={editSchoolPhone}
                             onChange={e => setEditSchoolPhone(e.target.value)}
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Tema Rengi</label>
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="color"
+                                value={editSchoolColor}
+                                onChange={e => setEditSchoolColor(e.target.value)}
+                                className="h-10 w-20 p-1 border border-slate-300 rounded-lg cursor-pointer"
+                            />
+                            <span className="text-sm text-slate-500 uppercase">{editSchoolColor}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                            <div className="flex items-center gap-2">
+                                <ImageIcon size={16} />
+                                <span>Kapak Görseli URL (İsteğe bağlı)</span>
+                            </div>
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="https://..."
+                            value={editSchoolImage}
+                            onChange={e => setEditSchoolImage(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                         />
                     </div>
                     <button

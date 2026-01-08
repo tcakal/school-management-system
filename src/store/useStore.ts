@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../supabase';
 import { useAuth } from './useAuth';
-import type { School, Student, ClassGroup, Payment, Teacher, TeacherAssignment, ActivityLog, Lesson, Attendance, NotificationTemplate } from '../types';
+import type { School, Student, ClassGroup, Payment, Teacher, TeacherAssignment, ActivityLog, Lesson, Attendance, NotificationTemplate, TeacherLeave } from '../types';
 import { addWeeks, format, startOfWeek } from 'date-fns';
 
 interface AppState {
@@ -15,6 +15,7 @@ interface AppState {
     lessons: Lesson[];
     attendance: Attendance[];
     notificationTemplates: NotificationTemplate[];
+    leaves: TeacherLeave[];
     loading: boolean;
     initialized: boolean;
 
@@ -55,6 +56,11 @@ interface AppState {
     addNotificationTemplate: (template: NotificationTemplate) => Promise<void>;
     updateNotificationTemplate: (id: string, updates: Partial<NotificationTemplate>) => Promise<void>;
     deleteNotificationTemplate: (id: string) => Promise<void>;
+
+    // Leaves
+    addLeave: (leave: TeacherLeave) => Promise<void>;
+    deleteLeave: (id: string) => Promise<void>;
+    findAvailableTeachers: (date: string, startTime: string, endTime: string) => Teacher[];
 }
 
 
@@ -69,6 +75,7 @@ export const useStore = create<AppState>((set, get) => ({
     lessons: [],
     attendance: [],
     notificationTemplates: [],
+    leaves: [],
     loading: false,
     initialized: false,
 
@@ -84,7 +91,8 @@ export const useStore = create<AppState>((set, get) => ({
                 supabase.from('teacher_assignments').select('*'),
                 supabase.from('lessons').select('*'),
                 supabase.from('attendance').select('*'),
-                supabase.from('notification_templates').select('*')
+                supabase.from('notification_templates').select('*'),
+                supabase.from('teacher_leaves').select('*')
             ]);
 
             if (schoolsRes.error) console.error('Error fetching schools:', schoolsRes.error);
@@ -95,7 +103,9 @@ export const useStore = create<AppState>((set, get) => ({
                 address: s.address,
                 phone: s.phone,
                 defaultPrice: s.default_price,
-                paymentTerms: s.payment_terms
+                paymentTerms: s.payment_terms,
+                color: s.color,
+                imageUrl: s.image_url
             }));
 
             const students: Student[] = (studentsRes.data || []).map(s => ({
@@ -181,7 +191,18 @@ export const useStore = create<AppState>((set, get) => ({
                 daysFilter: t.days_filter
             }));
 
-            set({ schools, students, classGroups, payments, teachers, assignments, lessons, attendance, notificationTemplates, initialized: true });
+            const { data: leavesRaw } = await supabase.from('teacher_leaves').select('*');
+            const leaves: TeacherLeave[] = (leavesRaw || []).map(l => ({
+                id: l.id,
+                teacherId: l.teacher_id,
+                startDate: l.start_date,
+                endDate: l.end_date,
+                type: l.type,
+                reason: l.reason,
+                createdAt: l.created_at
+            }));
+
+            set({ schools, students, classGroups, payments, teachers, assignments, lessons, attendance, notificationTemplates, leaves, initialized: true });
         } catch (error) {
             console.error('Supabase fetch error:', error);
         } finally {
@@ -210,7 +231,9 @@ export const useStore = create<AppState>((set, get) => ({
             address: school.address,
             phone: school.phone,
             default_price: school.defaultPrice,
-            payment_terms: school.paymentTerms
+            payment_terms: school.paymentTerms,
+            color: school.color,
+            image_url: school.imageUrl
         }]);
 
         if (error) {
@@ -226,7 +249,10 @@ export const useStore = create<AppState>((set, get) => ({
         const dbUpdate: any = {};
         if (updated.name) dbUpdate.name = updated.name;
         if (updated.defaultPrice !== undefined) dbUpdate.default_price = updated.defaultPrice;
+        if (updated.defaultPrice !== undefined) dbUpdate.default_price = updated.defaultPrice;
         if (updated.paymentTerms) dbUpdate.payment_terms = updated.paymentTerms;
+        if (updated.color) dbUpdate.color = updated.color;
+        if (updated.imageUrl) dbUpdate.image_url = updated.imageUrl;
         if (Object.keys(dbUpdate).length > 0) {
             await supabase.from('schools').update(dbUpdate).eq('id', id);
         }
@@ -770,7 +796,6 @@ export const useStore = create<AppState>((set, get) => ({
     },
 
     toggleClassStatus: async (id, status) => {
-        // 1. Optimistic Update for Group Status
         set(state => ({
             classGroups: state.classGroups.map(c => c.id === id ? { ...c, status } : c)
         }));
@@ -779,7 +804,6 @@ export const useStore = create<AppState>((set, get) => ({
             const today = new Date().toISOString().split('T')[0];
             const state = get();
 
-            // 2. Identify Future Lessons from LOCAL state for optimistic UI update
             const lessonsToRemove = state.lessons.filter(l =>
                 l.classGroupId === id &&
                 l.date >= today &&
@@ -789,20 +813,67 @@ export const useStore = create<AppState>((set, get) => ({
             const idsToRemove = lessonsToRemove.map(l => l.id);
 
             if (idsToRemove.length > 0) {
-                // Optimistically remove from state
                 set(state => ({
                     lessons: state.lessons.filter(l => !idsToRemove.includes(l.id))
                 }));
 
-                // 3. Database Operations
-                // Delete attendance first
                 await supabase.from('attendance').delete().in('lesson_id', idsToRemove);
-                // Then delete lessons
                 await supabase.from('lessons').delete().in('id', idsToRemove);
             }
+
+            await supabase.from('class_groups').update({ status }).eq('id', id);
+        } else {
+            await supabase.from('class_groups').update({ status }).eq('id', id);
+        }
+    },
+
+    addLeave: async (leave) => {
+        set(state => ({ leaves: [...state.leaves, leave] }));
+
+        const currentUser = useAuth.getState().user;
+        if (currentUser) {
+            const log: ActivityLog = {
+                id: crypto.randomUUID(),
+                userId: currentUser.id,
+                userName: currentUser.name,
+                userRole: currentUser.role,
+                action: 'IZIN_EKLE',
+                details: `${leave.startDate} - ${leave.endDate} tarihleri için izin eklendi.`,
+                timestamp: new Date().toISOString()
+            };
+            set(state => ({ logs: [log, ...state.logs] }));
         }
 
-        await supabase.from('class_groups').update({ status }).eq('id', id);
+        await supabase.from('teacher_leaves').insert([{
+            id: leave.id,
+            teacher_id: leave.teacherId,
+            start_date: leave.startDate,
+            end_date: leave.endDate,
+            start_time: leave.startTime,
+            end_time: leave.endTime,
+            type: leave.type,
+            reason: leave.reason
+        }]);
+    },
+
+    deleteLeave: async (id) => {
+        set(state => ({ leaves: state.leaves.filter(l => l.id !== id) }));
+
+        const currentUser = useAuth.getState().user;
+        if (currentUser) {
+            const log: ActivityLog = {
+                id: crypto.randomUUID(),
+                userId: currentUser.id,
+                userName: currentUser.name,
+                userRole: currentUser.role,
+                action: 'IZIN_SIL',
+                details: `İzin kaydı silindi.`,
+                timestamp: new Date().toISOString()
+            };
+            set(state => ({ logs: [log, ...state.logs] }));
+        }
+
+        await supabase.from('teacher_leaves').delete().eq('id', id);
     },
 
     saveAttendance: async (lessonId, records) => {
@@ -886,5 +957,47 @@ export const useStore = create<AppState>((set, get) => ({
     deleteNotificationTemplate: async (id) => {
         set(state => ({ notificationTemplates: state.notificationTemplates.filter(t => t.id !== id) }));
         await supabase.from('notification_templates').delete().eq('id', id);
+    },
+
+    findAvailableTeachers: (date, startTime, endTime) => {
+        const state = get();
+        const { teachers, leaves, lessons } = state;
+
+        return teachers.filter(t => {
+            // Check for leaves
+            const onLeave = leaves.some(l => {
+                if (l.teacherId !== t.id) return false;
+
+                // Date overlapping
+                if (l.startDate <= date && l.endDate >= date) {
+                    // If full day leave (no time specified), then unavailable
+                    if (!l.startTime || !l.endTime) return true;
+
+                    // If it's a specific time leave on the queried date
+                    // We need to check if the LESSON time overlaps with the LEAVE time
+                    // Simple interval overlap check: (StartA < EndB) && (EndA > StartB)
+                    const lessonStart = startTime;
+                    const lessonEnd = endTime;
+                    const leaveStart = l.startTime;
+                    const leaveEnd = l.endTime;
+
+                    return (lessonStart < leaveEnd && lessonEnd > leaveStart);
+                }
+                return false;
+            });
+
+            if (onLeave) return false;
+
+            // Check for lesson conflicts
+            const hasConflict = lessons.some(l =>
+                l.teacherId === t.id &&
+                l.date === date &&
+                l.status !== 'cancelled' &&
+                l.startTime < endTime &&
+                l.endTime > startTime
+            );
+
+            return !hasConflict;
+        });
     }
 }));

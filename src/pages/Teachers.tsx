@@ -1,13 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
-import { Phone, Mail, Plus, Edit2, BookOpen, Trash2, Shield, Filter } from 'lucide-react';
+import { Phone, Mail, Plus, Edit2, BookOpen, Trash2, Shield, Filter, Calendar } from 'lucide-react';
 import { Modal } from '../components/Modal';
+import { TeacherLeaveModal } from '../components/TeacherLeaveModal';
 import type { Teacher } from '../types';
 
 export function Teachers() {
     const { teachers, schools, assignments, addTeacher, updateTeacher, deleteTeacher } = useStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [leaveModalTeacherId, setLeaveModalTeacherId] = useState<string | null>(null);
     const [selectedSchoolId, setSelectedSchoolId] = useState<string>('all');
 
     // Form State
@@ -167,7 +169,12 @@ export function Teachers() {
                                     teacher={admin}
                                     status="admin"
                                     onEdit={() => openModal(admin)}
-                                    onDelete={() => deleteTeacher(admin.id)}
+                                    onDelete={() => {
+                                        if (window.confirm('Bu yöneticiyi silmek istediğinize emin misiniz?')) {
+                                            deleteTeacher(admin.id);
+                                        }
+                                    }}
+                                    onManageLeaves={() => setLeaveModalTeacherId(admin.id)}
                                 />
                             ))}
                         </div>
@@ -201,7 +208,12 @@ export function Teachers() {
                                     teacher={teacher}
                                     status={getTeacherStatus(teacher.id)}
                                     onEdit={() => openModal(teacher)}
-                                    onDelete={() => deleteTeacher(teacher.id)}
+                                    onDelete={() => {
+                                        if (window.confirm('Bu öğretmeni silmek istediğinize emin misiniz?')) {
+                                            deleteTeacher(teacher.id);
+                                        }
+                                    }}
+                                    onManageLeaves={() => setLeaveModalTeacherId(teacher.id)}
                                 />
                             ))}
                         </div>
@@ -301,26 +313,41 @@ export function Teachers() {
                         </button>
                     </div>
                 </form>
+
             </Modal>
-        </div>
+
+            <TeacherLeaveModal
+                isOpen={!!leaveModalTeacherId}
+                onClose={() => setLeaveModalTeacherId(null)}
+                teacherId={leaveModalTeacherId}
+            />
+        </div >
     );
 }
 
-function TeacherCard({ teacher, status, onEdit, onDelete }: {
+function TeacherCard({ teacher, status, onEdit, onDelete, onManageLeaves }: {
     teacher: Teacher,
     status: 'admin' | 'assigned' | 'unassigned',
     onEdit: () => void,
-    onDelete: () => void
+    onDelete: () => void,
+    onManageLeaves: () => void
 }) {
     const borderColor = status === 'unassigned' ? 'border-orange-200' : 'border-green-200';
 
-    const isActive = status === 'assigned' || status === 'admin';
+    // const isActive = status === 'assigned' || status === 'admin';
     const statusText = status === 'admin' ? 'Yönetici' : status === 'assigned' ? 'Ders Ataması Var' : 'Ders Ataması Yok';
     const statusBg = status === 'admin' ? 'bg-purple-100 text-purple-700' : status === 'assigned' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700';
 
     return (
         <div className={`bg-white p-6 rounded-2xl shadow-sm border-2 ${borderColor} hover:shadow-md transition-all group relative`}>
-            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+            <div className="absolute top-4 right-4 flex gap-2">
+                <button
+                    onClick={onManageLeaves}
+                    className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                    title="İzin Yönetimi"
+                >
+                    <Calendar size={18} />
+                </button>
                 <button
                     onClick={onDelete}
                     className="text-slate-400 hover:text-red-500 transition-colors p-1"

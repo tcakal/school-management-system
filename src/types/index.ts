@@ -4,6 +4,8 @@ export interface School {
     address: string;
     phone: string;
     logo?: string;
+    color?: string; // Theme color
+    imageUrl?: string; // Background image URL
     defaultPrice?: number;
     paymentTerms?: string; // e.g. "Monthly", "Termly"
 }
@@ -65,6 +67,18 @@ export interface Teacher {
     password?: string; // Optional for now to handle migration, but ideally required
 }
 
+export interface TeacherLeave {
+    id: string;
+    teacherId: string;
+    startDate: string; // ISO Date "2024-02-14"
+    endDate: string; // ISO Date "2024-02-15" (Inclusive)
+    startTime?: string;
+    endTime?: string;
+    type: 'sick' | 'vacation' | 'other';
+    reason?: string;
+    createdAt: string;
+}
+
 export interface TeacherAssignment {
     id: string;
     teacherId: string;
@@ -101,6 +115,8 @@ export interface Lesson {
     cancelReason?: string;
     topic?: string;
     notes?: string;
+    originalTeacherId?: string; // For substitutions
+    isSubstitute?: boolean; // UI flag
 }
 
 export interface NotificationTemplate {

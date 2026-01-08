@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { Building2, Users, Banknote, ArrowUpRight } from 'lucide-react';
+import { Building2, Users, Banknote, ArrowUpRight, Image as ImageIcon } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import type { School } from '../types';
 
@@ -17,6 +17,8 @@ export function Dashboard() {
     const [newSchoolName, setNewSchoolName] = useState('');
     const [newSchoolAddress, setNewSchoolAddress] = useState('');
     const [newSchoolPhone, setNewSchoolPhone] = useState('');
+    const [newSchoolColor, setNewSchoolColor] = useState('#2563eb');
+    const [newSchoolImage, setNewSchoolImage] = useState('');
     const { addSchool } = useStore();
 
     const handleAddSchool = async (e: React.FormEvent) => {
@@ -29,7 +31,9 @@ export function Dashboard() {
             address: newSchoolAddress,
             phone: newSchoolPhone,
             defaultPrice: 0,
-            paymentTerms: ''
+            paymentTerms: '',
+            color: newSchoolColor,
+            imageUrl: newSchoolImage
         };
 
         await addSchool(newSchool);
@@ -37,6 +41,8 @@ export function Dashboard() {
         setNewSchoolName('');
         setNewSchoolAddress('');
         setNewSchoolPhone('');
+        setNewSchoolColor('#2563eb');
+        setNewSchoolImage('');
     };
 
     return (
@@ -130,6 +136,33 @@ export function Dashboard() {
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                         />
                     </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Tema Rengi</label>
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="color"
+                                value={newSchoolColor}
+                                onChange={e => setNewSchoolColor(e.target.value)}
+                                className="h-10 w-20 p-1 border border-slate-300 rounded-lg cursor-pointer"
+                            />
+                            <span className="text-sm text-slate-500 uppercase">{newSchoolColor}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                            <div className="flex items-center gap-2">
+                                <ImageIcon size={16} />
+                                <span>Kapak Görseli URL (İsteğe bağlı)</span>
+                            </div>
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="https://..."
+                            value={newSchoolImage}
+                            onChange={e => setNewSchoolImage(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                        />
+                    </div>
                     <div className="flex justify-end gap-3 pt-2">
                         <button
                             type="button"
@@ -175,11 +208,28 @@ function SchoolCard({ school }: { school: any }) {
             onClick={() => navigate(`/school/${school.id}`)}
             className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow group cursor-pointer"
         >
-            <div className="h-32 bg-gradient-to-r from-slate-100 to-slate-200 flex items-center justify-center">
-                <Building2 size={48} className="text-slate-300 group-hover:scale-110 transition-transform duration-300" />
+            <div
+                className="h-32 flex items-center justify-center bg-cover bg-center"
+                style={{
+                    backgroundColor: school.color || '#f1f5f9',
+                    backgroundImage: school.imageUrl ? `url(${school.imageUrl})` : undefined
+                }}
+            >
+                {!school.imageUrl && (
+                    <Building2
+                        size={48}
+                        className="group-hover:scale-110 transition-transform duration-300"
+                        style={{ color: school.color ? '#fff' : '#cbd5e1' }}
+                    />
+                )}
             </div>
             <div className="p-5">
-                <h4 className="font-bold text-lg text-slate-900 mb-1">{school.name}</h4>
+                <h4
+                    className="font-bold text-lg text-slate-900 mb-1"
+                    style={{ color: school.color }}
+                >
+                    {school.name}
+                </h4>
                 <p className="text-sm text-slate-500 mb-4 truncate">{school.address}</p>
 
                 <div className="flex items-center justify-between pt-4 border-t border-slate-50">

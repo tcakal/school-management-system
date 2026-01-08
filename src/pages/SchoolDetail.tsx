@@ -252,23 +252,55 @@ export function SchoolDetail() {
             </button>
 
             {/* Header */}
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-900">{school.name}</h1>
-                        <div className="flex items-center gap-6 mt-4 text-slate-500">
+            <div
+                className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8 relative overflow-hidden"
+                style={{
+                    backgroundColor: school.color ? `${school.color}20` : undefined, // Increased from 10 to 20
+                    borderColor: school.color ? `${school.color}50` : undefined // Increased from 30 to 50
+                }}
+            >
+                {/* Background Pattern or Image */}
+                {school.imageUrl && (
+                    <div
+                        className="absolute inset-0 z-0 opacity-10 bg-cover bg-center pointer-events-none"
+                        style={{ backgroundImage: `url(${school.imageUrl})` }}
+                    />
+                )}
+                {/* Fallback decorative gradient if no image but color exists */}
+                {!school.imageUrl && school.color && (
+                    <div
+                        className="absolute top-0 right-0 w-64 h-64 rounded-full filter blur-3xl opacity-20 -mr-16 -mt-16 pointer-events-none"
+                        style={{ backgroundColor: school.color }}
+                    />
+                )}
+
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 relative z-10">
+                    <div className="flex-1">
+                        <h1
+                            className="text-3xl font-bold text-slate-900"
+                            style={{ color: school.color }}
+                        >
+                            {school.name}
+                        </h1>
+                        <div className="flex flex-wrap items-center gap-6 mt-4 text-slate-500">
                             <div className="flex items-center gap-2">
-                                <MapPin size={18} />
+                                <MapPin size={18} style={{ color: school.color }} />
                                 <span>{school.address}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Phone size={18} />
+                            <div className="flex items-center gap-2 whitespace-nowrap">
+                                <Phone size={18} style={{ color: school.color }} />
                                 <span>{school.phone}</span>
                             </div>
                         </div>
                     </div>
                     <div className="flex gap-3">
-                        <div className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg flex items-center gap-2">
+                        <div
+                            className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg flex items-center gap-2"
+                            style={{
+                                backgroundColor: school.color ? `${school.color}15` : undefined,
+                                color: school.color
+                            }}
+                        >
                             <Users size={18} />
                             <span className="font-bold">{activeStudentCount}</span> Aktif Öğrenci
                         </div>
