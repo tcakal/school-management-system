@@ -23,6 +23,7 @@ interface AppState {
     addSchool: (school: School) => Promise<void>;
     updateSchool: (id: string, school: Partial<School>) => Promise<void>;
     deleteSchool: (id: string) => Promise<void>;
+    deleteOrphanData: () => Promise<{ students: number; payments: number; classes: number }>;
 
     addStudent: (student: Student) => Promise<void>;
     updateStudent: (id: string, student: Partial<Student>) => Promise<void>;
@@ -584,21 +585,22 @@ export const useStore = create<AppState>((set, get) => ({
 
     deleteSchool: async (id) => {
         const previousSchools = get().schools;
+        // Optimistically remove school from local state
         set(state => ({ schools: state.schools.filter(s => s.id !== id) }));
 
         try {
-            // Delete related data first (Manual Cascade)
+            // Delete related data first (Manual Cascade) from DB
             // 1. Delete Payments
             await supabase.from('payments').delete().eq('school_id', id);
-            // 2. Delete Attendance (via Lessons) - complicated, skipping for now as usually cascade handles this or simple lesson delete is enough
-            // But strict manual cascade:
-            // Get school lessons
+
+            // 2. Delete Attendance (via Lessons)
             const { data: schoolLessons } = await supabase.from('lessons').select('id').eq('school_id', id);
             if (schoolLessons && schoolLessons.length > 0) {
                 const lessonIds = schoolLessons.map(l => l.id);
                 await supabase.from('attendance').delete().in('lesson_id', lessonIds);
                 await supabase.from('lessons').delete().in('id', lessonIds);
             }
+
             // 3. Delete Assignments
             await supabase.from('teacher_assignments').delete().eq('school_id', id);
             // 4. Delete Students
@@ -611,11 +613,62 @@ export const useStore = create<AppState>((set, get) => ({
             // Finally delete school
             const { error } = await supabase.from('schools').delete().eq('id', id);
             if (error) throw error;
+
+            // Should also clean up local state for related entities to prevent "ghost" data
+            set(state => ({
+                students: state.students.filter(s => s.schoolId !== id),
+                classGroups: state.classGroups.filter(c => c.schoolId !== id),
+                payments: state.payments.filter(p => p.schoolId !== id),
+                lessons: state.lessons.filter(l => l.schoolId !== id),
+                assignments: state.assignments.filter(a => a.schoolId !== id),
+                notificationTemplates: state.notificationTemplates.filter(n => n.schoolId !== id)
+            }));
+
         } catch (error) {
             console.error('Error deleting school:', error);
             alert('Okul silinirken bir hata oluştu. Lütfen önce ilişkili verileri (öğrenci, ders vb.) kontrol edin.');
             set({ schools: previousSchools }); // Revert
         }
+    },
+
+    deleteOrphanData: async () => {
+        const schools = get().schools;
+        const schoolIds = new Set(schools.map(s => s.id));
+
+        // Find orphans
+        const orphanStudents = get().students.filter(s => !schoolIds.has(s.schoolId));
+        const orphanPayments = get().payments.filter(p => !schoolIds.has(p.schoolId));
+        const orphanClasses = get().classGroups.filter(c => !schoolIds.has(c.schoolId));
+
+        const counts = {
+            students: orphanStudents.length,
+            payments: orphanPayments.length,
+            classes: orphanClasses.length
+        };
+
+        if (counts.students === 0 && counts.payments === 0 && counts.classes === 0) {
+            return counts;
+        }
+
+        // Delete from Local State
+        set(state => ({
+            students: state.students.filter(s => schoolIds.has(s.schoolId)),
+            payments: state.payments.filter(p => schoolIds.has(p.schoolId)),
+            classGroups: state.classGroups.filter(c => schoolIds.has(c.schoolId))
+        }));
+
+        // Delete from DB (Clean up)
+        // Note: In a real large scale app, we would batch these or use a backend function. A bit hacky here but works for small orphans.
+        // It's safer to just rely on "Not Existing in Schools Table" if we wanted to run a SQL query, 
+        // but since RLS is loose here, we'll try to delete by ID if possible, or just re-sync.
+        // Actually, best way is to query DB for items where school_id is NOT in known IDs. 
+        // But for now, let's delete strictly what we identified locally as orphan.
+
+        for (const s of orphanStudents) await supabase.from('students').delete().eq('id', s.id);
+        for (const p of orphanPayments) await supabase.from('payments').delete().eq('id', p.id);
+        for (const c of orphanClasses) await supabase.from('class_groups').delete().eq('id', c.id);
+
+        return counts;
     },
 
     deleteClassGroup: async (id) => {

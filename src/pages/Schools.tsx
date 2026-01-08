@@ -7,7 +7,7 @@ import { Modal } from '../components/Modal';
 import type { School } from '../types';
 
 export function Schools() {
-    const { schools, students, addSchool } = useStore();
+    const { schools, students, addSchool, payments } = useStore();
     const navigate = useNavigate();
 
     // Add School State
@@ -78,61 +78,78 @@ export function Schools() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {schools.map(school => (
-                    <div
-                        key={school.id}
-                        onClick={() => navigate(`/school/${school.id}`)}
-                        className="bg-white p-6 rounded-xl border border-slate-200 hover:shadow-md transition-all cursor-pointer group"
-                    >
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-                                <Building2 size={24} />
+                {schools.map(school => {
+                    // Payment Status Calculation
+                    const activeStudents = students.filter(s => s.schoolId === school.id && s.status === 'Active');
+                    const expectedAmount = activeStudents.length * (school.defaultPrice || 0);
+                    const collectedAmount = payments
+                        .filter(p => p.schoolId === school.id)
+                        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+                    let borderColorClass = 'border-slate-200'; // Default gray
+                    if (expectedAmount > 0) {
+                        const ratio = collectedAmount / expectedAmount;
+                        if (ratio >= 1) borderColorClass = 'border-emerald-500 border-2 shadow-emerald-50'; // Green (>100%)
+                        else if (ratio >= 0.25) borderColorClass = 'border-orange-400 border-2 shadow-orange-50'; // Orange (25-99%)
+                        else borderColorClass = 'border-red-500 border-2 shadow-red-50'; // Red (<25%)
+                    }
+
+                    return (
+                        <div
+                            key={school.id}
+                            onClick={() => navigate(`/school/${school.id}`)}
+                            className={`bg-white p-6 rounded-xl hover:shadow-md transition-all cursor-pointer group ${borderColorClass}`}
+                        >
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                                    <Building2 size={24} />
+                                </div>
+                                <ArrowRight className="text-slate-300 group-hover:text-blue-500 transition-colors" />
                             </div>
-                            <ArrowRight className="text-slate-300 group-hover:text-blue-500 transition-colors" />
+                            <div className="flex justify-between items-start mb-1">
+                                <h3 className="font-bold text-lg text-slate-900">{school.name}</h3>
+                                {useAuth.getState().user?.role === 'admin' && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (window.confirm('Bu okulu silmek istediğinizden emin misiniz?')) {
+                                                useStore.getState().deleteSchool(school.id);
+                                            }
+                                        }}
+                                        className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                                        title="Okulu Sil"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                    </button>
+                                )}
+                                {useAuth.getState().user?.role === 'admin' && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditSchoolClick(school);
+                                        }}
+                                        className="text-slate-400 hover:text-blue-600 transition-colors p-1 ml-1"
+                                        title="Okulu Düzenle"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.293 2.293a1 1 0 0 1 1.414 0l4 4a1 1 0 0 1 0 1.414l-9 9a1 1 0 0 1-.39.242l-3 1a1 1 0 0 1-1.266-1.265l1-3a1 1 0 0 1 .242-.391l9-9zM12 2l2 2m-2-2 2 2" /></svg>
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">
+                                <MapPin size={14} />
+                                <span className="truncate">{school.address}</span>
+                            </div>
+                            <div className="pt-4 border-t border-slate-50 text-sm font-medium text-slate-600 flex justify-between items-center">
+                                <span>
+                                    {students.filter(s => s.schoolId === school.id && s.status === 'Active').length} Öğrenci
+                                </span>
+                                <span className="text-blue-600 text-xs font-bold group-hover:translate-x-1 transition-transform">
+                                    Detaylar &rarr;
+                                </span>
+                            </div>
                         </div>
-                        <div className="flex justify-between items-start mb-1">
-                            <h3 className="font-bold text-lg text-slate-900">{school.name}</h3>
-                            {useAuth.getState().user?.role === 'admin' && (
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (window.confirm('Bu okulu silmek istediğinizden emin misiniz?')) {
-                                            useStore.getState().deleteSchool(school.id);
-                                        }
-                                    }}
-                                    className="text-slate-400 hover:text-red-600 transition-colors p-1"
-                                    title="Okulu Sil"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                                </button>
-                            )}
-                            {useAuth.getState().user?.role === 'admin' && (
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleEditSchoolClick(school);
-                                    }}
-                                    className="text-slate-400 hover:text-blue-600 transition-colors p-1 ml-1"
-                                    title="Okulu Düzenle"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.293 2.293a1 1 0 0 1 1.414 0l4 4a1 1 0 0 1 0 1.414l-9 9a1 1 0 0 1-.39.242l-3 1a1 1 0 0 1-1.266-1.265l1-3a1 1 0 0 1 .242-.391l9-9zM12 2l2 2m-2-2 2 2" /></svg>
-                                </button>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">
-                            <MapPin size={14} />
-                            <span className="truncate">{school.address}</span>
-                        </div>
-                        <div className="pt-4 border-t border-slate-50 text-sm font-medium text-slate-600 flex justify-between items-center">
-                            <span>
-                                {students.filter(s => s.schoolId === school.id && s.status === 'Active').length} Öğrenci
-                            </span>
-                            <span className="text-blue-600 text-xs font-bold group-hover:translate-x-1 transition-transform">
-                                Detaylar &rarr;
-                            </span>
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             <Modal
