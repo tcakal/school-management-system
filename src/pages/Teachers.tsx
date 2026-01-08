@@ -339,77 +339,81 @@ function TeacherCard({ teacher, status, onEdit, onDelete, onManageLeaves }: {
     const statusBg = status === 'admin' ? 'bg-purple-100 text-purple-700' : status === 'assigned' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700';
 
     return (
-        <div className={`bg-white p-6 rounded-2xl shadow-sm border-2 ${borderColor} hover:shadow-md transition-all group relative`}>
-            <div className="absolute top-4 right-4 flex gap-2">
+        <div className={`bg-white p-6 rounded-2xl shadow-sm border-2 ${borderColor} hover:shadow-md transition-all group flex flex-col h-full`}>
+            <div className="flex-1">
+                <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-500 text-xl font-bold relative">
+                        {teacher.name.substring(0, 2).toUpperCase()}
+                        {teacher.role === 'admin' && (
+                            <div className="absolute -bottom-1 -right-1 bg-purple-600 text-white p-1 rounded-full border-2 border-white" title="Yönetici">
+                                <Shield size={12} fill="currentColor" />
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-lg text-slate-900">{teacher.name}</h3>
+                        <div className="flex items-center gap-2 text-slate-500 text-sm">
+                            <Phone size={14} />
+                            <span>{teacher.phone}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-sm">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${statusBg}`}>
+                            {statusText}
+                        </span>
+                    </div>
+
+                    {teacher.email && (
+                        <div className="flex items-center gap-3 text-sm text-slate-600">
+                            <Mail size={16} className="text-slate-400" />
+                            <span>{teacher.email}</span>
+                        </div>
+                    )}
+
+                    <div className="flex items-start gap-3 text-sm text-slate-600">
+                        <BookOpen size={16} className="text-slate-400 mt-0.5" />
+                        <div className="flex flex-wrap gap-2">
+                            {teacher.specialties?.length ? (
+                                teacher.specialties.map(spec => (
+                                    <span key={spec} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                                        {spec}
+                                    </span>
+                                ))
+                            ) : (
+                                <span className="text-slate-400 italic">Uzmanlık belirtilmemiş</span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end gap-2">
                 <button
                     onClick={onManageLeaves}
-                    className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                    className="text-slate-400 hover:text-blue-600 transition-colors p-2 hover:bg-slate-50 rounded-lg"
                     title="İzin Yönetimi"
                 >
                     <Calendar size={18} />
                 </button>
-                <button
-                    onClick={onDelete}
-                    className="text-slate-400 hover:text-red-500 transition-colors p-1"
-                    title="Sil"
-                >
-                    <Trash2 size={18} />
-                </button>
+                <div className="w-px bg-slate-200 my-1"></div>
                 <button
                     onClick={onEdit}
-                    className="text-slate-400 hover:text-blue-600 p-1"
+                    className="text-slate-400 hover:text-blue-600 transition-colors p-2 hover:bg-slate-50 rounded-lg"
                     title="Düzenle"
                 >
                     <Edit2 size={18} />
                 </button>
-            </div>
-
-            <div className="flex items-center gap-4 mb-4">
-                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-500 text-xl font-bold relative">
-                    {teacher.name.substring(0, 2).toUpperCase()}
-                    {teacher.role === 'admin' && (
-                        <div className="absolute -bottom-1 -right-1 bg-purple-600 text-white p-1 rounded-full border-2 border-white" title="Yönetici">
-                            <Shield size={12} fill="currentColor" />
-                        </div>
-                    )}
-                </div>
-                <div>
-                    <h3 className="font-bold text-lg text-slate-900">{teacher.name}</h3>
-                    <div className="flex items-center gap-2 text-slate-500 text-sm">
-                        <Phone size={14} />
-                        <span>{teacher.phone}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="space-y-3">
-                <div className="flex items-center gap-3 text-sm">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${statusBg}`}>
-                        {statusText}
-                    </span>
-                </div>
-
-                {teacher.email && (
-                    <div className="flex items-center gap-3 text-sm text-slate-600">
-                        <Mail size={16} className="text-slate-400" />
-                        <span>{teacher.email}</span>
-                    </div>
-                )}
-
-                <div className="flex items-start gap-3 text-sm text-slate-600">
-                    <BookOpen size={16} className="text-slate-400 mt-0.5" />
-                    <div className="flex flex-wrap gap-2">
-                        {teacher.specialties?.length ? (
-                            teacher.specialties.map(spec => (
-                                <span key={spec} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
-                                    {spec}
-                                </span>
-                            ))
-                        ) : (
-                            <span className="text-slate-400 italic">Uzmanlık belirtilmemiş</span>
-                        )}
-                    </div>
-                </div>
+                <div className="w-px bg-slate-200 my-1"></div>
+                <button
+                    onClick={onDelete}
+                    className="text-slate-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
+                    title="Sil"
+                >
+                    <Trash2 size={18} />
+                </button>
             </div>
         </div>
     );
