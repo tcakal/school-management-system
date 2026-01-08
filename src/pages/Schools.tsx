@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
-import { Building2, ArrowRight, Plus, MapPin, Image as ImageIcon } from 'lucide-react';
+import { Building2, ArrowRight, Plus, MapPin, Image as ImageIcon, Trash2, Edit } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import type { School } from '../types';
 
@@ -143,7 +143,7 @@ export function Schools() {
                                         className="text-slate-400 hover:text-red-600 transition-colors p-1"
                                         title="Okulu Sil"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                        <Trash2 size={18} />
                                     </button>
                                 )}
                                 {useAuth.getState().user?.role === 'admin' && (
@@ -155,7 +155,7 @@ export function Schools() {
                                         className="text-slate-400 hover:text-blue-600 transition-colors p-1 ml-1"
                                         title="Okulu Düzenle"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.293 2.293a1 1 0 0 1 1.414 0l4 4a1 1 0 0 1 0 1.414l-9 9a1 1 0 0 1-.39.242l-3 1a1 1 0 0 1-1.266-1.265l1-3a1 1 0 0 1 .242-.391l9-9zM12 2l2 2m-2-2 2 2" /></svg>
+                                        <Edit size={18} />
                                     </button>
                                 )}
                             </div>
