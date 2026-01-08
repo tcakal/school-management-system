@@ -21,6 +21,12 @@ const DAYS = [
     { value: 7, label: 'Pazar' },
 ];
 
+const TIME_SLOTS = Array.from({ length: 25 }, (_, i) => {
+    const hour = Math.floor(i / 2) + 9; // Start from 09:00
+    const minute = i % 2 === 0 ? '00' : '30';
+    return `${hour.toString().padStart(2, '0')}:${minute}`;
+}).filter(t => parseInt(t.split(':')[0]) <= 21); // End at 21:00
+
 export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: AssignmentModalProps) {
     const { teachers, addAssignment } = useStore();
     const [teacherId, setTeacherId] = useState('');
@@ -105,7 +111,7 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
                             onChange={(e) => setStartTime(e.target.value)}
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                         >
-                            {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'].map(t => (
+                            {TIME_SLOTS.map(t => (
                                 <option key={t} value={t}>{t}</option>
                             ))}
                         </select>
@@ -122,7 +128,7 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
                             onChange={(e) => setEndTime(e.target.value)}
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                         >
-                            {['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].map(t => (
+                            {TIME_SLOTS.map(t => (
                                 <option key={t} value={t}>{t}</option>
                             ))}
                         </select>
