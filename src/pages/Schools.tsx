@@ -107,72 +107,82 @@ export function Schools() {
                     }
 
                     return (
+
                         <div
                             key={school.id}
                             onClick={() => navigate(`/school/${school.id}`)}
-                            className={`bg-white p-6 rounded-xl hover:shadow-md transition-all cursor-pointer group ${borderColorClass}`}
+                            className={`bg-white p-6 rounded-xl hover:shadow-md transition-all cursor-pointer group ${borderColorClass} flex flex-col h-full relative`}
                         >
-                            <div className="flex justify-between items-start mb-4">
-                                <div
-                                    className="w-12 h-12 rounded-lg flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform bg-cover bg-center"
-                                    style={{
-                                        backgroundColor: school.color || '#eff6ff',
-                                        color: school.color ? '#fff' : '#2563eb', // text-blue-600 is #2563eb
-                                        backgroundImage: school.imageUrl ? `url(${school.imageUrl})` : undefined
-                                    }}
-                                >
-                                    {!school.imageUrl && <Building2 size={24} />}
+                            <div className="flex-1">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div
+                                        className="w-12 h-12 rounded-lg flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform bg-cover bg-center"
+                                        style={{
+                                            backgroundColor: school.color || '#eff6ff',
+                                            color: school.color ? '#fff' : '#2563eb', // text-blue-600 is #2563eb
+                                            backgroundImage: school.imageUrl ? `url(${school.imageUrl})` : undefined
+                                        }}
+                                    >
+                                        {!school.imageUrl && <Building2 size={24} />}
+                                    </div>
+                                    {/* <ArrowRight className="text-slate-300 group-hover:text-blue-500 transition-colors" /> */}
                                 </div>
-                                <ArrowRight className="text-slate-300 group-hover:text-blue-500 transition-colors" />
-                            </div>
-                            <div className="flex justify-between items-start mb-1">
-                                <h3
-                                    className="font-bold text-lg text-slate-900"
-                                    style={{ color: school.color }}
-                                >
-                                    {school.name}
-                                </h3>
-                                {useAuth.getState().user?.role === 'admin' && (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (window.confirm('Bu okulu silmek istediğinizden emin misiniz?')) {
-                                                useStore.getState().deleteSchool(school.id);
-                                            }
-                                        }}
-                                        className="text-slate-400 hover:text-red-600 transition-colors p-1"
-                                        title="Okulu Sil"
+                                <div className="mb-4">
+                                    <h3
+                                        className="font-bold text-lg text-slate-900 mb-1"
+                                        style={{ color: school.color }}
                                     >
-                                        <Trash2 size={18} />
-                                    </button>
-                                )}
+                                        {school.name}
+                                    </h3>
+                                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                                        <MapPin size={14} />
+                                        <span className="line-clamp-1">{school.address}</span>
+                                    </div>
+                                </div>
+
+                                <div className="text-sm font-medium text-slate-600 mb-4">
+                                    <span>
+                                        {students.filter(s => s.schoolId === school.id && s.status === 'Active').length} Öğrenci
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                                <span className="text-blue-600 text-xs font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                                    Detaylar <ArrowRight size={14} />
+                                </span>
+
                                 {useAuth.getState().user?.role === 'admin' && (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleEditSchoolClick(school);
-                                        }}
-                                        className="text-slate-400 hover:text-blue-600 transition-colors p-1 ml-1"
-                                        title="Okulu Düzenle"
-                                    >
-                                        <Edit size={18} />
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleEditSchoolClick(school);
+                                            }}
+                                            className="text-slate-400 hover:text-blue-600 transition-colors p-2 hover:bg-slate-50 rounded-lg"
+                                            title="Okulu Düzenle"
+                                        >
+                                            <Edit size={18} />
+                                        </button>
+                                        <div className="w-px h-4 bg-slate-200"></div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (window.confirm('Bu okulu silmek istediğinizden emin misiniz?')) {
+                                                    useStore.getState().deleteSchool(school.id);
+                                                }
+                                            }}
+                                            className="text-slate-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
+                                            title="Okulu Sil"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </div>
                                 )}
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">
-                                <MapPin size={14} />
-                                <span className="truncate">{school.address}</span>
-                            </div>
-                            <div className="pt-4 border-t border-slate-50 text-sm font-medium text-slate-600 flex justify-between items-center">
-                                <span>
-                                    {students.filter(s => s.schoolId === school.id && s.status === 'Active').length} Öğrenci
-                                </span>
-                                <span className="text-blue-600 text-xs font-bold group-hover:translate-x-1 transition-transform">
-                                    Detaylar &rarr;
-                                </span>
                             </div>
                         </div>
                     );
+
                 })}
             </div>
 
