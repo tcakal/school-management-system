@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, School, Users, Banknote, Calendar, ClipboardList, Shield, History, Settings, CalendarDays, LogOut, Hexagon } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
+import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
 import { useState } from 'react';
 import { ProfileModal } from './ProfileModal';
@@ -17,6 +18,7 @@ export function ModernSidebar() {
     ];
 
     const { user, logout } = useAuth();
+    const systemSettings = useStore((state) => state.systemSettings);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     // Filter Navigation based on Role
@@ -36,18 +38,19 @@ export function ModernSidebar() {
                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
                 {/* Header */}
-                <div className="p-8 relative z-10">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
-                            <Hexagon size={24} className="text-white fill-current" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-                                Atölye Vizyon
-                            </h1>
-                        </div>
+                <div className="p-8 relative z-10 flex flex-col items-center text-center">
+                    <div className="mb-4 bg-white/10 p-4 rounded-full shadow-lg border border-white/10 backdrop-blur-sm">
+                        {systemSettings?.logoUrl ? (
+                            <img src={systemSettings.logoUrl} alt="Logo" className="w-20 h-20 object-contain" />
+                        ) : (
+                            <Hexagon size={48} className="text-blue-500 fill-current" />
+                        )}
                     </div>
-                    <p className="text-xs text-slate-500 font-medium tracking-wide uppercase pl-1">Okul Yönetim Sistemi</p>
+                    <div>
+                        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
+                            {systemSettings?.systemName || 'Okul Yönetim Sistemi'}
+                        </h1>
+                    </div>
                 </div>
 
                 {/* Navigation */}

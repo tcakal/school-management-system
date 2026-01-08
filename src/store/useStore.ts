@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../supabase';
 import { useAuth } from './useAuth';
-import type { School, Student, ClassGroup, Payment, Teacher, TeacherAssignment, ActivityLog, Lesson, Attendance, NotificationTemplate, TeacherLeave } from '../types';
+import type { School, Student, ClassGroup, Payment, Teacher, TeacherAssignment, ActivityLog, Lesson, Attendance, NotificationTemplate, TeacherLeave, SystemSettings } from '../types';
 import { addWeeks, format, startOfWeek } from 'date-fns';
 
 interface AppState {
@@ -16,6 +16,13 @@ interface AppState {
     attendance: Attendance[];
     notificationTemplates: NotificationTemplate[];
     leaves: TeacherLeave[];
+
+    // Theme & Settings
+    theme: 'light' | 'dark';
+    systemSettings: SystemSettings | null;
+    toggleTheme: () => void;
+    updateSystemSettings: (settings: Partial<SystemSettings>) => Promise<void>;
+
     loading: boolean;
     initialized: boolean;
 
@@ -76,13 +83,69 @@ export const useStore = create<AppState>((set, get) => ({
     attendance: [],
     notificationTemplates: [],
     leaves: [],
+
+    theme: 'dark',
+    systemSettings: null,
+
+    toggleTheme: () => {
+        // Theme is now permanently dark
+        return;
+    },
+
+    updateSystemSettings: async (updates) => {
+        const current = get().systemSettings;
+
+        // If we have an existing ID, update it
+        if (current?.id) {
+            const { error } = await supabase
+                .from('system_settings')
+                .update({
+                    logo_url: updates.logoUrl,
+                    system_name: updates.systemName
+                })
+                .eq('id', current.id);
+
+            if (error) {
+                console.error('Error updating system settings:', error);
+                return;
+            }
+            set({ systemSettings: { ...current, ...updates } });
+        } else {
+            // No existing settings, insert new row
+            const newSettings = {
+                logo_url: updates.logoUrl,
+                system_name: updates.systemName
+            };
+
+            const { data, error } = await supabase
+                .from('system_settings')
+                .insert([newSettings])
+                .select()
+                .single();
+
+            if (error || !data) {
+                console.error('Error creating system settings:', error);
+                return;
+            }
+
+            set({
+                systemSettings: {
+                    id: data.id,
+                    logoUrl: data.logo_url,
+                    systemName: data.system_name
+                }
+            });
+        }
+    },
+
     loading: false,
     initialized: false,
 
     fetchData: async () => {
         set({ loading: true });
+
         try {
-            const [schoolsRes, studentsRes, classesRes, paymentsRes, teachersRes, assignmentsRes, lessonsRes, attendanceRes, templatesRes] = await Promise.all([
+            const [schoolsRes, studentsRes, classGroupsRes, paymentsRes, teachersRes, assignmentsRes, lessonsRes, attendanceRes, notificationTemplatesRes, leavesRes, settingsRes] = await Promise.all([
                 supabase.from('schools').select('*'),
                 supabase.from('students').select('*'),
                 supabase.from('class_groups').select('*'),
@@ -92,7 +155,8 @@ export const useStore = create<AppState>((set, get) => ({
                 supabase.from('lessons').select('*'),
                 supabase.from('attendance').select('*'),
                 supabase.from('notification_templates').select('*'),
-                supabase.from('teacher_leaves').select('*')
+                supabase.from('teacher_leaves').select('*'),
+                supabase.from('system_settings').select('*').limit(1).single()
             ]);
 
             if (schoolsRes.error) console.error('Error fetching schools:', schoolsRes.error);
@@ -118,7 +182,7 @@ export const useStore = create<AppState>((set, get) => ({
                 joinedDate: s.joined_date
             }));
 
-            const classGroups: ClassGroup[] = (classesRes.data || []).map(c => ({
+            const classGroups: ClassGroup[] = (classGroupsRes.data || []).map(c => ({
                 id: c.id,
                 schoolId: c.school_id,
                 name: c.name,
@@ -180,7 +244,7 @@ export const useStore = create<AppState>((set, get) => ({
                 note: a.note
             }));
 
-            const notificationTemplates: NotificationTemplate[] = (templatesRes.data || []).map(t => ({
+            const notificationTemplates: NotificationTemplate[] = (notificationTemplatesRes.data || []).map(t => ({
                 id: t.id,
                 schoolId: t.school_id,
                 classGroupId: t.class_group_id,
@@ -191,8 +255,7 @@ export const useStore = create<AppState>((set, get) => ({
                 daysFilter: t.days_filter
             }));
 
-            const { data: leavesRaw } = await supabase.from('teacher_leaves').select('*');
-            const leaves: TeacherLeave[] = (leavesRaw || []).map(l => ({
+            const leaves: TeacherLeave[] = (leavesRes.data || []).map(l => ({
                 id: l.id,
                 teacherId: l.teacher_id,
                 startDate: l.start_date,
@@ -202,7 +265,39 @@ export const useStore = create<AppState>((set, get) => ({
                 createdAt: l.created_at
             }));
 
-            set({ schools, students, classGroups, payments, teachers, assignments, lessons, attendance, notificationTemplates, leaves, initialized: true });
+            // Handle System Settings
+            // Handle System Settings
+            const settingsData = settingsRes.data;
+            const settingsError = settingsRes.error;
+
+            // Ignore error code PGRST116 (no rows), but log others
+            if (settingsError && settingsError.code !== 'PGRST116') {
+                console.error('Error fetching settings:', settingsError);
+            }
+
+            let systemSettings: SystemSettings | null = null;
+            if (settingsData) {
+                systemSettings = {
+                    id: settingsData.id,
+                    logoUrl: settingsData.logo_url,
+                    systemName: settingsData.system_name
+                };
+            }
+
+            // Apply Theme
+            const savedTheme = localStorage.getItem('theme');
+            // Force dark mode if no theme saved OR if saved theme is light (migrating to dark)
+            // This is a temporary override to ensure the user gets dark mode as requested
+            const themeToApply = savedTheme === 'dark' ? 'dark' : 'dark';
+
+            localStorage.setItem('theme', themeToApply);
+            if (themeToApply === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+
+            set({ schools, students, classGroups, payments, teachers, assignments, lessons, attendance, notificationTemplates, leaves, systemSettings, theme: themeToApply, initialized: true });
         } catch (error) {
             console.error('Supabase fetch error:', error);
         } finally {

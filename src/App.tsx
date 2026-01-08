@@ -1,3 +1,4 @@
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './layouts/Layout';
 import { Dashboard } from './pages/Dashboard';
@@ -15,6 +16,18 @@ import { useAuth } from './store/useAuth';
 
 const RequireAuth = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
+
+  // Force dark mode implementation
+  React.useEffect(() => {
+    // Always enforce dark mode if local storage is not set or set to light (migration)
+    if (localStorage.getItem('theme') !== 'dark') {
+      localStorage.setItem('theme', 'dark');
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 

@@ -137,3 +137,9 @@ export interface Attendance {
     status: 'present' | 'absent' | 'late' | 'excused';
     note?: string;
 }
+
+export interface SystemSettings {
+    id: string;
+    logoUrl?: string;
+    systemName: string;
+}
