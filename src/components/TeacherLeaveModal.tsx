@@ -157,7 +157,7 @@ export function TeacherLeaveModal({ isOpen, onClose, teacherId }: TeacherLeaveMo
                             id="fullDay"
                             checked={isFullDay}
                             onChange={e => setIsFullDay(e.target.checked)}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 text-slate-900"
                         />
                         <label htmlFor="fullDay" className="text-sm font-medium text-slate-700">Tüm Gün</label>
                     </div>
@@ -170,7 +170,7 @@ export function TeacherLeaveModal({ isOpen, onClose, teacherId }: TeacherLeaveMo
                                 required
                                 value={startDate}
                                 onChange={e => setStartDate(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
                         </div>
                         <div>
@@ -181,7 +181,7 @@ export function TeacherLeaveModal({ isOpen, onClose, teacherId }: TeacherLeaveMo
                                 value={endDate}
                                 min={startDate}
                                 onChange={e => setEndDate(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
                         </div>
                     </div>
@@ -195,7 +195,7 @@ export function TeacherLeaveModal({ isOpen, onClose, teacherId }: TeacherLeaveMo
                                     required
                                     value={startTime}
                                     onChange={e => setStartTime(e.target.value)}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                                 />
                             </div>
                             <div>
@@ -205,7 +205,7 @@ export function TeacherLeaveModal({ isOpen, onClose, teacherId }: TeacherLeaveMo
                                     required
                                     value={endTime}
                                     onChange={e => setEndTime(e.target.value)}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                                 />
                             </div>
                         </div>
@@ -217,7 +217,7 @@ export function TeacherLeaveModal({ isOpen, onClose, teacherId }: TeacherLeaveMo
                             <select
                                 value={type}
                                 onChange={(e) => setType(e.target.value as any)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                             >
                                 <option value="sick">Raporlu / Hastalık</option>
                                 <option value="vacation">Yıllık İzin</option>
@@ -231,7 +231,7 @@ export function TeacherLeaveModal({ isOpen, onClose, teacherId }: TeacherLeaveMo
                                 value={reason}
                                 onChange={e => setReason(e.target.value)}
                                 placeholder="Örn: Grip, Cenaze..."
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
                         </div>
                     </div>
@@ -359,7 +359,7 @@ function ConflictItem({ lesson, selectedSubId, onSelectSub, findAvailableTeacher
                 <select
                     value={selectedSubId || ""}
                     onChange={(e) => onSelectSub(e.target.value)}
-                    className={`flex-1 px-2 py-1.5 border rounded text-xs font-medium outline-none focus:ring-1 focus:ring-blue-500 ${selectedSubId && selectedSubId !== 'ignore' ? 'border-green-300 bg-green-50 text-green-700' : 'border-slate-300'
+                    className={`flex-1 px-2 py-1.5 border rounded text-xs font-medium outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 ${selectedSubId && selectedSubId !== 'ignore' ? 'border-green-300 bg-green-50 text-green-700' : 'border-slate-300'
                         }`}
                 >
                     <option value="">İşlem Seçiniz...</option>

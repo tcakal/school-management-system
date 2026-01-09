@@ -63,7 +63,7 @@ export function Login() {
                                     setPhone(e.target.value);
                                     setError(false);
                                 }}
-                                className="w-full pl-10 pr-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-white placeholder:text-slate-600"
+                                className="w-full pl-10 pr-4 py-3 !bg-slate-900/50 !border-slate-700 !text-white placeholder:!text-slate-600 rounded-xl outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-transparent transition-all"
                                 placeholder="5XX XXX XX XX"
                             />
                         </div>
@@ -81,7 +81,7 @@ export function Login() {
                                     setPassword(e.target.value);
                                     setError(false);
                                 }}
-                                className={`w-full pl-10 pr-4 py-3 bg-slate-900/50 border rounded-xl outline-none focus:ring-2 transition-all text-white placeholder:text-slate-600 ${error ? 'border-red-500/50 ring-2 ring-red-500/20' : 'border-slate-700 focus:ring-blue-500 focus:border-transparent'
+                                className={`w-full pl-10 pr-4 py-3 !bg-slate-900/50 !text-white placeholder:!text-slate-600 rounded-xl outline-none focus:!ring-2 transition-all ${error ? '!border-red-500/50 !ring-red-500/20' : '!border-slate-700 focus:!ring-blue-500 focus:!border-transparent'
                                     }`}
                                 placeholder="••••••••"
                             />

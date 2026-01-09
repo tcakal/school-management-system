@@ -144,7 +144,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                         value={topic}
                         onChange={(e) => setTopic(e.target.value)}
                         placeholder="Örn: Robotik Giriş, Sensörler..."
-                        className="w-full text-sm border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full text-sm border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-slate-900"
                     />
                 </div>
 
@@ -155,7 +155,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                         onChange={(e) => setNotes(e.target.value)}
                         placeholder="Öğretmen için özel notlar..."
                         rows={3}
-                        className="w-full text-sm border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full text-sm border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-slate-900"
                     />
                 </div>
 
@@ -235,7 +235,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                     <label className="block text-xs font-medium text-slate-700 mb-1">Tarih</label>
                                     <input
                                         type="date"
-                                        className="w-full text-sm border-slate-300 rounded-md"
+                                        className="w-full text-sm border-slate-300 rounded-md text-slate-900"
                                         value={rescheduleDate}
                                         onChange={e => setRescheduleDate(e.target.value)}
                                     />
@@ -244,7 +244,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                     <div>
                                         <label className="block text-xs font-medium text-slate-700 mb-1">Başlangıç</label>
                                         <select
-                                            className="w-full text-sm border-slate-300 rounded-md"
+                                            className="w-full text-sm border-slate-300 rounded-md text-slate-900"
                                             value={rescheduleTime}
                                             onChange={e => setRescheduleTime(e.target.value)}
                                         >
@@ -256,7 +256,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                     <div>
                                         <label className="block text-xs font-medium text-slate-700 mb-1">Bitiş</label>
                                         <select
-                                            className="w-full text-sm border-slate-300 rounded-md"
+                                            className="w-full text-sm border-slate-300 rounded-md text-slate-900"
                                             value={rescheduleEndTime}
                                             onChange={e => setRescheduleEndTime(e.target.value)}
                                         >
@@ -298,7 +298,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                     <select
                                         value={cancelReason}
                                         onChange={e => setCancelReason(e.target.value)}
-                                        className="w-full text-sm border-red-200 rounded-md focus:ring-red-500"
+                                        className="w-full text-sm border-red-200 rounded-md focus:ring-red-500 text-slate-900"
                                     >
                                         <option value="">Seçiniz...</option>
                                         <option value="teacher_sick">Öğretmen Raporlu</option>
@@ -320,7 +320,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                     <label className="block text-xs font-medium text-blue-700 mb-1">Tarih</label>
                                     <input
                                         type="date"
-                                        className="w-full text-sm border-blue-200 rounded-md"
+                                        className="w-full text-sm border-blue-200 rounded-md text-slate-900"
                                         value={rescheduleDate}
                                         onChange={e => setRescheduleDate(e.target.value)}
                                     />
@@ -328,7 +328,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                 <div>
                                     <label className="block text-xs font-medium text-blue-700 mb-1">Saat</label>
                                     <select
-                                        className="w-full text-sm border-blue-200 rounded-md"
+                                        className="w-full text-sm border-blue-200 rounded-md text-slate-900"
                                         value={rescheduleTime}
                                         onChange={e => setRescheduleTime(e.target.value)}
                                     >

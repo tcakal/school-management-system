@@ -15,3 +15,42 @@ body {
   color: #f8fafc;
   /* sw-slate-50 match */
 }
+
+/* Global Form Styles Override */
+@layer components {
+
+  /* Hedef: Tüm metin tabanlı inputlar, select ve textarea'lar */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]):not([type="range"]),
+  select,
+  textarea {
+    @apply text-slate-900 bg-white border-2 rounded-lg shadow-sm outline-none transition-all duration-300 !important;
+  }
+
+  /* Varsayılan / Boş Durum (Eğer placeholder varsa ve görünüyorsa) -> Kırmızı Çerçeve */
+  input:not([type="checkbox"]):not([type="radio"]):placeholder-shown,
+  textarea:placeholder-shown {
+    @apply border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-100;
+  }
+
+  /* Dolu Durum (Placeholder görünmüyorsa) -> Yeşil Çerçeve */
+  input:not([type="checkbox"]):not([type="radio"]):not(:placeholder-shown),
+  textarea:not(:placeholder-shown) {
+    @apply border-emerald-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100;
+  }
+
+  /* Select elemanları için (Placeholder mantığı çalışmaz, o yüzden varsayılan mor yapalım veya dolu kabul edelim) */
+  select {
+    @apply border-purple-400 focus:border-purple-600 focus:ring-4 focus:ring-purple-100;
+  }
+
+  /* Date ve Time inputları için özel durum (her zaman dolu gibi veya özel) */
+  input[type="date"],
+  input[type="time"] {
+    @apply border-purple-400 focus:border-purple-600;
+  }
+
+  /* Login sayfasındaki inputlar için istisna (Orada özel tasarım var, class ile ezilmeli ama !important kullanırsak bozulabilir)
+     Burada !important kullanmayarak sayfa içi stillerin ezmesine izin vermeye çalışalım ama yukarıda !important kullandık.
+     Login sayfasını düzeltmek gerekebilir. 
+  */
+}

@@ -86,7 +86,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                         required
                         value={name}
                         onChange={e => setName(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                     />
                 </div>
 
@@ -97,7 +97,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                         required
                         value={phone}
                         onChange={e => setPhone(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                     />
                 </div>
 
@@ -108,7 +108,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                         placeholder="Değiştirmek istemiyorsanız boş bırakın"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-slate-900"
                     />
                     <p className="text-xs text-slate-500 mt-1">Şifrenizi değiştirirseniz tekrar giriş yapmanız gerekecektir.</p>
                 </div>
@@ -119,7 +119,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                         type="email"
                         value={email}
                         onChange={e => setEmail(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                     />
                 </div>
 
