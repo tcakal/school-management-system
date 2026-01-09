@@ -305,6 +305,7 @@ export function Settings() {
 
             {activeTab === 'data' && (
                 <div className="space-y-6">
+                    {/* Orphan Data Cleanup */}
                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
                             <div>
@@ -353,6 +354,22 @@ export function Settings() {
                         <div className="mt-4 p-4 bg-slate-50 rounded-lg text-xs text-slate-500">
                             <strong>Bilgi:</strong> Okul silme işlemi sırasında bazen bağlantılı veriler (öğrenciler, ödemeler) tam olarak silinemeyebilir.
                             Bu araç, herhangi bir okula bağlı olmayan bu "hayalet" verileri tespit eder ve kalıcı olarak siler.
+                        </div>
+                    </div>
+
+                    {/* Regenerate Schedule */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900">Ders Programı Onarımı</h3>
+                                <p className="text-sm text-slate-500">Mevcut öğretmen atamalarına göre ders takvimini yeniden oluşturur.</p>
+                            </div>
+                            <RegenerateButton />
+                        </div>
+                        <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
+                            <strong>Ne zaman kullanılır?</strong> Eğer takvimde dersler görünmüyorsa veya hatalı görünüyorsa bu işlemi çalıştırın.
+                            Gelecek 4 haftanın ders programını mevcut atamalara (gün/saat) göre sıfırdan hesaplar.
+                            Geçmiş derslere veya "Ders Yapıldı" olarak işaretlenmiş derslere dokunmaz.
                         </div>
                     </div>
                 </div>
@@ -437,5 +454,36 @@ function SettingsForm() {
                 {saving ? 'Kaydediliyor...' : 'Kaydet'}
             </button>
         </div>
+    );
+}
+
+function RegenerateButton() {
+    const [regenerating, setRegenerating] = useState(false);
+    const { generateLessons } = useStore();
+
+    const handleRegenerate = async () => {
+        if (!confirm('Tüm mevcut atamalara göre gelecek 4 haftalık ders programı yeniden oluşturulacak. Bu işlem biraz zaman alabilir. Devam etmek istiyor musunuz?')) return;
+
+        setRegenerating(true);
+        try {
+            await generateLessons(); // Parametresiz = Tüm sınıflar
+            alert('Ders programı başarıyla güncellendi!');
+        } catch (e) {
+            console.error(e);
+            alert('Bir hata oluştu.');
+        } finally {
+            setRegenerating(false);
+        }
+    };
+
+    return (
+        <button
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 font-medium disabled:opacity-50"
+        >
+            {regenerating ? <RefreshCw className="animate-spin" size={18} /> : <RefreshCw size={18} />}
+            {regenerating ? 'Onarılıyor...' : 'Programı Onar / Yenile'}
+        </button>
     );
 }
