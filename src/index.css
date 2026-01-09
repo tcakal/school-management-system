@@ -16,6 +16,18 @@ body {
   /* sw-slate-50 match */
 }
 
+/* Force light color scheme for form elements to ensure calendar icons are dark */
+:root {
+  color-scheme: light;
+}
+
+/* Make placeholders more visible globally */
+::placeholder {
+  color: #64748b !important;
+  /* slate-500 */
+  opacity: 1;
+}
+
 /* Global Form Styles Override */
 @layer components {
 
