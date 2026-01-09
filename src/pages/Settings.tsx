@@ -306,56 +306,16 @@ export function Settings() {
             {activeTab === 'data' && (
                 <div className="space-y-6">
                     {/* Orphan Data Cleanup */}
-                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    {/* Orphan Data Cleanup - TEMPORARILY DISABLED DUE TO DATA LOSS RISK
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm opacity-50 pointer-events-none grayscale">
                         <div className="flex items-center justify-between mb-4">
                             <div>
-                                <h3 className="text-lg font-bold text-slate-900">Veri Temizliği</h3>
-                                <p className="text-sm text-slate-500">Silinmiş okullardan kalan artık verileri temizler.</p>
+                                <h3 className="text-lg font-bold text-slate-900">Veri Temizliği (Bakımda)</h3>
+                                <p className="text-sm text-slate-500">Bu özellik geçici olarak devre dışı bırakılmıştır.</p>
                             </div>
-                            <button
-                                onClick={handleScan}
-                                disabled={scanning}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium disabled:opacity-50"
-                            >
-                                {scanning ? <RefreshCw className="animate-spin" size={18} /> : <Database size={18} />}
-                                {scanning ? 'İşleniyor...' : 'Verileri Tara ve Temizle'}
-                            </button>
                         </div>
-
-                        {orphanCounts && (
-                            <div className={`p-4 rounded-lg border flex items-start gap-3 ${(orphanCounts.students + orphanCounts.payments + orphanCounts.classes) > 0
-                                ? 'bg-amber-50 border-amber-200 text-amber-900'
-                                : 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                                }`}>
-                                {(orphanCounts.students + orphanCounts.payments + orphanCounts.classes) > 0 ? (
-                                    <AlertTriangle className="shrink-0 mt-0.5" />
-                                ) : (
-                                    <CheckCircle className="shrink-0 mt-0.5" />
-                                )}
-                                <div>
-                                    <h4 className="font-bold mb-1">İşlem Sonucu</h4>
-                                    {(orphanCounts.students + orphanCounts.payments + orphanCounts.classes) > 0 ? (
-                                        <p className="text-sm">
-                                            Temizlik tamamlandı. Toplamda:
-                                            <ul className="list-disc ml-5 mt-1">
-                                                <li>{orphanCounts.students} öğrenci</li>
-                                                <li>{orphanCounts.payments} ödeme kaydı</li>
-                                                <li>{orphanCounts.classes} sınıf grubu</li>
-                                            </ul>
-                                            başarıyla silindi.
-                                        </p>
-                                    ) : (
-                                        <p className="text-sm">Sistemde yetim veri bulunamadı. Veritabanı temiz durumda.</p>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="mt-4 p-4 bg-slate-50 rounded-lg text-xs text-slate-500">
-                            <strong>Bilgi:</strong> Okul silme işlemi sırasında bazen bağlantılı veriler (öğrenciler, ödemeler) tam olarak silinemeyebilir.
-                            Bu araç, herhangi bir okula bağlı olmayan bu "hayalet" verileri tespit eder ve kalıcı olarak siler.
-                        </div>
-                    </div>
+                    </div> 
+                    */}
 
                     {/* Regenerate Schedule */}
                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
