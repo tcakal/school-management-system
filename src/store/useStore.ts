@@ -530,6 +530,9 @@ export const useStore = create<AppState>((set, get) => ({
             start_time: assignment.startTime,
             end_time: assignment.endTime
         }]);
+
+        // Trigger lesson generation for this group immediately
+        await get().generateLessons(4, assignment.classGroupId);
     },
 
     deleteAssignment: async (id) => {
