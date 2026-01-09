@@ -93,8 +93,12 @@ export function ModernSidebar() {
                                     )
                                 }
                             >
-                                <History size={20} />
-                                <span className="font-medium">İşlem Geçmişi</span>
+                                {({ isActive }) => (
+                                    <>
+                                        <History size={20} className={isActive ? "" : "text-purple-400 group-hover:text-purple-300 transition-colors"} />
+                                        <span className="font-medium">İşlem Geçmişi</span>
+                                    </>
+                                )}
                             </NavLink>
                             <NavLink
                                 to="/settings"
@@ -107,8 +111,12 @@ export function ModernSidebar() {
                                     )
                                 }
                             >
-                                <Settings size={20} />
-                                <span className="font-medium">Ayarlar</span>
+                                {({ isActive }) => (
+                                    <>
+                                        <Settings size={20} className={isActive ? "" : "text-purple-400 group-hover:text-purple-300 transition-colors"} />
+                                        <span className="font-medium">Ayarlar</span>
+                                    </>
+                                )}
                             </NavLink>
                         </>
                     )}

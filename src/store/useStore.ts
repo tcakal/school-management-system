@@ -344,7 +344,6 @@ export const useStore = create<AppState>((set, get) => ({
         const dbUpdate: any = {};
         if (updated.name) dbUpdate.name = updated.name;
         if (updated.defaultPrice !== undefined) dbUpdate.default_price = updated.defaultPrice;
-        if (updated.defaultPrice !== undefined) dbUpdate.default_price = updated.defaultPrice;
         if (updated.paymentTerms) dbUpdate.payment_terms = updated.paymentTerms;
         if (updated.color) dbUpdate.color = updated.color;
         if (updated.imageUrl) dbUpdate.image_url = updated.imageUrl;

@@ -30,9 +30,9 @@ export function Settings() {
 
     if (user?.role !== 'admin') {
         return (
-            <div className="p-8 text-center bg-white dark:bg-slate-800 rounded-xl border border-red-200 dark:border-red-900">
-                <h3 className="text-red-600 dark:text-red-400 font-bold">Yetkisiz Erişim</h3>
-                <p className="text-slate-500 dark:text-slate-400">Bu sayfayı görüntüleme yetkiniz yok.</p>
+            <div className="p-8 text-center bg-white rounded-xl border border-red-200">
+                <h3 className="text-red-600 font-bold">Yetkisiz Erişim</h3>
+                <p className="text-slate-500">Bu sayfayı görüntüleme yetkiniz yok.</p>
             </div>
         );
     }
@@ -71,8 +71,8 @@ export function Settings() {
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Ayarlar</h2>
-                <p className="text-slate-500 dark:text-slate-400 mt-1">Sistem yapılandırması ve yönetim araçları.</p>
+                <h2 className="text-3xl font-bold text-slate-900">Ayarlar</h2>
+                <p className="text-slate-500 mt-1">Sistem yapılandırması ve yönetim araçları.</p>
             </div>
 
             <Tabs
@@ -86,16 +86,16 @@ export function Settings() {
             />
 
             {activeTab === 'notifications' && (
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">Bildirim Şablonları</h3>
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-200 pb-2">Bildirim Şablonları</h3>
 
                     <div className="mb-6 flex gap-4">
                         <div className="flex-1">
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Okul Seçin</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Okul Seçin</label>
                             <select
                                 value={selectedSchoolId}
                                 onChange={e => setSelectedSchoolId(e.target.value)}
-                                className="p-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="p-2 border border-slate-300 rounded-lg text-sm w-full bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                             >
                                 {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
@@ -105,12 +105,12 @@ export function Settings() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* List */}
                         <div className="space-y-3">
-                            <h4 className="font-medium text-slate-900 dark:text-white">Mevcut Şablonlar</h4>
+                            <h4 className="font-medium text-slate-900">Mevcut Şablonlar</h4>
                             {templates.length === 0 && <p className="text-sm text-slate-400">Tanımlı şablon yok.</p>}
                             {templates.map(t => (
-                                <div key={t.id} className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900/50 flex justify-between items-start group hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
+                                <div key={t.id} className="p-3 border border-slate-200 rounded-lg bg-slate-50 flex justify-between items-start group hover:border-slate-300 transition-colors">
                                     <div>
-                                        <div className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-1">
+                                        <div className="text-xs font-bold text-blue-600 uppercase mb-1">
                                             {t.triggerType === 'fixed_time' ? `Saat: ${t.triggerTime}` :
                                                 t.triggerType === 'last_lesson_end' ? 'Son Ders Bitimi' :
                                                     t.triggerType === 'lesson_start' ? 'Ders Başlangıcı' :
@@ -127,17 +127,17 @@ export function Settings() {
                                         {t.daysFilter && (
                                             <div className="flex gap-1 mb-1">
                                                 {t.daysFilter.map(d => (
-                                                    <span key={d} className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1 rounded text-slate-500 dark:text-slate-400">
+                                                    <span key={d} className="text-[10px] bg-slate-100 px-1 rounded text-slate-500">
                                                         {['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'][d]}
                                                     </span>
                                                 ))}
                                             </div>
                                         )}
-                                        <p className="text-sm text-slate-700 dark:text-slate-300">{t.messageTemplate}</p>
+                                        <p className="text-sm text-slate-700">{t.messageTemplate}</p>
                                     </div>
                                     <button
                                         onClick={() => deleteNotificationTemplate(t.id)}
-                                        className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="text-slate-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
                                     >
                                         <Trash2 size={16} />
                                     </button>
@@ -146,13 +146,13 @@ export function Settings() {
                         </div>
 
                         {/* Add Form */}
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 h-fit">
-                            <h4 className="font-medium text-slate-900 dark:text-white mb-3">Yeni Şablon Ekle</h4>
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 h-fit">
+                            <h4 className="font-medium text-slate-900 mb-3">Yeni Şablon Ekle</h4>
                             <div className="space-y-3">
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Özel Grup (Opsiyonel)</label>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Özel Grup (Opsiyonel)</label>
                                     <select
-                                        className="w-full text-sm border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                                        className="w-full text-sm border-slate-300 rounded-md bg-white text-slate-900"
                                         value={newTemplate.classGroupId || ''}
                                         onChange={e => setNewTemplate(prev => ({ ...prev, classGroupId: e.target.value || undefined }))}
                                     >
@@ -167,9 +167,9 @@ export function Settings() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Tetikleyici Zamanı</label>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Tetikleyici Zamanı</label>
                                     <select
-                                        className="w-full text-sm border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                                        className="w-full text-sm border-slate-300 rounded-md bg-white text-slate-900"
                                         value={newTemplate.triggerType}
                                         onChange={e => {
                                             const type = e.target.value as any;
@@ -191,11 +191,11 @@ export function Settings() {
                                 {/* Dynamic Offset UI */}
                                 {(newTemplate.triggerType === '15_min_before' || newTemplate.triggerType === 'last_lesson_end' || newTemplate.triggerType === 'lesson_start' || newTemplate.triggerType === 'lesson_end') && (
                                     <div>
-                                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Zaman Farkı (Dakika)</label>
+                                        <label className="block text-xs font-medium text-slate-500 mb-1">Zaman Farkı (Dakika)</label>
                                         <div className="flex items-center gap-2">
                                             <input
                                                 type="number"
-                                                className="w-full text-sm border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                                                className="w-full text-sm border-slate-300 rounded-md bg-white text-slate-900"
                                                 value={newTemplate.offsetMinutes}
                                                 onChange={e => setNewTemplate(prev => ({ ...prev, offsetMinutes: Number(e.target.value) }))}
                                                 placeholder="0"
@@ -211,10 +211,10 @@ export function Settings() {
                                 {/* Fixed Time Input */}
                                 {newTemplate.triggerType === 'fixed_time' && (
                                     <div>
-                                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Saat Seçin (24 Saat ve 15dk aralıklı)</label>
+                                        <label className="block text-xs font-medium text-slate-500 mb-1">Saat Seçin (24 Saat ve 15dk aralıklı)</label>
                                         <div className="flex gap-2">
                                             <select
-                                                className="w-20 text-sm border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                                                className="w-20 text-sm border-slate-300 rounded-md bg-white text-slate-900"
                                                 value={newTemplate.triggerTime ? newTemplate.triggerTime.split(':')[0] : '09'}
                                                 onChange={e => {
                                                     const currentMinute = newTemplate.triggerTime ? newTemplate.triggerTime.split(':')[1] : '00';
@@ -228,7 +228,7 @@ export function Settings() {
                                             </select>
                                             <span className="self-center font-bold text-slate-400">:</span>
                                             <select
-                                                className="w-20 text-sm border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                                                className="w-20 text-sm border-slate-300 rounded-md bg-white text-slate-900"
                                                 value={newTemplate.triggerTime ? newTemplate.triggerTime.split(':')[1] : '00'}
                                                 onChange={e => {
                                                     const currentHour = newTemplate.triggerTime ? newTemplate.triggerTime.split(':')[0] : '09';
@@ -246,7 +246,7 @@ export function Settings() {
 
                                 {/* Days Filter */}
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Gün Filtresi (Opsiyonel)</label>
+                                    <label className="block text-xs font-medium text-slate-500 mb-2">Gün Filtresi (Opsiyonel)</label>
                                     <div className="flex flex-wrap gap-2">
                                         {['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'].map((day, idx) => {
                                             const isSelected = !newTemplate.daysFilter || newTemplate.daysFilter.includes(idx);
@@ -263,7 +263,7 @@ export function Settings() {
                                                         }
                                                         setNewTemplate(prev => ({ ...prev, daysFilter: next }));
                                                     }}
-                                                    className={`px-2 py-1 text-xs rounded border ${isSelected ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 font-medium' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'}`}
+                                                    className={`px-2 py-1 text-xs rounded border ${isSelected ? 'bg-blue-50 border-blue-200 text-blue-700 font-medium' : 'bg-white border-slate-200 text-slate-500'}`}
                                                 >
                                                     {day}
                                                 </button>
@@ -274,9 +274,9 @@ export function Settings() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Mesaj Metni</label>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Mesaj Metni</label>
                                     <textarea
-                                        className="w-full text-sm border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                                        className="w-full text-sm border-slate-300 rounded-md bg-white text-slate-900"
                                         rows={3}
                                         value={newTemplate.messageTemplate}
                                         onChange={e => setNewTemplate(prev => ({ ...prev, messageTemplate: e.target.value }))}
@@ -292,7 +292,7 @@ export function Settings() {
                                         await handleAdd();
                                         alert('Şablon başarıyla kaydedildi!');
                                     }}
-                                    className="w-full bg-slate-900 dark:bg-blue-600 text-white py-2 rounded-md text-sm font-medium hover:bg-slate-800 dark:hover:bg-blue-700 flex justify-center items-center gap-2"
+                                    className="w-full bg-slate-900 text-white py-2 rounded-md text-sm font-medium hover:bg-slate-800 flex justify-center items-center gap-2"
                                 >
                                     <Plus size={16} />
                                     Şablonu Kaydet
@@ -305,11 +305,11 @@ export function Settings() {
 
             {activeTab === 'data' && (
                 <div className="space-y-6">
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
                             <div>
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Veri Temizliği</h3>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">Silinmiş okullardan kalan artık verileri temizler.</p>
+                                <h3 className="text-lg font-bold text-slate-900">Veri Temizliği</h3>
+                                <p className="text-sm text-slate-500">Silinmiş okullardan kalan artık verileri temizler.</p>
                             </div>
                             <button
                                 onClick={handleScan}
@@ -323,8 +323,8 @@ export function Settings() {
 
                         {orphanCounts && (
                             <div className={`p-4 rounded-lg border flex items-start gap-3 ${(orphanCounts.students + orphanCounts.payments + orphanCounts.classes) > 0
-                                ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-400'
-                                : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-400'
+                                ? 'bg-amber-50 border-amber-200 text-amber-900'
+                                : 'bg-emerald-50 border-emerald-200 text-emerald-900'
                                 }`}>
                                 {(orphanCounts.students + orphanCounts.payments + orphanCounts.classes) > 0 ? (
                                     <AlertTriangle className="shrink-0 mt-0.5" />
@@ -350,7 +350,7 @@ export function Settings() {
                             </div>
                         )}
 
-                        <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg text-xs text-slate-500 dark:text-slate-400">
+                        <div className="mt-4 p-4 bg-slate-50 rounded-lg text-xs text-slate-500">
                             <strong>Bilgi:</strong> Okul silme işlemi sırasında bazen bağlantılı veriler (öğrenciler, ödemeler) tam olarak silinemeyebilir.
                             Bu araç, herhangi bir okula bağlı olmayan bu "hayalet" verileri tespit eder ve kalıcı olarak siler.
                         </div>
@@ -359,12 +359,12 @@ export function Settings() {
             )}
 
             {activeTab === 'appearance' && (
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-8">
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-8">
                     {/* Theme Settings Removed - Permanently Dark Mode */}
 
                     {/* Branding Settings (Admin Only) */}
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">Marka ve Logo</h3>
+                        <h3 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-200 pb-2">Marka ve Logo</h3>
                         <SettingsForm />
                     </div>
                 </div>
@@ -403,28 +403,28 @@ function SettingsForm() {
     return (
         <div className="space-y-4 max-w-lg">
             <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Sistem Başlığı</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Sistem Başlığı</label>
                 <input
                     type="text"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Örn: Atölye Vizyon"
                 />
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Sol menüde üst kısımda görünen ana başlık.</p>
+                <p className="text-xs text-slate-500 mt-1">Sol menüde üst kısımda görünen ana başlık.</p>
             </div>
             <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Logo URL</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Logo URL</label>
                 <div className="flex gap-2">
                     <input
                         type="text"
-                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                         placeholder="https://..."
                         value={logo}
                         onChange={(e) => setLogo(e.target.value)}
                     />
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                     Şeffaf PNG veya SVG formatında bir görsel URL'i giriniz.
                 </p>
             </div>

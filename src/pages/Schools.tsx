@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
@@ -50,14 +50,24 @@ export function Schools() {
     const [editSchoolColor, setEditSchoolColor] = useState('');
     const [editSchoolImage, setEditSchoolImage] = useState('');
 
+    // Sync state when editingSchoolId changes
+    useEffect(() => {
+        if (editingSchoolId) {
+            const school = schools.find(s => s.id === editingSchoolId);
+            if (school) {
+                setEditSchoolName(school.name || '');
+                setEditSchoolAddress(school.address || '');
+                setEditSchoolPhone(school.phone || '');
+                setEditSchoolColor(school.color || '#2563eb');
+                setEditSchoolImage(school.imageUrl || '');
+                setIsEditModalOpen(true);
+            }
+        }
+    }, [editingSchoolId, schools]);
+
     const handleEditSchoolClick = (school: School) => {
         setEditingSchoolId(school.id);
-        setEditSchoolName(school.name);
-        setEditSchoolAddress(school.address);
-        setEditSchoolPhone(school.phone);
-        setEditSchoolColor(school.color || '#2563eb');
-        setEditSchoolImage(school.imageUrl || '');
-        setIsEditModalOpen(true);
+        // Modal open is handled by useEffect
     };
 
     const handleUpdateSchool = async (e: React.FormEvent) => {
@@ -200,7 +210,7 @@ export function Schools() {
                             placeholder="Örn: X Koleji"
                             value={newSchoolName}
                             onChange={e => setNewSchoolName(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
                     </div>
                     <div>
@@ -210,7 +220,7 @@ export function Schools() {
                             placeholder="Okulun açık adresi..."
                             value={newSchoolAddress}
                             onChange={e => setNewSchoolAddress(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none h-24"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none h-24 text-slate-900"
                         />
                     </div>
                     <div>
@@ -220,7 +230,7 @@ export function Schools() {
                             placeholder="0212 ..."
                             value={newSchoolPhone}
                             onChange={e => setNewSchoolPhone(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
                     </div>
                     <div>
@@ -247,7 +257,7 @@ export function Schools() {
                             placeholder="https://..."
                             value={newSchoolImage}
                             onChange={e => setNewSchoolImage(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-slate-900"
                         />
                     </div>
                     <button
@@ -273,7 +283,7 @@ export function Schools() {
                             placeholder="Örn: X Koleji"
                             value={editSchoolName}
                             onChange={e => setEditSchoolName(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
                     </div>
                     <div>
@@ -283,7 +293,7 @@ export function Schools() {
                             placeholder="Okulun açık adresi..."
                             value={editSchoolAddress}
                             onChange={e => setEditSchoolAddress(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none h-24"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none h-24 text-slate-900"
                         />
                     </div>
                     <div>
@@ -293,7 +303,7 @@ export function Schools() {
                             placeholder="0212 ..."
                             value={editSchoolPhone}
                             onChange={e => setEditSchoolPhone(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
                     </div>
                     <div>
@@ -320,7 +330,7 @@ export function Schools() {
                             placeholder="https://..."
                             value={editSchoolImage}
                             onChange={e => setEditSchoolImage(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-slate-900"
                         />
                     </div>
                     <button

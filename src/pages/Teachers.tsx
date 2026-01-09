@@ -235,7 +235,7 @@ export function Teachers() {
                                 required
                                 value={name}
                                 onChange={e => setName(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
                         </div>
 
@@ -247,7 +247,7 @@ export function Teachers() {
                                 placeholder="5XX XXX XX XX"
                                 value={phone}
                                 onChange={e => setPhone(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
                         </div>
 
@@ -256,7 +256,7 @@ export function Teachers() {
                             <select
                                 value={role}
                                 onChange={(e) => setRole(e.target.value as 'admin' | 'teacher')}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                             >
                                 <option value="teacher">Öğretmen</option>
                                 <option value="admin">Yönetici</option>
@@ -271,7 +271,7 @@ export function Teachers() {
                                 placeholder="Giriş şifresi belirleyin"
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-slate-900"
                             />
                         </div>
 
@@ -281,7 +281,7 @@ export function Teachers() {
                                 type="email"
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
                         </div>
                     </div>
@@ -293,7 +293,7 @@ export function Teachers() {
                             placeholder="Matematik, Robotik..."
                             value={specialties}
                             onChange={e => setSpecialties(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
                     </div>
 
@@ -332,7 +332,7 @@ function TeacherCard({ teacher, status, onEdit, onDelete, onManageLeaves }: {
     onDelete: () => void,
     onManageLeaves: () => void
 }) {
-    const borderColor = status === 'unassigned' ? 'border-orange-200' : 'border-green-200';
+    const borderColor = status === 'admin' ? 'border-purple-500 shadow-purple-50' : status === 'unassigned' ? 'border-orange-200 shadow-orange-50' : 'border-green-200 shadow-green-50';
 
     // const isActive = status === 'assigned' || status === 'admin';
     const statusText = status === 'admin' ? 'Yönetici' : status === 'assigned' ? 'Ders Ataması Var' : 'Ders Ataması Yok';

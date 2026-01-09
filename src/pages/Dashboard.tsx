@@ -199,14 +199,29 @@ function StatCard({ title, value, icon: Icon, color }: { title: string, value: s
 }
 
 function SchoolCard({ school }: { school: any }) {
-    const { students } = useStore();
+    const { students, payments } = useStore();
     const navigate = useNavigate();
     const studentCount = students.filter(s => s.schoolId === school.id && s.status === 'Active').length;
+
+    // Payment Status Calculation (Same logic as Schools.tsx)
+    const activeStudents = students.filter(s => s.schoolId === school.id && s.status === 'Active');
+    const expectedAmount = activeStudents.length * (school.defaultPrice || 0);
+    const collectedAmount = payments
+        .filter(p => p.schoolId === school.id)
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+    let borderColorClass = 'border-slate-100'; // Default gray
+    if (expectedAmount > 0) {
+        const ratio = collectedAmount / expectedAmount;
+        if (ratio >= 1) borderColorClass = 'border-emerald-500 border-2 shadow-emerald-50'; // Green (>100%)
+        else if (ratio >= 0.25) borderColorClass = 'border-orange-400 border-2 shadow-orange-50'; // Orange (25-99%)
+        else borderColorClass = 'border-red-500 border-2 shadow-red-50'; // Red (<25%)
+    }
 
     return (
         <div
             onClick={() => navigate(`/school/${school.id}`)}
-            className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow group cursor-pointer"
+            className={`bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow group cursor-pointer ${borderColorClass}`}
         >
             <div
                 className="h-32 flex items-center justify-center bg-cover bg-center"
