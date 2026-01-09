@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
@@ -6,6 +6,7 @@ import { ArrowLeft, MapPin, Phone, Users, Wallet, Plus, Calendar, Clock, User, S
 import { Tabs } from '../components/Tabs';
 import { Modal } from '../components/Modal';
 import { AssignmentModal } from '../components/AssignmentModal';
+import { TimeSelect } from '../components/TimeSelect';
 import type { ClassGroup, Student } from '../types';
 
 export function SchoolDetail() {
@@ -990,76 +991,13 @@ export function SchoolDetail() {
                             {assignments.filter(a => a.classGroupId === editingClassId).map(assignment => {
                                 const teacher = teachers.find(t => t.id === assignment.teacherId);
                                 return (
-                                    <div key={assignment.id} className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                        <div className="grid grid-cols-2 gap-3 mb-3">
-                                            <div>
-                                                <label className="block text-xs font-medium text-slate-500 mb-1">Gün</label>
-                                                <select
-                                                    className="w-full text-sm border-slate-300 rounded-md text-slate-900"
-                                                    value={assignment.dayOfWeek}
-                                                    onChange={(e) => {
-                                                        const newVal = parseInt(e.target.value);
-                                                        if (window.confirm('Ders gününü değiştirmek istiyor musunuz? Gelecek dersler yeniden oluşturulacak.')) {
-                                                            updateAssignment(assignment.id, { dayOfWeek: newVal }, true);
-                                                        }
-                                                    }}
-                                                >
-                                                    <option value={1}>Pazartesi</option>
-                                                    <option value={2}>Salı</option>
-                                                    <option value={3}>Çarşamba</option>
-                                                    <option value={4}>Perşembe</option>
-                                                    <option value={5}>Cuma</option>
-                                                    <option value={6}>Cumartesi</option>
-                                                    <option value={7}>Pazar</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-slate-500 mb-1">Saatler (Başlangıç - Bitiş)</label>
-                                                <div className="flex gap-2 items-center">
-                                                    <input
-                                                        type="time"
-                                                        className="w-full text-sm border-slate-300 rounded-md text-slate-900"
-                                                        defaultValue={assignment.startTime}
-                                                        step="300"
-                                                        onBlur={(e) => {
-                                                            if (e.target.value !== assignment.startTime) {
-                                                                if (window.confirm('Ders saatini değiştirmek istiyor musunuz? Gelecek dersler güncellenecek.')) {
-                                                                    updateAssignment(assignment.id, { startTime: e.target.value }, true);
-                                                                } else {
-                                                                    e.target.value = assignment.startTime;
-                                                                }
-                                                            }
-                                                        }}
-                                                    />
-                                                    <span className="text-slate-400">-</span>
-                                                    <input
-                                                        type="time"
-                                                        className="w-full text-sm border-slate-300 rounded-md text-slate-900"
-                                                        defaultValue={assignment.endTime || '10:00'}
-                                                        step="300"
-                                                        onBlur={(e) => {
-                                                            if (e.target.value !== (assignment.endTime || '10:00')) {
-                                                                if (window.confirm('Ders bitiş saatini değiştirmek istiyor musunuz? Gelecek dersler güncellenecek.')) {
-                                                                    updateAssignment(assignment.id, { endTime: e.target.value }, true);
-                                                                } else {
-                                                                    e.target.value = assignment.endTime || '10:00';
-                                                                }
-                                                            }
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs text-slate-500">
-                                            <span>Öğretmen: <strong>{teacher?.name}</strong></span>
-                                            <button
-                                                onClick={() => deleteAssignment(assignment.id)}
-                                                className="text-red-500 hover:text-red-700"
-                                            >
-                                                Kaldır
-                                            </button>
-                                        </div>
-                                    </div>
+                                    <AssignmentItem
+                                        key={assignment.id}
+                                        assignment={assignment}
+                                        teacher={teacher}
+                                        updateAssignment={updateAssignment}
+                                        deleteAssignment={deleteAssignment}
+                                    />
                                 );
                             })}
                             {assignments.filter(a => a.classGroupId === editingClassId).length === 0 && (
@@ -1084,5 +1022,95 @@ export function SchoolDetail() {
                 </div>
             </Modal>
         </div >
+    );
+}
+
+function AssignmentItem({ assignment, teacher, updateAssignment, deleteAssignment }: { assignment: any, teacher: any, updateAssignment: any, deleteAssignment: any }) {
+    const [localDay, setLocalDay] = useState(assignment.dayOfWeek);
+    const [localStart, setLocalStart] = useState(assignment.startTime);
+    const [localEnd, setLocalEnd] = useState(assignment.endTime || '10:00');
+
+    // Update local state when prop changes (external update)
+    useEffect(() => {
+        setLocalDay(assignment.dayOfWeek);
+        setLocalStart(assignment.startTime);
+        setLocalEnd(assignment.endTime || '10:00');
+    }, [assignment]);
+
+    const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+        // Check if new focus is still within this component
+        if (e.currentTarget.contains(e.relatedTarget)) {
+            return;
+        }
+
+        // Focus left the component -> Check for changes
+        if (
+            localDay !== assignment.dayOfWeek ||
+            localStart !== assignment.startTime ||
+            localEnd !== (assignment.endTime || '10:00')
+        ) {
+            if (window.confirm('Değişiklikleri kaydetmek istiyor musunuz? Gelecek dersler güncellenecek.')) {
+                updateAssignment(assignment.id, {
+                    dayOfWeek: localDay,
+                    startTime: localStart,
+                    endTime: localEnd
+                }, true);
+            } else {
+                // Revert changes
+                setLocalDay(assignment.dayOfWeek);
+                setLocalStart(assignment.startTime);
+                setLocalEnd(assignment.endTime || '10:00');
+            }
+        }
+    };
+
+    return (
+        <div
+            className="bg-slate-50 p-3 rounded-lg border border-slate-200 focus-within:ring-2 focus-within:ring-blue-100 transition-all"
+            onBlur={handleBlur}
+            tabIndex={-1} // Allow focus handling
+        >
+            <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Gün</label>
+                    <select
+                        className="w-full text-sm border-slate-300 rounded-md text-slate-900 cursor-pointer"
+                        value={localDay}
+                        onChange={(e) => setLocalDay(parseInt(e.target.value))}
+                    >
+                        <option value={1}>Pazartesi</option>
+                        <option value={2}>Salı</option>
+                        <option value={3}>Çarşamba</option>
+                        <option value={4}>Perşembe</option>
+                        <option value={5}>Cuma</option>
+                        <option value={6}>Cumartesi</option>
+                        <option value={7}>Pazar</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Saatler (Başlangıç - Bitiş)</label>
+                    <div className="flex gap-2 items-center">
+                        <TimeSelect
+                            value={localStart}
+                            onChange={setLocalStart}
+                        />
+                        <span className="text-slate-400">-</span>
+                        <TimeSelect
+                            value={localEnd}
+                            onChange={setLocalEnd}
+                        />
+                    </div>
+                </div>
+            </div>
+            <div className="flex justify-between items-center text-xs text-slate-500">
+                <span>Öğretmen: <strong>{teacher?.name}</strong></span>
+                <button
+                    onClick={() => deleteAssignment(assignment.id)}
+                    className="text-red-500 hover:text-red-700"
+                >
+                    Kaldır
+                </button>
+            </div>
+        </div>
     );
 }
