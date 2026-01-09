@@ -4,6 +4,8 @@
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
+  /* Force light mode for form elements (date picker icons etc) */
+  color-scheme: light;
 }
 
 body {
@@ -16,53 +18,86 @@ body {
   /* sw-slate-50 match */
 }
 
-/* Force light color scheme for form elements to ensure calendar icons are dark */
-:root {
-  color-scheme: light;
+/* Global Form Styles Override - Pure CSS to avoid Build Errors */
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]):not([type="range"]),
+select,
+textarea {
+  color: #0f172a !important;
+  /* text-slate-900 */
+  background-color: #ffffff !important;
+  border-width: 2px !important;
+  border-radius: 0.5rem !important;
+  /* rounded-lg */
+  outline: none !important;
+  transition: all 0.3s ease !important;
 }
 
-/* Make placeholders more visible globally */
+/* Placeholder Visibility */
 ::placeholder {
   color: #64748b !important;
   /* slate-500 */
   opacity: 1;
 }
 
-/* Global Form Styles Override */
-@layer components {
+/* Dynamic Borders Logic - Pure CSS */
 
-  /* Hedef: Tüm metin tabanlı inputlar, select ve textarea'lar */
-  input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]):not([type="range"]),
-  select,
-  textarea {
-    @apply text-slate-900 bg-white border-2 rounded-lg shadow-sm outline-none transition-all duration-300 !important;
-  }
+/* Default Border (Purple) - Fallback */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  border-color: #c084fc !important;
+  /* purple-400 */
+}
 
-  /* Varsayılan / Boş Durum (Eğer placeholder varsa ve görünüyorsa) -> Kırmızı Çerçeve */
-  input:not([type="checkbox"]):not([type="radio"]):placeholder-shown,
-  textarea:placeholder-shown {
-    @apply border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-100;
-  }
+/* Empty State (Placeholder Shown) -> Red Border */
+input:not([type="checkbox"]):not([type="radio"]):placeholder-shown,
+textarea:placeholder-shown {
+  border-color: #f87171 !important;
+  /* red-400 */
+}
 
-  /* Dolu Durum (Placeholder görünmüyorsa) -> Yeşil Çerçeve */
-  input:not([type="checkbox"]):not([type="radio"]):not(:placeholder-shown),
-  textarea:not(:placeholder-shown) {
-    @apply border-emerald-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100;
-  }
+/* Empty State Focus */
+input:not([type="checkbox"]):not([type="radio"]):placeholder-shown:focus,
+textarea:placeholder-shown:focus {
+  border-color: #ef4444 !important;
+  /* red-500 */
+  box-shadow: 0 0 0 4px #fee2e2 !important;
+  /* red-100 ring */
+}
 
-  /* Select elemanları için (Placeholder mantığı çalışmaz, o yüzden varsayılan mor yapalım veya dolu kabul edelim) */
-  select {
-    @apply border-purple-400 focus:border-purple-600 focus:ring-4 focus:ring-purple-100;
-  }
+/* Filled State (No Placeholder) -> Green Border */
+input:not([type="checkbox"]):not([type="radio"]):not(:placeholder-shown),
+textarea:not(:placeholder-shown) {
+  border-color: #34d399 !important;
+  /* emerald-400 */
+}
 
-  /* Date ve Time inputları için özel durum (her zaman dolu gibi veya özel) */
-  input[type="date"],
-  input[type="time"] {
-    @apply border-purple-400 focus:border-purple-600;
-  }
+/* Filled State Focus */
+input:not([type="checkbox"]):not([type="radio"]):not(:placeholder-shown):focus,
+textarea:not(:placeholder-shown):focus {
+  border-color: #059669 !important;
+  /* emerald-600 */
+  box-shadow: 0 0 0 4px #d1fae5 !important;
+  /* emerald-100 ring */
+}
 
-  /* Login sayfasındaki inputlar için istisna (Orada özel tasarım var, class ile ezilmeli ama !important kullanırsak bozulabilir)
-     Burada !important kullanmayarak sayfa içi stillerin ezmesine izin vermeye çalışalım ama yukarıda !important kullandık.
-     Login sayfasını düzeltmek gerekebilir. 
-  */
+/* Select Elements (Always Green/Purple as they don't support placeholder-shown well) */
+select {
+  border-color: #c084fc !important;
+  /* purple-400 */
+}
+
+select:focus {
+  border-color: #9333ea !important;
+  /* purple-600 */
+  box-shadow: 0 0 0 4px #f3e8ff !important;
+  /* purple-100 ring */
+}
+
+/* Login Page Override (Specific Class) */
+/* We rely on inline styles with !important in Login.tsx, but just in case */
+.login-input {
+  background-color: rgba(15, 23, 42, 0.5) !important;
+  color: white !important;
+  border-color: #334155 !important;
 }
