@@ -71,7 +71,7 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
                         value={teacherId}
                         onChange={(e) => setTeacherId(e.target.value)}
                         required
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                     >
                         <option value="">Seçiniz...</option>
                         {teachers.map((t) => (
@@ -90,7 +90,7 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
                     <select
                         value={dayOfWeek}
                         onChange={(e) => setDayOfWeek(Number(e.target.value))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                     >
                         {DAYS.map((d) => (
                             <option key={d.value} value={d.value}>{d.label}</option>
@@ -109,7 +109,7 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
                         <select
                             value={startTime}
                             onChange={(e) => setStartTime(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                         >
                             {TIME_SLOTS.map(t => (
                                 <option key={t} value={t}>{t}</option>
@@ -126,7 +126,7 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
                         <select
                             value={endTime}
                             onChange={(e) => setEndTime(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                         >
                             {TIME_SLOTS.map(t => (
                                 <option key={t} value={t}>{t}</option>

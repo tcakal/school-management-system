@@ -346,52 +346,7 @@ export function SchoolDetail() {
                                                 {c.schedule || 'Planlanmamış'}
                                             </div>
                                         </div>
-                                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleEditClassClick(c);
-                                                }}
-                                                className="rounded-full p-1 border shadow-sm transition-colors text-slate-400 hover:text-blue-500 bg-white hover:border-blue-200"
-                                                title="Sınıfı Düzenle"
-                                            >
-                                                <Settings size={16} />
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (window.confirm(c.status === 'archived' ? 'Bu sınıfı tekrar aktif etmek istiyor musunuz?' : 'Bu sınıfı arşivlemek istiyor musunuz? Gelecek dersler takvimden silinecek ama geçmiş kayıtlar tutulacaktır.')) {
-                                                        useStore.getState().toggleClassStatus(c.id, c.status === 'archived' ? 'active' : 'archived');
-                                                    }
-                                                }}
-                                                className={`rounded-full p-1 border shadow-sm transition-colors ${c.status === 'archived'
-                                                    ? 'text-slate-400 hover:text-green-600 bg-white hover:border-green-200'
-                                                    : 'text-slate-300 hover:text-orange-500 bg-white hover:border-orange-200'
-                                                    }`}
-                                                title={c.status === 'archived' ? "Sınıfı Aktif Et" : "Sınıfı Arşivle"}
-                                            >
-                                                {c.status === 'archived' ? (
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
-                                                ) : (
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg>
-                                                )}
-                                            </button>
-                                            {useAuth.getState().user?.role === 'admin' && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (window.confirm('Bu sınıfı TAMAMEN silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!')) {
-                                                            const { deleteClassGroup } = useStore.getState();
-                                                            deleteClassGroup(c.id);
-                                                        }
-                                                    }}
-                                                    className="text-slate-300 hover:text-red-500 bg-white rounded-full p-1 border border-slate-100 shadow-sm"
-                                                    title="Sınıfı Tamamen Sil"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                                                </button>
-                                            )}
-                                        </div>
+
 
                                         <div className="space-y-3 mb-4">
                                             {classAssignments.length > 0 ? (
@@ -440,6 +395,52 @@ export function SchoolDetail() {
                                             <span>
                                                 {students.filter(s => s.classGroupId === c.id && s.status === 'Active').length} Öğrenci
                                             </span>
+                                            <div className="flex gap-1">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditClassClick(c);
+                                                    }}
+                                                    className="rounded-full p-1 border shadow-sm transition-colors text-slate-400 hover:text-blue-500 bg-white hover:border-blue-200"
+                                                    title="Sınıfı Düzenle"
+                                                >
+                                                    <Settings size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (window.confirm(c.status === 'archived' ? 'Bu sınıfı tekrar aktif etmek istiyor musunuz?' : 'Bu sınıfı arşivlemek istiyor musunuz? Gelecek dersler takvimden silinecek ama geçmiş kayıtlar tutulacaktır.')) {
+                                                            useStore.getState().toggleClassStatus(c.id, c.status === 'archived' ? 'active' : 'archived');
+                                                        }
+                                                    }}
+                                                    className={`rounded-full p-1 border shadow-sm transition-colors ${c.status === 'archived'
+                                                        ? 'text-slate-400 hover:text-green-600 bg-white hover:border-green-200'
+                                                        : 'text-slate-300 hover:text-orange-500 bg-white hover:border-orange-200'
+                                                        }`}
+                                                    title={c.status === 'archived' ? "Sınıfı Aktif Et" : "Sınıfı Arşivle"}
+                                                >
+                                                    {c.status === 'archived' ? (
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
+                                                    ) : (
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg>
+                                                    )}
+                                                </button>
+                                                {useAuth.getState().user?.role === 'admin' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (window.confirm('Bu sınıfı TAMAMEN silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!')) {
+                                                                const { deleteClassGroup } = useStore.getState();
+                                                                deleteClassGroup(c.id);
+                                                            }
+                                                        }}
+                                                        className="text-slate-300 hover:text-red-500 bg-white rounded-full p-1 border border-slate-100 shadow-sm"
+                                                        title="Sınıfı Tamamen Sil"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -466,7 +467,7 @@ export function SchoolDetail() {
                                         placeholder="Öğrenci ara..."
                                         value={studentSearchTerm}
                                         onChange={(e) => setStudentSearchTerm(e.target.value)}
-                                        className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-full md:w-64"
+                                        className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-full md:w-64 text-slate-900"
                                     />
                                 </div>
 
@@ -607,7 +608,7 @@ export function SchoolDetail() {
                                     type="number"
                                     value={price}
                                     onChange={(e) => setPrice(e.target.value)}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                                 />
                             </div>
                             <div>
@@ -615,7 +616,7 @@ export function SchoolDetail() {
                                 <textarea
                                     value={paymentTerms}
                                     onChange={(e) => setPaymentTerms(e.target.value)}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none text-slate-900"
                                     placeholder="Örn: 9 Taksit, Ayın 15'inde ödenir."
                                 ></textarea>
                             </div>
@@ -645,7 +646,7 @@ export function SchoolDetail() {
                             placeholder="Örn: Robotik A"
                             value={newClassName}
                             onChange={e => setNewClassName(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
                     </div>
                     <div>
@@ -655,7 +656,7 @@ export function SchoolDetail() {
                             placeholder="Örn: Salı 14:00"
                             value={newClassSchedule}
                             onChange={e => setNewClassSchedule(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
                     </div>
                     <button
@@ -682,7 +683,7 @@ export function SchoolDetail() {
                                 placeholder="Ad Soyad"
                                 value={newStudentName}
                                 onChange={e => setNewStudentName(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
                         </div>
                         <div>
@@ -692,7 +693,7 @@ export function SchoolDetail() {
                                 placeholder="0555 555 5555"
                                 value={newStudentPhone}
                                 onChange={e => setNewStudentPhone(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
                         </div>
                     </div>
@@ -703,7 +704,7 @@ export function SchoolDetail() {
                                 type="date"
                                 value={newStudentBirthDate}
                                 onChange={e => setNewStudentBirthDate(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
                         </div>
                         <div>
@@ -711,7 +712,7 @@ export function SchoolDetail() {
                             <select
                                 value={newStudentGrade}
                                 onChange={e => setNewStudentGrade(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                             >
                                 <option value="">Seçiniz</option>
                                 {Array.from({ length: 12 }, (_, i) => i + 1).map(g => (
@@ -728,7 +729,7 @@ export function SchoolDetail() {
                             placeholder="veli@ornek.com"
                             value={newStudentEmail}
                             onChange={e => setNewStudentEmail(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
                     </div>
                     <div>
@@ -738,7 +739,7 @@ export function SchoolDetail() {
                             placeholder="Açık adres..."
                             value={newStudentAddress}
                             onChange={e => setNewStudentAddress(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none text-slate-900"
                         />
                     </div>
                     <div>
@@ -748,7 +749,7 @@ export function SchoolDetail() {
                             placeholder="Alerji, ilaç kullanımı vb..."
                             value={newStudentMedical}
                             onChange={e => setNewStudentMedical(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none text-slate-900"
                         />
                     </div>
                     <div>
@@ -757,7 +758,7 @@ export function SchoolDetail() {
                             value={selectedClassId}
                             onChange={e => setSelectedClassId(e.target.value)}
                             required
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                         >
                             <option value="">Sınıf Seçilmedi</option>
                             {schoolClasses.map(cls => (
@@ -789,7 +790,7 @@ export function SchoolDetail() {
                                 placeholder="Ad Soyad"
                                 value={editStudentName}
                                 onChange={e => setEditStudentName(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
                         </div>
                         <div>
@@ -799,7 +800,7 @@ export function SchoolDetail() {
                                 placeholder="0555 555 5555"
                                 value={editStudentPhone}
                                 onChange={e => setEditStudentPhone(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
                         </div>
                     </div>
@@ -810,7 +811,7 @@ export function SchoolDetail() {
                                 type="date"
                                 value={editStudentBirthDate}
                                 onChange={e => setEditStudentBirthDate(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
                         </div>
                         <div>
@@ -818,7 +819,7 @@ export function SchoolDetail() {
                             <select
                                 value={editStudentGrade}
                                 onChange={e => setEditStudentGrade(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                             >
                                 <option value="">Seçiniz</option>
                                 {Array.from({ length: 12 }, (_, i) => i + 1).map(g => (
@@ -835,7 +836,7 @@ export function SchoolDetail() {
                             placeholder="veli@ornek.com"
                             value={editStudentEmail}
                             onChange={e => setEditStudentEmail(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
                     </div>
                     <div>
@@ -845,7 +846,7 @@ export function SchoolDetail() {
                             placeholder="Açık adres..."
                             value={editStudentAddress}
                             onChange={e => setEditStudentAddress(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none text-slate-900"
                         />
                     </div>
                     <div>
@@ -855,7 +856,7 @@ export function SchoolDetail() {
                             placeholder="Alerji, ilaç kullanımı vb..."
                             value={editStudentMedical}
                             onChange={e => setEditStudentMedical(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none text-slate-900"
                         />
                     </div>
                     <div>
@@ -864,7 +865,7 @@ export function SchoolDetail() {
                             value={editStudentClassId}
                             onChange={e => setEditStudentClassId(e.target.value)}
                             required
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                         >
                             <option value="">Sınıf Seçiniz</option>
                             {schoolClasses.map(cls => (
@@ -907,7 +908,7 @@ export function SchoolDetail() {
                             required
                             value={leaveDate}
                             onChange={e => setLeaveDate(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
                     </div>
 
@@ -917,7 +918,7 @@ export function SchoolDetail() {
                             placeholder="Örn: Taşınma, Maddi Nedenler, Memnuniyetsizlik..."
                             value={leaveReason}
                             onChange={e => setLeaveReason(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none text-slate-900"
                         />
                     </div>
 
@@ -959,7 +960,7 @@ export function SchoolDetail() {
                             <input
                                 type="text"
                                 required
-                                className="w-full border-slate-300 rounded-lg"
+                                className="w-full border-slate-300 rounded-lg text-slate-900"
                                 value={editClassName}
                                 onChange={e => setEditClassName(e.target.value)}
                             />
@@ -968,7 +969,7 @@ export function SchoolDetail() {
                             <label className="block text-sm font-medium text-slate-700 mb-1">Ders Programı (Görünen İsim)</label>
                             <input
                                 type="text"
-                                className="w-full border-slate-300 rounded-lg"
+                                className="w-full border-slate-300 rounded-lg text-slate-900"
                                 value={editClassSchedule}
                                 onChange={e => setEditClassSchedule(e.target.value)}
                             />
@@ -994,7 +995,7 @@ export function SchoolDetail() {
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-500 mb-1">Gün</label>
                                                 <select
-                                                    className="w-full text-sm border-slate-300 rounded-md"
+                                                    className="w-full text-sm border-slate-300 rounded-md text-slate-900"
                                                     value={assignment.dayOfWeek}
                                                     onChange={(e) => {
                                                         const newVal = parseInt(e.target.value);
@@ -1016,7 +1017,7 @@ export function SchoolDetail() {
                                                 <label className="block text-xs font-medium text-slate-500 mb-1">Saatler (Başlangıç - Bitiş)</label>
                                                 <div className="flex gap-2 items-center">
                                                     <select
-                                                        className="w-full text-sm border-slate-300 rounded-md"
+                                                        className="w-full text-sm border-slate-300 rounded-md text-slate-900"
                                                         value={assignment.startTime}
                                                         onChange={(e) => {
                                                             if (window.confirm('Ders saatini değiştirmek istiyor musunuz? Gelecek dersler güncellenecek.')) {
@@ -1030,7 +1031,7 @@ export function SchoolDetail() {
                                                     </select>
                                                     <span className="text-slate-400">-</span>
                                                     <select
-                                                        className="w-full text-sm border-slate-300 rounded-md"
+                                                        className="w-full text-sm border-slate-300 rounded-md text-slate-900"
                                                         value={assignment.endTime || '10:00'}
                                                         onChange={(e) => {
                                                             if (window.confirm('Ders bitiş saatini değiştirmek istiyor musunuz? Gelecek dersler güncellenecek.')) {

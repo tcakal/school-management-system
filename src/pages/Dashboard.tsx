@@ -109,7 +109,7 @@ export function Dashboard() {
                             placeholder="Örn: Atatürk İlkokulu"
                             value={newSchoolName}
                             onChange={(e) => setNewSchoolName(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
                     </div>
                     <div>
@@ -121,7 +121,7 @@ export function Dashboard() {
                             placeholder="İlçe / Şehir"
                             value={newSchoolAddress}
                             onChange={(e) => setNewSchoolAddress(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
                     </div>
                     <div>
@@ -133,7 +133,7 @@ export function Dashboard() {
                             placeholder="0212 555 5555"
                             value={newSchoolPhone}
                             onChange={(e) => setNewSchoolPhone(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
                     </div>
                     <div>
@@ -160,7 +160,7 @@ export function Dashboard() {
                             placeholder="https://..."
                             value={newSchoolImage}
                             onChange={e => setNewSchoolImage(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-slate-900"
                         />
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
