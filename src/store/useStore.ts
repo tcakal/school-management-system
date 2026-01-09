@@ -536,8 +536,17 @@ export const useStore = create<AppState>((set, get) => ({
     },
 
     deleteAssignment: async (id) => {
+        // Find which class this assignment belongs to before deleting
+        const assignment = get().assignments.find(a => a.id === id);
+        const classGroupId = assignment?.classGroupId;
+
         set((state) => ({ assignments: state.assignments.filter(a => a.id !== id) }));
         await supabase.from('teacher_assignments').delete().eq('id', id);
+
+        // Regenerate lessons to cleanup orphaned future lessons
+        if (classGroupId) {
+            await get().generateLessons(4, classGroupId);
+        }
     },
 
     generateLessons: async (weeks = 4, classGroupId) => {
