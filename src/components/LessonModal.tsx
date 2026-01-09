@@ -243,27 +243,23 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
                                         <label className="block text-xs font-medium text-slate-700 mb-1">Başlangıç</label>
-                                        <select
+                                        <input
+                                            type="time"
                                             className="w-full text-sm border-slate-300 rounded-md text-slate-900"
                                             value={rescheduleTime}
+                                            step="300"
                                             onChange={e => setRescheduleTime(e.target.value)}
-                                        >
-                                            {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'].map(t => (
-                                                <option key={t} value={t}>{t}</option>
-                                            ))}
-                                        </select>
+                                        />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-slate-700 mb-1">Bitiş</label>
-                                        <select
+                                        <input
+                                            type="time"
                                             className="w-full text-sm border-slate-300 rounded-md text-slate-900"
                                             value={rescheduleEndTime}
+                                            step="300"
                                             onChange={e => setRescheduleEndTime(e.target.value)}
-                                        >
-                                            {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'].map(t => (
-                                                <option key={t} value={t}>{t}</option>
-                                            ))}
-                                        </select>
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -327,16 +323,13 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-blue-700 mb-1">Saat</label>
-                                    <select
+                                    <input
+                                        type="time"
                                         className="w-full text-sm border-blue-200 rounded-md text-slate-900"
                                         value={rescheduleTime}
+                                        step="300"
                                         onChange={e => setRescheduleTime(e.target.value)}
-                                    >
-                                        <option value="">Seçiniz...</option>
-                                        {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'].map(t => (
-                                            <option key={t} value={t}>{t}</option>
-                                        ))}
-                                    </select>
+                                    />
                                 </div>
                             </div>
                         </div>

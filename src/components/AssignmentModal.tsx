@@ -106,15 +106,13 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
                                 Başlangıç
                             </div>
                         </label>
-                        <select
+                        <input
+                            type="time"
                             value={startTime}
                             onChange={(e) => setStartTime(e.target.value)}
+                            step="300"
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
-                        >
-                            {TIME_SLOTS.map(t => (
-                                <option key={t} value={t}>{t}</option>
-                            ))}
-                        </select>
+                        />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -123,15 +121,13 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
                                 Bitiş
                             </div>
                         </label>
-                        <select
+                        <input
+                            type="time"
                             value={endTime}
                             onChange={(e) => setEndTime(e.target.value)}
+                            step="300"
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
-                        >
-                            {TIME_SLOTS.map(t => (
-                                <option key={t} value={t}>{t}</option>
-                            ))}
-                        </select>
+                        />
                     </div>
                 </div>
 

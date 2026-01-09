@@ -87,82 +87,86 @@ export function Schedule() {
                 </div>
 
                 <div className="relative">
-                    {/* Time Slots */}
-                    {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'].map(time => (
-                        <div key={time} className="grid grid-cols-8 border-b border-slate-100 min-h-[100px]">
-                            <div className="p-4 border-r border-slate-100 text-center text-sm font-medium text-slate-400">
-                                {time}
-                            </div>
-                            {weekDays.map(day => {
-                                const dayLessons = lessons.filter(l =>
-                                    isSameDay(parseISO(l.date), day) &&
-                                    l.startTime === time
-                                );
+                    {/* Time Slots - Extended to cover full day */}
+                    {Array.from({ length: 15 }, (_, i) => i + 8).map(hour => {
+                        const timeLabel = `${hour.toString().padStart(2, '0')}:00`;
 
-                                return (
-                                    <div key={day.toString()} className="p-2 border-r border-slate-100 relative group">
-                                        {dayLessons.map(lesson => {
-                                            const group = classGroups.find(g => g.id === lesson.classGroupId);
-                                            const teacher = teachers.find(t => t.id === lesson.teacherId);
+                        return (
+                            <div key={timeLabel} className="grid grid-cols-8 border-b border-slate-100 min-h-[100px]">
+                                <div className="p-4 border-r border-slate-100 text-center text-sm font-medium text-slate-400">
+                                    {timeLabel}
+                                </div>
+                                {weekDays.map(day => {
+                                    const dayLessons = lessons.filter(l => {
+                                        if (!isSameDay(parseISO(l.date), day)) return false;
+                                        const lessonHour = parseInt(l.startTime.split(':')[0]);
+                                        return lessonHour === hour;
+                                    }).sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-                                            return (
-                                                <button
-                                                    key={lesson.id}
-                                                    onClick={() => handleLessonClick(lesson)}
-                                                    className={`w-full text-left p-2 rounded-lg text-xs mb-1 transition-all hover:scale-[1.02] active:scale-95 shadow-sm border ${lesson.status === 'cancelled'
-                                                        ? 'bg-red-50 border-red-100 text-red-700 opacity-70 line-through decoration-red-500'
-                                                        : lesson.type === 'makeup'
-                                                            ? 'bg-orange-50 border-orange-100 text-orange-700'
-                                                            : 'bg-blue-50 border-blue-100 text-blue-700'
-                                                        }`}
-                                                >
-                                                    <div className="font-bold truncate">{group?.name}</div>
-                                                    <div className="truncate opacity-80">{teacher?.name}</div>
-                                                    {lesson.topic && (
-                                                        <div className="text-[10px] text-slate-500 italic truncate mt-0.5 border-t border-slate-200/50 pt-0.5">
-                                                            {lesson.topic}
+                                    return (
+                                        <div key={day.toString()} className="p-2 border-r border-slate-100 relative group">
+                                            {dayLessons.map(lesson => {
+                                                const group = classGroups.find(g => g.id === lesson.classGroupId);
+                                                const teacher = teachers.find(t => t.id === lesson.teacherId);
+
+                                                return (
+                                                    <button
+                                                        key={lesson.id}
+                                                        onClick={() => handleLessonClick(lesson)}
+                                                        className={`w-full text-left p-2 rounded-lg text-xs mb-1 transition-all hover:scale-[1.02] active:scale-95 shadow-sm border ${lesson.status === 'cancelled'
+                                                            ? 'bg-red-50 border-red-100 text-red-700 opacity-70 line-through decoration-red-500'
+                                                            : lesson.type === 'makeup'
+                                                                ? 'bg-orange-50 border-orange-100 text-orange-700'
+                                                                : 'bg-blue-50 border-blue-100 text-blue-700'
+                                                            }`}
+                                                    >
+                                                        {/* Time Display for Granular Lessons */}
+                                                        <div className="flex items-center gap-1 text-[10px] font-mono opacity-70 mb-0.5">
+                                                            <span>{lesson.startTime}</span>
+                                                            <span>-</span>
+                                                            <span>{lesson.endTime}</span>
                                                         </div>
-                                                    )}
 
-                                                    {lesson.status !== 'cancelled' && (
-                                                        <div className="flex justify-end mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <div
-                                                                role="button"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    const msg = `Merhaba, ${lesson.date} saat ${lesson.startTime} dersiniz için hatırlatmadır.`;
-                                                                    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-                                                                }}
-                                                                className="p-1 rounded-full bg-green-100 text-green-600 hover:bg-green-200 shadow-sm"
-                                                                title="WhatsApp Hatırlatma Gönder"
-                                                            >
-                                                                <Phone size={12} />
+                                                        <div className="font-bold truncate">{group?.name}</div>
+                                                        <div className="truncate opacity-80">{teacher?.name}</div>
+
+                                                        {lesson.status !== 'cancelled' && (
+                                                            <div className="flex justify-end mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <div
+                                                                    role="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const msg = `Merhaba, ${lesson.date} saat ${lesson.startTime} dersiniz için hatırlatmadır.`;
+                                                                        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                                                                    }}
+                                                                    className="p-1 rounded-full bg-green-100 text-green-600 hover:bg-green-200 shadow-sm"
+                                                                    title="WhatsApp Hatırlatma Gönder"
+                                                                >
+                                                                    <Phone size={12} />
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    )}
+                                                        )}
 
-                                                    {lesson.status === 'cancelled' && (
-                                                        <div className="text-[10px] mt-1 font-bold">İPTAL EDİLDİ</div>
-                                                    )}
-                                                    {lesson.topic && (
-                                                        <div className="text-[10px] text-slate-500 italic truncate mt-0.5 border-t border-slate-200/50 pt-0.5">
-                                                            {lesson.topic}
-                                                        </div>
-                                                    )}
-                                                    {lesson.status === 'cancelled' && (
-                                                        <div className="text-[10px] mt-1 font-bold">İPTAL EDİLDİ</div>
-                                                    )}
-                                                    {lesson.type === 'makeup' && (
-                                                        <div className="text-[10px] mt-1 font-bold">TELAFİ</div>
-                                                    )}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ))}
+                                                        {lesson.status === 'cancelled' && (
+                                                            <div className="text-[10px] mt-1 font-bold">İPTAL EDİLDİ</div>
+                                                        )}
+                                                        {lesson.topic && (
+                                                            <div className="text-[10px] text-slate-500 italic truncate mt-0.5 border-t border-slate-200/50 pt-0.5">
+                                                                {lesson.topic}
+                                                            </div>
+                                                        )}
+                                                        {lesson.type === 'makeup' && (
+                                                            <div className="text-[10px] mt-1 font-bold">TELAFİ</div>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 
