@@ -21,11 +21,7 @@ const DAYS = [
     { value: 7, label: 'Pazar' },
 ];
 
-const TIME_SLOTS = Array.from({ length: 25 }, (_, i) => {
-    const hour = Math.floor(i / 2) + 9; // Start from 09:00
-    const minute = i % 2 === 0 ? '00' : '30';
-    return `${hour.toString().padStart(2, '0')}:${minute}`;
-}).filter(t => parseInt(t.split(':')[0]) <= 21); // End at 21:00
+
 
 export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: AssignmentModalProps) {
     const { teachers, addAssignment } = useStore();

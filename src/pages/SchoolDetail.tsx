@@ -1016,33 +1016,37 @@ export function SchoolDetail() {
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-500 mb-1">Saatler (Başlangıç - Bitiş)</label>
                                                 <div className="flex gap-2 items-center">
-                                                    <select
+                                                    <input
+                                                        type="time"
                                                         className="w-full text-sm border-slate-300 rounded-md text-slate-900"
-                                                        value={assignment.startTime}
-                                                        onChange={(e) => {
-                                                            if (window.confirm('Ders saatini değiştirmek istiyor musunuz? Gelecek dersler güncellenecek.')) {
-                                                                updateAssignment(assignment.id, { startTime: e.target.value }, true);
+                                                        defaultValue={assignment.startTime}
+                                                        step="300"
+                                                        onBlur={(e) => {
+                                                            if (e.target.value !== assignment.startTime) {
+                                                                if (window.confirm('Ders saatini değiştirmek istiyor musunuz? Gelecek dersler güncellenecek.')) {
+                                                                    updateAssignment(assignment.id, { startTime: e.target.value }, true);
+                                                                } else {
+                                                                    e.target.value = assignment.startTime;
+                                                                }
                                                             }
                                                         }}
-                                                    >
-                                                        {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'].map(t => (
-                                                            <option key={t} value={t}>{t}</option>
-                                                        ))}
-                                                    </select>
+                                                    />
                                                     <span className="text-slate-400">-</span>
-                                                    <select
+                                                    <input
+                                                        type="time"
                                                         className="w-full text-sm border-slate-300 rounded-md text-slate-900"
-                                                        value={assignment.endTime || '10:00'}
-                                                        onChange={(e) => {
-                                                            if (window.confirm('Ders bitiş saatini değiştirmek istiyor musunuz? Gelecek dersler güncellenecek.')) {
-                                                                updateAssignment(assignment.id, { endTime: e.target.value }, true);
+                                                        defaultValue={assignment.endTime || '10:00'}
+                                                        step="300"
+                                                        onBlur={(e) => {
+                                                            if (e.target.value !== (assignment.endTime || '10:00')) {
+                                                                if (window.confirm('Ders bitiş saatini değiştirmek istiyor musunuz? Gelecek dersler güncellenecek.')) {
+                                                                    updateAssignment(assignment.id, { endTime: e.target.value }, true);
+                                                                } else {
+                                                                    e.target.value = assignment.endTime || '10:00';
+                                                                }
                                                             }
                                                         }}
-                                                    >
-                                                        {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].map(t => (
-                                                            <option key={t} value={t}>{t}</option>
-                                                        ))}
-                                                    </select>
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
