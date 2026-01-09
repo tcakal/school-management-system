@@ -1070,8 +1070,8 @@ function AssignmentItem({ assignment, teacher, updateAssignment, deleteAssignmen
             onBlur={handleBlur}
             tabIndex={-1} // Allow focus handling
         >
-            <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
+            <div className="flex flex-col sm:flex-row gap-3 mb-3">
+                <div className="w-full sm:w-1/3">
                     <label className="block text-xs font-medium text-slate-500 mb-1">Gün</label>
                     <select
                         className="w-full text-sm border-slate-300 rounded-md text-slate-900 cursor-pointer"
@@ -1087,17 +1087,19 @@ function AssignmentItem({ assignment, teacher, updateAssignment, deleteAssignmen
                         <option value={7}>Pazar</option>
                     </select>
                 </div>
-                <div>
+                <div className="w-full sm:w-2/3">
                     <label className="block text-xs font-medium text-slate-500 mb-1">Saatler (Başlangıç - Bitiş)</label>
                     <div className="flex gap-2 items-center">
                         <TimeSelect
                             value={localStart}
                             onChange={setLocalStart}
+                            className="flex-1"
                         />
                         <span className="text-slate-400">-</span>
                         <TimeSelect
                             value={localEnd}
                             onChange={setLocalEnd}
+                            className="flex-1"
                         />
                     </div>
                 </div>

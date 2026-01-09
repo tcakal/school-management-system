@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { TimeSelect } from './TimeSelect';
 import { useStore } from '../store/useStore';
 import { X, Check, AlertTriangle, Calendar, Clock } from 'lucide-react';
 import { Modal } from './Modal';
@@ -243,22 +244,18 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
                                         <label className="block text-xs font-medium text-slate-700 mb-1">Başlangıç</label>
-                                        <input
-                                            type="time"
-                                            className="w-full text-sm border-slate-300 rounded-md text-slate-900"
+                                        <TimeSelect
                                             value={rescheduleTime}
-                                            step="300"
-                                            onChange={e => setRescheduleTime(e.target.value)}
+                                            onChange={(val) => setRescheduleTime(val)}
+                                            className="w-full"
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-slate-700 mb-1">Bitiş</label>
-                                        <input
-                                            type="time"
-                                            className="w-full text-sm border-slate-300 rounded-md text-slate-900"
+                                        <TimeSelect
                                             value={rescheduleEndTime}
-                                            step="300"
-                                            onChange={e => setRescheduleEndTime(e.target.value)}
+                                            onChange={(val) => setRescheduleEndTime(val)}
+                                            className="w-full"
                                         />
                                     </div>
                                 </div>
@@ -323,12 +320,10 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-blue-700 mb-1">Saat</label>
-                                    <input
-                                        type="time"
-                                        className="w-full text-sm border-blue-200 rounded-md text-slate-900"
+                                    <TimeSelect
                                         value={rescheduleTime}
-                                        step="300"
-                                        onChange={e => setRescheduleTime(e.target.value)}
+                                        onChange={(val) => setRescheduleTime(val)}
+                                        className="w-full"
                                     />
                                 </div>
                             </div>

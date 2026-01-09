@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { TimeSelect } from './TimeSelect';
 import { useStore } from '../store/useStore';
 import { Modal } from './Modal';
 import type { TeacherAssignment } from '../types';
@@ -102,12 +103,10 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
                                 Başlangıç
                             </div>
                         </label>
-                        <input
-                            type="time"
+                        <TimeSelect
                             value={startTime}
-                            onChange={(e) => setStartTime(e.target.value)}
-                            step="300"
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
+                            onChange={(val) => setStartTime(val)}
+                            className="w-full"
                         />
                     </div>
                     <div>
@@ -117,12 +116,10 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
                                 Bitiş
                             </div>
                         </label>
-                        <input
-                            type="time"
+                        <TimeSelect
                             value={endTime}
-                            onChange={(e) => setEndTime(e.target.value)}
-                            step="300"
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
+                            onChange={(val) => setEndTime(val)}
+                            className="w-full"
                         />
                     </div>
                 </div>
