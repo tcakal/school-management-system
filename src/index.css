@@ -4,6 +4,8 @@
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
+  font-size: 14px;
+  /* Global Scale Down */
   /* Force light mode for form elements (date picker icons etc) */
   color-scheme: light;
 }
@@ -100,4 +102,25 @@ select:focus {
   background-color: rgba(15, 23, 42, 0.5) !important;
   color: white !important;
   border-color: #334155 !important;
+}
+
+/* Custom Scrollbar for better visibility */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  /* slate-300 */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+  /* slate-400 */
 }

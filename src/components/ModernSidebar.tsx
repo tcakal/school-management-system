@@ -38,16 +38,16 @@ export function ModernSidebar() {
                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
                 {/* Header */}
-                <div className="p-8 relative z-10 flex flex-col items-center text-center">
-                    <div className="mb-4 bg-white/10 p-4 rounded-full shadow-lg border border-white/10 backdrop-blur-sm">
+                <div className="p-6 relative z-10 flex flex-col items-center text-center">
+                    <div className="mb-3 bg-white/10 p-3 rounded-full shadow-lg border border-white/10 backdrop-blur-sm">
                         {systemSettings?.logoUrl ? (
-                            <img src={systemSettings.logoUrl} alt="Logo" className="w-20 h-20 object-contain" />
+                            <img src={systemSettings.logoUrl} alt="Logo" className="w-14 h-14 object-contain" />
                         ) : (
-                            <Hexagon size={48} className="text-blue-500 fill-current" />
+                            <Hexagon size={36} className="text-blue-500 fill-current" />
                         )}
                     </div>
                     <div>
-                        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
+                        <h1 className="text-lg font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
                             {systemSettings?.systemName || 'Okul Yönetim Sistemi'}
                         </h1>
                     </div>
@@ -63,7 +63,7 @@ export function ModernSidebar() {
                             to={item.to}
                             className={({ isActive }) =>
                                 twMerge(
-                                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden",
+                                    "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 group relative overflow-hidden",
                                     isActive
                                         ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 translate-x-1"
                                         : "text-slate-400 hover:text-white hover:bg-slate-800/50 hover:pl-5"
@@ -72,8 +72,8 @@ export function ModernSidebar() {
                         >
                             {({ isActive }) => (
                                 <>
-                                    <item.icon size={20} className={isActive ? "animate-pulse" : "group-hover:scale-110 transition-transform duration-300"} />
-                                    <span className="font-medium">{item.label}</span>
+                                    <item.icon size={18} className={isActive ? "animate-pulse" : "group-hover:scale-110 transition-transform duration-300"} />
+                                    <span className="font-medium text-sm">{item.label}</span>
                                 </>
                             )}
                         </NavLink>
@@ -86,7 +86,7 @@ export function ModernSidebar() {
                                 to="/activity-log"
                                 className={({ isActive }) =>
                                     twMerge(
-                                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group",
+                                        "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 group",
                                         isActive
                                             ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25 translate-x-1"
                                             : "text-slate-400 hover:text-white hover:bg-slate-800/50 hover:pl-5"
@@ -95,8 +95,8 @@ export function ModernSidebar() {
                             >
                                 {({ isActive }) => (
                                     <>
-                                        <History size={20} className={isActive ? "" : "text-purple-400 group-hover:text-purple-300 transition-colors"} />
-                                        <span className="font-medium">İşlem Geçmişi</span>
+                                        <History size={18} className={isActive ? "" : "text-purple-400 group-hover:text-purple-300 transition-colors"} />
+                                        <span className="font-medium text-sm">İşlem Geçmişi</span>
                                     </>
                                 )}
                             </NavLink>
@@ -104,7 +104,7 @@ export function ModernSidebar() {
                                 to="/settings"
                                 className={({ isActive }) =>
                                     twMerge(
-                                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group",
+                                        "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 group",
                                         isActive
                                             ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25 translate-x-1"
                                             : "text-slate-400 hover:text-white hover:bg-slate-800/50 hover:pl-5"
@@ -113,8 +113,8 @@ export function ModernSidebar() {
                             >
                                 {({ isActive }) => (
                                     <>
-                                        <Settings size={20} className={isActive ? "" : "text-purple-400 group-hover:text-purple-300 transition-colors"} />
-                                        <span className="font-medium">Ayarlar</span>
+                                        <Settings size={18} className={isActive ? "" : "text-purple-400 group-hover:text-purple-300 transition-colors"} />
+                                        <span className="font-medium text-sm">Ayarlar</span>
                                     </>
                                 )}
                             </NavLink>

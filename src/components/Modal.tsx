@@ -31,10 +31,10 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
     return createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
             <div
-                className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200"
+                className="bg-white rounded-xl shadow-xl w-full max-w-md flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between p-4 border-b border-slate-100">
+                <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
                     <h3 className="font-bold text-lg text-slate-900">{title}</h3>
                     <button
                         onClick={onClose}
@@ -43,7 +43,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
                         <X size={20} />
                     </button>
                 </div>
-                <div className="p-4">
+                <div className="p-4 overflow-y-auto">
                     {children}
                 </div>
             </div>
