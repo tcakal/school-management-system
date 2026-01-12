@@ -129,7 +129,16 @@ export function ModernSidebar() {
                         onClick={() => setIsProfileOpen(true)}
                     >
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform ${user?.role === 'admin' ? 'bg-gradient-to-br from-purple-500 to-pink-500' : 'bg-gradient-to-br from-blue-500 to-cyan-500'}`}>
-                            <span className="text-sm font-bold text-white">{user?.name?.substring(0, 2).toUpperCase() || 'AD'}</span>
+                            <span className="text-sm font-bold text-white">
+                                {(() => {
+                                    const name = user?.name || 'AD';
+                                    const parts = name.trim().split(' ');
+                                    if (parts.length >= 2) {
+                                        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+                                    }
+                                    return name.substring(0, 2).toUpperCase();
+                                })()}
+                            </span>
                         </div>
                         <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-bold text-white truncate flex items-center gap-1">

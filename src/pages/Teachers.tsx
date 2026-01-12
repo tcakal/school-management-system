@@ -343,7 +343,13 @@ function TeacherCard({ teacher, status, onEdit, onDelete, onManageLeaves }: {
             <div className="flex-1">
                 <div className="flex items-center gap-4 mb-4">
                     <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-500 text-xl font-bold relative">
-                        {teacher.name.substring(0, 2).toUpperCase()}
+                        {(() => {
+                            const parts = teacher.name.trim().split(' ');
+                            if (parts.length >= 2) {
+                                return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+                            }
+                            return teacher.name.substring(0, 2).toUpperCase();
+                        })()}
                         {teacher.role === 'admin' && (
                             <div className="absolute -bottom-1 -right-1 bg-purple-600 text-white p-1 rounded-full border-2 border-white" title="Yönetici">
                                 <Shield size={12} fill="currentColor" />
