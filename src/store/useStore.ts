@@ -31,7 +31,6 @@ interface AppState {
     addSchool: (school: School) => Promise<void>;
     updateSchool: (id: string, school: Partial<School>) => Promise<void>;
     deleteSchool: (id: string) => Promise<void>;
-    deleteOrphanData: () => Promise<{ students: number; payments: number; classes: number }>;
 
     addStudent: (student: Student) => Promise<void>;
     updateStudent: (id: string, student: Partial<Student>) => Promise<void>;
@@ -763,45 +762,7 @@ export const useStore = create<AppState>((set, get) => ({
         }
     },
 
-    deleteOrphanData: async () => {
-        const schools = get().schools;
-        const schoolIds = new Set(schools.map(s => s.id));
 
-        // Find orphans
-        const orphanStudents = get().students.filter(s => !schoolIds.has(s.schoolId));
-        const orphanPayments = get().payments.filter(p => !schoolIds.has(p.schoolId));
-        const orphanClasses = get().classGroups.filter(c => !schoolIds.has(c.schoolId));
-
-        const counts = {
-            students: orphanStudents.length,
-            payments: orphanPayments.length,
-            classes: orphanClasses.length
-        };
-
-        if (counts.students === 0 && counts.payments === 0 && counts.classes === 0) {
-            return counts;
-        }
-
-        // Delete from Local State
-        set(state => ({
-            students: state.students.filter(s => schoolIds.has(s.schoolId)),
-            payments: state.payments.filter(p => schoolIds.has(p.schoolId)),
-            classGroups: state.classGroups.filter(c => schoolIds.has(c.schoolId))
-        }));
-
-        // Delete from DB (Clean up)
-        // Note: In a real large scale app, we would batch these or use a backend function. A bit hacky here but works for small orphans.
-        // It's safer to just rely on "Not Existing in Schools Table" if we wanted to run a SQL query, 
-        // but since RLS is loose here, we'll try to delete by ID if possible, or just re-sync.
-        // Actually, best way is to query DB for items where school_id is NOT in known IDs. 
-        // But for now, let's delete strictly what we identified locally as orphan.
-
-        for (const s of orphanStudents) await supabase.from('students').delete().eq('id', s.id);
-        for (const p of orphanPayments) await supabase.from('payments').delete().eq('id', p.id);
-        for (const c of orphanClasses) await supabase.from('class_groups').delete().eq('id', c.id);
-
-        return counts;
-    },
 
     deleteClassGroup: async (id) => {
         const previousGroups = get().classGroups;
