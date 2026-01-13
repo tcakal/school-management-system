@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { Plus, Trash2, RefreshCw, AlertTriangle, CheckCircle, Database, Palette } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Database, Palette } from 'lucide-react';
 import { useAuth } from '../store/useAuth';
 import type { NotificationTemplate } from '../types';
 import { Tabs } from '../components/Tabs';
 
 export function Settings() {
-    const { notificationTemplates, schools, addNotificationTemplate, deleteNotificationTemplate, deleteOrphanData } = useStore();
+    const { notificationTemplates, schools, addNotificationTemplate, deleteNotificationTemplate } = useStore();
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('notifications');
 
@@ -19,14 +19,16 @@ export function Settings() {
     const [selectedSchoolId, setSelectedSchoolId] = useState(schools[0]?.id || '');
 
     // Data Management State
-    const [orphanCounts, setOrphanCounts] = useState<{ students: number; payments: number; classes: number } | null>(null);
-    const [scanning, setScanning] = useState(false);
+    // const [orphanCounts, setOrphanCounts] = useState<{ students: number; payments: number; classes: number } | null>(null);
+    // const [scanning, setScanning] = useState(false); // Unused
 
+    /*
     useEffect(() => {
         if (activeTab === 'data' && !orphanCounts) {
-            handleScan();
+            // handleScan();
         }
     }, [activeTab]);
+    */
 
     if (user?.role !== 'admin') {
         return (
@@ -56,6 +58,7 @@ export function Settings() {
         });
     };
 
+    /*
     const handleScan = async () => {
         setScanning(true);
         // Simulate a small delay for better UX
@@ -65,6 +68,7 @@ export function Settings() {
             setScanning(false);
         }, 500);
     };
+    */
 
     const templates = notificationTemplates.filter(t => t.schoolId === selectedSchoolId);
 
