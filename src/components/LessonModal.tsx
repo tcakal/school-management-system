@@ -287,9 +287,12 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
 
                                                         const { error: uploadError } = await supabase.storage
                                                             .from('lesson-attachments')
-                                                            .upload(filePath, file);
+                                                            .upload(filePath, file, {
+                                                                upsert: true
+                                                            });
 
                                                         if (uploadError) {
+                                                            console.error('Supabase Upload Detailed Error:', uploadError);
                                                             throw uploadError;
                                                         }
 
