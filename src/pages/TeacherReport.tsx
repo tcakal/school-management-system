@@ -15,7 +15,7 @@ export function TeacherReport() {
             </div>
 
             <div className="space-y-6">
-                {teachers.map(teacher => {
+                {teachers.filter(t => t.role === 'teacher').map(teacher => {
                     const teacherAssignments = assignments.filter(a => a.teacherId === teacher.id);
                     // Sort by day and time
                     teacherAssignments.sort((a, b) => {
@@ -23,12 +23,18 @@ export function TeacherReport() {
                         return a.startTime.localeCompare(b.startTime);
                     });
 
+                    // Initials
+                    const names = teacher.name.split(' ');
+                    const initials = names.length >= 2
+                        ? `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
+                        : teacher.name.substring(0, 2).toUpperCase();
+
                     return (
                         <div key={teacher.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                             <div className="p-6 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
                                 <div className="flex items-center gap-4">
                                     <div className={`w-12 h-12 rounded-full flex items-center justify-center text-slate-700 font-bold text-xl ${teacher.color}`}>
-                                        {teacher.name.substring(0, 2).toUpperCase()}
+                                        {initials}
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-lg text-slate-900">{teacher.name}</h3>

@@ -71,7 +71,7 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                     >
                         <option value="">Seçiniz...</option>
-                        {teachers.map((t) => (
+                        {teachers.filter(t => t.role === 'teacher').map((t) => (
                             <option key={t.id} value={t.id}>{t.name} ({t.specialties?.join(', ')})</option>
                         ))}
                     </select>

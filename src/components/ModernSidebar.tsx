@@ -9,6 +9,7 @@ import { ProfileModal } from './ProfileModal';
 export function ModernSidebar() {
     const navItems = [
         { to: '/', icon: LayoutDashboard, label: 'Panel' },
+        { to: '/parent', icon: LayoutDashboard, label: 'Panel' },
         { to: '/schedule', icon: CalendarDays, label: 'Ders Programı' },
         { to: '/schools', icon: School, label: 'Okullar' },
         { to: '/students', icon: Users, label: 'Öğrenciler' },
@@ -24,7 +25,10 @@ export function ModernSidebar() {
     // Filter Navigation based on Role
     const filteredNavItems = navItems.filter(item => {
         if (!user) return false;
-        if (user.role === 'admin') return true;
+        if (user.role === 'admin') return item.to !== '/parent';
+        if (user.role === 'parent') {
+            return item.to === '/parent';
+        }
         const teacherAllowed = ['/', '/schedule', '/schools', '/students', '/reports'];
         return teacherAllowed.includes(item.to);
     });

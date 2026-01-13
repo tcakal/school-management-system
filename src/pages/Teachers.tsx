@@ -1,16 +1,23 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
-import { Phone, Mail, Plus, Edit2, BookOpen, Trash2, Shield, Filter, Calendar } from 'lucide-react';
+import { useAuth } from '../store/useAuth';
+import { Phone, Mail, Plus, Edit2, BookOpen, Trash2, Shield, Filter, Calendar, Star } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { TeacherLeaveModal } from '../components/TeacherLeaveModal';
+import { EvaluateTeacherModal } from '../components/EvaluateTeacherModal';
 import type { Teacher } from '../types';
 
 export function Teachers() {
     const { teachers, schools, assignments, addTeacher, updateTeacher, deleteTeacher } = useStore();
+    const { user } = useAuth(); // Import useAuth hook
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [leaveModalTeacherId, setLeaveModalTeacherId] = useState<string | null>(null);
-    const [selectedSchoolId, setSelectedSchoolId] = useState<string>('all');
+    const [evaluateModalTeacherId, setEvaluateModalTeacherId] = useState<string | null>(null);
+    // Initialize with manager's school ID if manager, else 'all'
+    const [selectedSchoolId, setSelectedSchoolId] = useState<string>(user?.role === 'manager' ? user.id : 'all');
+
+    // ... (rest of state)
 
     // Form State
     const [name, setName] = useState('');
@@ -82,7 +89,15 @@ export function Teachers() {
             );
 
             filtered = teachers.filter(t => {
-                if (t.role === 'admin') return true; // Always show admins
+                if (t.role === 'admin') return true; // Always show admins? Maybe not for school managers?
+                // For managers, maybe only show admins if they are school admins? 
+                // But admins are global currently. 
+                // Let's assume Managers only care about Teachers assigned to their school.
+
+                // If Manager, hide global admins? Or show them? 
+                // Let's keep admins visible but separated.
+                if ((t.role as string) === 'admin') return true;
+
                 return assignedTeacherIds.has(t.id);
             });
         }
@@ -101,11 +116,6 @@ export function Teachers() {
 
     // Check assignment status for visualization
     const getTeacherStatus = (teacherId: string) => {
-        // If filtering by school, we might want to know if they are assigned to THIS school or ANY school?
-        // Requirement: "tüm kadroya bakarken..." (While looking at all staff...).
-        // "öğretmenlerden bir sınıfa bir okula atanmışları yeşil... atanmamışları turuncu"
-        // So global assignment check seems correct for the "status" indicator.
-        // Even if filtered, if they show up, they are assigned (green).
         const hasAssignment = assignments.some(a => a.teacherId === teacherId);
         return hasAssignment ? 'assigned' : 'unassigned';
     };
@@ -120,19 +130,21 @@ export function Teachers() {
 
                 <div className="flex items-center gap-3">
                     {/* School Filter */}
-                    <div className="relative">
-                        <select
-                            value={selectedSchoolId}
-                            onChange={(e) => setSelectedSchoolId(e.target.value)}
-                            className="appearance-none bg-white border border-slate-200 text-slate-700 pl-10 pr-8 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer hover:border-slate-300 transition-colors"
-                        >
-                            <option value="all">Tüm Okullar</option>
-                            {schools.map(school => (
-                                <option key={school.id} value={school.id}>{school.name}</option>
-                            ))}
-                        </select>
-                        <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    </div>
+                    {user?.role !== 'manager' && (
+                        <div className="relative">
+                            <select
+                                value={selectedSchoolId}
+                                onChange={(e) => setSelectedSchoolId(e.target.value)}
+                                className="appearance-none bg-white border border-slate-200 text-slate-700 pl-10 pr-8 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer hover:border-slate-300 transition-colors"
+                            >
+                                <option value="all">Tüm Okullar</option>
+                                {schools.map(school => (
+                                    <option key={school.id} value={school.id}>{school.name}</option>
+                                ))}
+                            </select>
+                            <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        </div>
+                    )}
 
                     <button
                         onClick={() => openModal()}
@@ -214,6 +226,8 @@ export function Teachers() {
                                         }
                                     }}
                                     onManageLeaves={() => setLeaveModalTeacherId(teacher.id)}
+                                    // Only admins can evaluate teachers
+                                    onEvaluate={() => setEvaluateModalTeacherId(teacher.id)}
                                 />
                             ))}
                         </div>
@@ -321,16 +335,23 @@ export function Teachers() {
                 onClose={() => setLeaveModalTeacherId(null)}
                 teacherId={leaveModalTeacherId}
             />
+
+            <EvaluateTeacherModal
+                isOpen={!!evaluateModalTeacherId}
+                onClose={() => setEvaluateModalTeacherId(null)}
+                teacher={teachers.find(t => t.id === evaluateModalTeacherId) || null}
+            />
         </div >
     );
 }
 
-function TeacherCard({ teacher, status, onEdit, onDelete, onManageLeaves }: {
+function TeacherCard({ teacher, status, onEdit, onDelete, onManageLeaves, onEvaluate }: {
     teacher: Teacher,
     status: 'admin' | 'assigned' | 'unassigned',
     onEdit: () => void,
     onDelete: () => void,
-    onManageLeaves: () => void
+    onManageLeaves: () => void,
+    onEvaluate?: () => void
 }) {
     const borderColor = status === 'admin' ? 'border-purple-500 shadow-purple-50' : status === 'unassigned' ? 'border-orange-200 shadow-orange-50' : 'border-green-200 shadow-green-50';
 
@@ -405,6 +426,18 @@ function TeacherCard({ teacher, status, onEdit, onDelete, onManageLeaves }: {
                     <Calendar size={18} />
                 </button>
                 <div className="w-px bg-slate-200 my-1"></div>
+                {onEvaluate && (
+                    <>
+                        <button
+                            onClick={onEvaluate}
+                            className="text-slate-400 hover:text-yellow-600 transition-colors p-2 hover:bg-yellow-50 rounded-lg"
+                            title="Değerlendir"
+                        >
+                            <Star size={18} />
+                        </button>
+                        <div className="w-px bg-slate-200 my-1"></div>
+                    </>
+                )}
                 <button
                     onClick={onEdit}
                     className="text-slate-400 hover:text-blue-600 transition-colors p-2 hover:bg-slate-50 rounded-lg"

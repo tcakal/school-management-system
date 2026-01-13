@@ -7,8 +7,14 @@ import { Modal } from '../components/Modal';
 import type { School } from '../types';
 
 export function Schools() {
-    const { schools, students, addSchool, payments } = useStore();
+    const { schools, students, addSchool } = useStore();
+    const { user } = useAuth(); // Import user
     const navigate = useNavigate();
+
+    // Filter schools for manager
+    const visibleSchools = user?.role === 'manager'
+        ? schools.filter(s => s.id === user.id)
+        : schools;
 
     // Add School State
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -18,8 +24,13 @@ export function Schools() {
     const [newSchoolColor, setNewSchoolColor] = useState('#2563eb'); // Default blue-600
     const [newSchoolImage, setNewSchoolImage] = useState('');
 
+    const [managerName, setManagerName] = useState('');
+    const [managerPhone, setManagerPhone] = useState('');
+    const [managerEmail, setManagerEmail] = useState('');
+
     const handleAddSchool = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!newSchoolName) return;
 
         const newSchool: School = {
             id: crypto.randomUUID(),
@@ -28,7 +39,10 @@ export function Schools() {
             phone: newSchoolPhone,
             defaultPrice: 0, // Default value
             color: newSchoolColor,
-            imageUrl: newSchoolImage
+            imageUrl: newSchoolImage,
+            managerName: managerName,
+            managerPhone: managerPhone,
+            managerEmail: managerEmail
         };
 
         await addSchool(newSchool);
@@ -39,6 +53,9 @@ export function Schools() {
         setNewSchoolPhone('');
         setNewSchoolColor('#2563eb');
         setNewSchoolImage('');
+        setManagerName('');
+        setManagerPhone('');
+        setManagerEmail('');
     };
 
     // Edit School State
@@ -50,6 +67,10 @@ export function Schools() {
     const [editSchoolColor, setEditSchoolColor] = useState('');
     const [editSchoolImage, setEditSchoolImage] = useState('');
 
+    const [editManagerName, setEditManagerName] = useState('');
+    const [editManagerPhone, setEditManagerPhone] = useState('');
+    const [editManagerEmail, setEditManagerEmail] = useState('');
+
     // Sync state when editingSchoolId changes
     useEffect(() => {
         if (editingSchoolId) {
@@ -60,6 +81,9 @@ export function Schools() {
                 setEditSchoolPhone(school.phone || '');
                 setEditSchoolColor(school.color || '#2563eb');
                 setEditSchoolImage(school.imageUrl || '');
+                setEditManagerName(school.managerName || '');
+                setEditManagerPhone(school.managerPhone || '');
+                setEditManagerEmail(school.managerEmail || '');
                 setIsEditModalOpen(true);
             }
         }
@@ -79,7 +103,10 @@ export function Schools() {
             address: editSchoolAddress,
             phone: editSchoolPhone,
             color: editSchoolColor,
-            imageUrl: editSchoolImage
+            imageUrl: editSchoolImage,
+            managerName: editManagerName,
+            managerPhone: editManagerPhone,
+            managerEmail: editManagerEmail
         });
 
         setIsEditModalOpen(false);
@@ -100,28 +127,38 @@ export function Schools() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {schools.map(school => {
+                {visibleSchools.map(school => {
                     // Payment Status Calculation
                     const activeStudents = students.filter(s => s.schoolId === school.id && s.status === 'Active');
-                    const expectedAmount = activeStudents.length * (school.defaultPrice || 0);
-                    const collectedAmount = payments
-                        .filter(p => p.schoolId === school.id)
-                        .reduce((sum, p) => sum + Number(p.amount), 0);
+                    // Payment Status Calculation (Currently Unused in UI favoring Active Status)
+                    // const expectedAmount = activeStudents.length * (school.defaultPrice || 0);
+                    // const collectedAmount = payments
+                    //     .filter(p => p.schoolId === school.id)
+                    //     .reduce((sum, p) => sum + Number(p.amount), 0);
+
+                    // Active Status Calculation
+                    const hasStudents = activeStudents.length > 0;
+                    const hasAssignments = useStore.getState().assignments.some(a => a.schoolId === school.id);
+                    const isActive = hasStudents || hasAssignments;
 
                     let borderColorClass = 'border-slate-200'; // Default gray
-                    if (expectedAmount > 0) {
-                        const ratio = collectedAmount / expectedAmount;
-                        if (ratio >= 1) borderColorClass = 'border-emerald-500 border-2 shadow-emerald-50'; // Green (>100%)
-                        else if (ratio >= 0.25) borderColorClass = 'border-orange-400 border-2 shadow-orange-50'; // Orange (25-99%)
-                        else borderColorClass = 'border-red-500 border-2 shadow-red-50'; // Red (<25%)
+                    if (isActive) {
+                        borderColorClass = 'border-emerald-500 border-2 shadow-emerald-50'; // Active (Green)
+                    } else {
+                        borderColorClass = 'border-orange-400 border-2 shadow-orange-50'; // Inactive (Orange)
                     }
+
+                    // Original Payment Logic (Optional to keep or replace? User asked for Active/Inactive colored borders specifically)
+                    // If we want to keep payment visualization, we might need a separate indicator or ring.
+                    // User request: "aktif okullarda yeşil çerçeve olsun. henüz aktif olmamış... turuncu çerçeve olsun."
+                    // So we prioritize Active status for the border.
 
                     return (
 
                         <div
                             key={school.id}
                             onClick={() => navigate(`/school/${school.id}`)}
-                            className={`bg-white p-6 rounded-xl hover:shadow-md transition-all cursor-pointer group ${borderColorClass} flex flex-col h-full relative`}
+                            className={`bg-white p-6 rounded-xl hover:shadow-xl hover:translate-y-[-2px] transition-all cursor-pointer group ${borderColorClass} flex flex-col h-full relative`}
                         >
                             <div className="flex-1">
                                 <div className="flex justify-between items-start mb-4">
@@ -233,6 +270,42 @@ export function Schools() {
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
                     </div>
+                    <div className="border-t border-slate-200 pt-4 mt-4">
+                        <h4 className="text-sm font-bold text-slate-900 mb-3">Okul Yöneticisi (Müdür)</h4>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Ad Soyad</label>
+                                <input
+                                    type="text"
+                                    placeholder="Örn: Ahmet Yılmaz"
+                                    value={managerName}
+                                    onChange={e => setManagerName(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Telefon (Giriş için)</label>
+                                <input
+                                    type="tel"
+                                    placeholder="555..."
+                                    value={managerPhone}
+                                    onChange={e => setManagerPhone(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                                />
+                                <p className="text-xs text-slate-500 mt-1">Yönetici bu telefon numarası ve son 4 hanesi ile giriş yapacak.</p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">E-posta</label>
+                                <input
+                                    type="email"
+                                    placeholder="mudur@okul.com"
+                                    value={managerEmail}
+                                    onChange={e => setManagerEmail(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                                />
+                            </div>
+                        </div>
+                    </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Tema Rengi</label>
                         <div className="flex items-center gap-3">
@@ -305,6 +378,41 @@ export function Schools() {
                             onChange={e => setEditSchoolPhone(e.target.value)}
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                         />
+                    </div>
+                    <div className="border-t border-slate-200 pt-4 mt-4">
+                        <h4 className="text-sm font-bold text-slate-900 mb-3">Okul Yöneticisi (Müdür)</h4>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Ad Soyad</label>
+                                <input
+                                    type="text"
+                                    placeholder="Örn: Ahmet Yılmaz"
+                                    value={editManagerName}
+                                    onChange={e => setEditManagerName(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Telefon (Giriş için)</label>
+                                <input
+                                    type="tel"
+                                    placeholder="555..."
+                                    value={editManagerPhone}
+                                    onChange={e => setEditManagerPhone(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">E-posta</label>
+                                <input
+                                    type="email"
+                                    placeholder="mudur@okul.com"
+                                    value={editManagerEmail}
+                                    onChange={e => setEditManagerEmail(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                                />
+                            </div>
+                        </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Tema Rengi</label>

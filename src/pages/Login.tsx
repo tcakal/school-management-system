@@ -14,7 +14,12 @@ export function Login() {
         e.preventDefault();
         const success = await login(phone, password);
         if (success) {
-            navigate('/');
+            const user = useAuth.getState().user;
+            if (user?.role === 'parent') {
+                navigate('/parent');
+            } else {
+                navigate('/');
+            }
         } else {
             setError(true);
         }
@@ -64,7 +69,7 @@ export function Login() {
                                     setError(false);
                                 }}
                                 className="w-full pl-10 pr-4 py-3 !bg-slate-900/50 !border-slate-700 !text-white placeholder:!text-slate-600 rounded-xl outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-transparent transition-all"
-                                placeholder="5XX XXX XX XX"
+                                placeholder="5554443322"
                             />
                         </div>
                     </div>

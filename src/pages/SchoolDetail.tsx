@@ -9,8 +9,9 @@ import { AssignmentModal } from '../components/AssignmentModal';
 import { TimeSelect } from '../components/TimeSelect';
 import type { ClassGroup, Student } from '../types';
 
-export function SchoolDetail() {
-    const { id } = useParams<{ id: string }>();
+export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) {
+    const { id: paramId } = useParams<{ id: string }>();
+    const id = propSchoolId || paramId;
     const navigate = useNavigate();
     const { schools, classGroups, students, assignments, teachers, addClassGroup, addStudent, updateSchool, deleteAssignment, updateStudent, updateClassGroup, updateAssignment } = useStore();
     const [activeTab, setActiveTab] = useState('classes');
@@ -33,24 +34,30 @@ export function SchoolDetail() {
     // Add Student State
     const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
     const [newStudentName, setNewStudentName] = useState('');
+    const [newParentName, setNewParentName] = useState(''); // New Parent Name State
     const [newStudentPhone, setNewStudentPhone] = useState('');
     const [newStudentEmail, setNewStudentEmail] = useState(''); // Parent Email
     const [newStudentBirthDate, setNewStudentBirthDate] = useState('');
     const [newStudentGrade, setNewStudentGrade] = useState('');
     const [newStudentAddress, setNewStudentAddress] = useState('');
-    const [newStudentMedical, setNewStudentMedical] = useState('');
+    // Removed medical notes state
+    const [newStudentPaymentStatus, setNewStudentPaymentStatus] = useState<'paid' | 'free' | 'discounted'>('paid');
+    const [newStudentDiscount, setNewStudentDiscount] = useState('');
     const [selectedClassId, setSelectedClassId] = useState('');
 
     // Edit Student State
     const [isEditStudentModalOpen, setIsEditStudentModalOpen] = useState(false);
     const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
     const [editStudentName, setEditStudentName] = useState('');
+    const [editParentName, setEditParentName] = useState(''); // New Parent Name State
     const [editStudentPhone, setEditStudentPhone] = useState('');
     const [editStudentEmail, setEditStudentEmail] = useState('');
     const [editStudentBirthDate, setEditStudentBirthDate] = useState('');
     const [editStudentGrade, setEditStudentGrade] = useState('');
     const [editStudentAddress, setEditStudentAddress] = useState('');
-    const [editStudentMedical, setEditStudentMedical] = useState('');
+    // Removed medical notes state
+    const [editStudentPaymentStatus, setEditStudentPaymentStatus] = useState<'paid' | 'free' | 'discounted'>('paid');
+    const [editStudentDiscount, setEditStudentDiscount] = useState('');
     const [editStudentClassId, setEditStudentClassId] = useState('');
 
     // Student Search & Filter State
@@ -113,23 +120,29 @@ export function SchoolDetail() {
             id: crypto.randomUUID(),
             schoolId: school.id,
             name: newStudentName,
+            parentName: newParentName, // Include parent name
             phone: newStudentPhone,
             parentEmail: newStudentEmail,
             birthDate: newStudentBirthDate,
             gradeLevel: Number(newStudentGrade) || undefined,
             address: newStudentAddress,
-            medicalNotes: newStudentMedical,
+            // Removed medicalNotes
+            paymentStatus: newStudentPaymentStatus,
+            discountPercentage: newStudentPaymentStatus === 'discounted' ? Number(newStudentDiscount) : (newStudentPaymentStatus === 'free' ? 100 : 0),
             classGroupId: selectedClassId || undefined,
             status: 'Active',
             joinedDate: new Date().toISOString()
         });
         setNewStudentName('');
+        setNewParentName('');
         setNewStudentPhone('');
         setNewStudentEmail('');
         setNewStudentBirthDate('');
         setNewStudentGrade('');
         setNewStudentAddress('');
-        setNewStudentMedical('');
+        // Removed medicalNotes reset
+        setNewStudentPaymentStatus('paid');
+        setNewStudentDiscount('');
         setSelectedClassId('');
         setIsAddStudentModalOpen(false);
     };
@@ -137,12 +150,15 @@ export function SchoolDetail() {
     const handleEditStudentClick = (student: Student) => {
         setEditingStudentId(student.id);
         setEditStudentName(student.name);
+        setEditParentName(student.parentName || '');
         setEditStudentPhone(student.phone);
         setEditStudentEmail(student.parentEmail || '');
         setEditStudentBirthDate(student.birthDate || '');
         setEditStudentGrade(student.gradeLevel?.toString() || '');
         setEditStudentAddress(student.address || '');
-        setEditStudentMedical(student.medicalNotes || '');
+        // Removed medical notes set
+        setEditStudentPaymentStatus(student.paymentStatus || 'paid');
+        setEditStudentDiscount(student.discountPercentage?.toString() || '');
         setEditStudentClassId(student.classGroupId || '');
         setIsEditStudentModalOpen(true);
     };
@@ -153,12 +169,15 @@ export function SchoolDetail() {
 
         updateStudent(editingStudentId, {
             name: editStudentName,
+            parentName: editParentName,
             phone: editStudentPhone,
             parentEmail: editStudentEmail,
             birthDate: editStudentBirthDate,
             gradeLevel: Number(editStudentGrade) || undefined,
             address: editStudentAddress,
-            medicalNotes: editStudentMedical,
+            // Removed medicalNotes logic
+            paymentStatus: editStudentPaymentStatus,
+            discountPercentage: editStudentPaymentStatus === 'discounted' ? Number(editStudentDiscount) : (editStudentPaymentStatus === 'free' ? 100 : 0),
             classGroupId: editStudentClassId || undefined
         });
 
@@ -688,25 +707,27 @@ export function SchoolDetail() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Telefon</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Veli Adı Soyadı</label>
                             <input
-                                type="tel"
-                                placeholder="0555 555 5555"
-                                value={newStudentPhone}
-                                onChange={e => setNewStudentPhone(e.target.value)}
+                                type="text"
+                                placeholder="Veli Adı Soyadı"
+                                value={newParentName}
+                                onChange={e => setNewParentName(e.target.value)}
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Doğum Tarihi</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Telefon</label>
                             <input
-                                type="date"
-                                value={newStudentBirthDate}
-                                onChange={e => setNewStudentBirthDate(e.target.value)}
+                                type="tel"
+                                placeholder="5554443322"
+                                value={newStudentPhone}
+                                onChange={e => setNewStudentPhone(e.target.value)}
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
+                            <p className="text-[10px] text-slate-500 mt-1">Başında 0 olmadan 10 hane giriniz.</p>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Sınıf Seviyesi</label>
@@ -720,6 +741,17 @@ export function SchoolDetail() {
                                     <option key={g} value={g}>{g}. Sınıf</option>
                                 ))}
                             </select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Doğum Tarihi</label>
+                            <input
+                                type="date"
+                                value={newStudentBirthDate}
+                                onChange={e => setNewStudentBirthDate(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                            />
                         </div>
                     </div>
                     <div>
@@ -743,16 +775,7 @@ export function SchoolDetail() {
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none text-slate-900"
                         />
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Özel Notlar / Sağlık</label>
-                        <textarea
-                            rows={2}
-                            placeholder="Alerji, ilaç kullanımı vb..."
-                            value={newStudentMedical}
-                            onChange={e => setNewStudentMedical(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none text-slate-900"
-                        />
-                    </div>
+                    {/* Removed Special Notes Field */}
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Sınıf Seçimi</label>
                         <select
@@ -795,14 +818,30 @@ export function SchoolDetail() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Telefon</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Veli Adı Soyadı</label>
+                            <input
+                                type="text"
+                                placeholder="Veli Adı Soyadı"
+                                value={editParentName}
+                                onChange={e => setEditParentName(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Telefon <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 type="tel"
+                                required
                                 placeholder="0555 555 5555"
                                 value={editStudentPhone}
                                 onChange={e => setEditStudentPhone(e.target.value)}
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
+                            <p className="text-xs text-slate-500 mt-1">Veli Paneli girişi için kullanılacaktır.</p>
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -850,16 +889,7 @@ export function SchoolDetail() {
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none text-slate-900"
                         />
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Özel Notlar / Sağlık</label>
-                        <textarea
-                            rows={2}
-                            placeholder="Alerji, ilaç kullanımı vb..."
-                            value={editStudentMedical}
-                            onChange={e => setEditStudentMedical(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none text-slate-900"
-                        />
-                    </div>
+                    {/* Removed Special Notes Field */}
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Sınıf Seçimi</label>
                         <select
@@ -873,6 +903,67 @@ export function SchoolDetail() {
                                 <option key={cls.id} value={cls.id}>{cls.name}</option>
                             ))}
                         </select>
+                    </div>
+
+                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Ödeme Durumu</label>
+                        <div className="grid grid-cols-3 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setEditStudentPaymentStatus('paid')}
+                                className={`py-2 text-sm font-medium rounded-lg border transition-all ${editStudentPaymentStatus === 'paid'
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 ring-2 ring-emerald-500/20'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                                    }`}
+                            >
+                                Tam Ücret
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setEditStudentPaymentStatus('discounted');
+                                    if (!editStudentDiscount) setEditStudentDiscount('50');
+                                }}
+                                className={`py-2 text-sm font-medium rounded-lg border transition-all ${editStudentPaymentStatus === 'discounted'
+                                    ? 'bg-blue-50 text-blue-700 border-blue-200 ring-2 ring-blue-500/20'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                                    }`}
+                            >
+                                İndirimli
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setEditStudentPaymentStatus('free')}
+                                className={`py-2 text-sm font-medium rounded-lg border transition-all ${editStudentPaymentStatus === 'free'
+                                    ? 'bg-purple-50 text-purple-700 border-purple-200 ring-2 ring-purple-500/20'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                                    }`}
+                            >
+                                Ücretsiz
+                            </button>
+                        </div>
+                        {editStudentPaymentStatus === 'discounted' && (
+                            <div className="mt-3 animate-in fade-in slide-in-from-top-2">
+                                <label className="block text-xs text-slate-500 mb-1">İndirim Oranı (%)</label>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="99"
+                                        value={editStudentDiscount}
+                                        onChange={e => setEditStudentDiscount(e.target.value)}
+                                        className="w-full pl-3 pr-8 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                                        placeholder="Örn: 50"
+                                    />
+                                    <span className="absolute right-3 top-2 text-slate-400 font-medium">%</span>
+                                </div>
+                            </div>
+                        )}
+                        {editStudentPaymentStatus === 'free' && (
+                            <p className="mt-2 text-xs text-purple-600 font-medium flex items-center gap-1">
+                                ✨ Bu öğrenci okul ödemesine dahil edilmeyecek.
+                            </p>
+                        )}
                     </div>
                     <div className="flex justify-end gap-3 pt-4">
                         <button

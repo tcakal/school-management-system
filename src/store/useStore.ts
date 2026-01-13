@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../supabase';
 import { useAuth } from './useAuth';
-import type { School, Student, ClassGroup, Payment, Teacher, TeacherAssignment, ActivityLog, Lesson, Attendance, NotificationTemplate, TeacherLeave, SystemSettings } from '../types';
+import type { School, Student, ClassGroup, Payment, Teacher, TeacherAssignment, ActivityLog, Lesson, Attendance, NotificationTemplate, TeacherLeave, SystemSettings, StudentEvaluation, TeacherEvaluation } from '../types';
 import { addWeeks, format, startOfWeek } from 'date-fns';
 
 interface AppState {
@@ -58,6 +58,12 @@ interface AppState {
 
     saveAttendance: (lessonId: string, records: { studentId: string, status: 'present' | 'absent' | 'late' | 'excused' }[]) => Promise<void>;
 
+    // Evaluations
+    studentEvaluations: StudentEvaluation[];
+    teacherEvaluations: TeacherEvaluation[];
+    addStudentEvaluation: (evaluation: Omit<StudentEvaluation, 'id' | 'createdAt'>) => Promise<void>;
+    addTeacherEvaluation: (evaluation: Omit<TeacherEvaluation, 'id' | 'createdAt'>) => Promise<void>;
+
     // Notification Templates
     addNotificationTemplate: (template: NotificationTemplate) => Promise<void>;
     updateNotificationTemplate: (id: string, updates: Partial<NotificationTemplate>) => Promise<void>;
@@ -80,6 +86,8 @@ export const useStore = create<AppState>((set, get) => ({
     logs: [],
     lessons: [],
     attendance: [],
+    studentEvaluations: [],
+    teacherEvaluations: [],
     notificationTemplates: [],
     leaves: [],
 
@@ -144,7 +152,21 @@ export const useStore = create<AppState>((set, get) => ({
         set({ loading: true });
 
         try {
-            const [schoolsRes, studentsRes, classGroupsRes, paymentsRes, teachersRes, assignmentsRes, lessonsRes, attendanceRes, notificationTemplatesRes, leavesRes, settingsRes] = await Promise.all([
+            const [
+                schoolsRes,
+                studentsRes,
+                classGroupsRes,
+                paymentsRes,
+                teachersRes,
+                assignmentsRes,
+                lessonsRes,
+                attendanceRes,
+                notificationTemplatesRes,
+                leavesRes,
+                settingsRes,
+                evaluationsRes,
+                teacherEvaluationsRes
+            ] = await Promise.all([
                 supabase.from('schools').select('*'),
                 supabase.from('students').select('*'),
                 supabase.from('class_groups').select('*'),
@@ -155,7 +177,9 @@ export const useStore = create<AppState>((set, get) => ({
                 supabase.from('attendance').select('*'),
                 supabase.from('notification_templates').select('*'),
                 supabase.from('teacher_leaves').select('*'),
-                supabase.from('system_settings').select('*').limit(1).single()
+                supabase.from('system_settings').select('*').limit(1).single(),
+                supabase.from('student_evaluations').select('*'),
+                supabase.from('teacher_evaluations').select('*')
             ]);
 
             if (schoolsRes.error) console.error('Error fetching schools:', schoolsRes.error);
@@ -168,7 +192,10 @@ export const useStore = create<AppState>((set, get) => ({
                 defaultPrice: s.default_price,
                 paymentTerms: s.payment_terms,
                 color: s.color,
-                imageUrl: s.image_url
+                imageUrl: s.image_url,
+                managerName: s.manager_name,
+                managerPhone: s.manager_phone,
+                managerEmail: s.manager_email
             }));
 
             const students: Student[] = (studentsRes.data || []).map(s => ({
@@ -178,7 +205,15 @@ export const useStore = create<AppState>((set, get) => ({
                 name: s.name,
                 phone: s.phone,
                 status: s.status as any,
-                joinedDate: s.joined_date
+                joinedDate: s.joined_date,
+                paymentStatus: s.payment_status || 'paid',
+                discountPercentage: s.discount_percentage || 0,
+                parentName: s.parent_name,
+                parentEmail: s.parent_email,
+                birthDate: s.birth_date,
+                address: s.address,
+                medicalNotes: s.medical_notes,
+                gradeLevel: s.grade_level
             }));
 
             const classGroups: ClassGroup[] = (classGroupsRes.data || []).map(c => ({
@@ -232,7 +267,8 @@ export const useStore = create<AppState>((set, get) => ({
                 type: l.type,
                 cancelReason: l.cancel_reason,
                 topic: l.topic,
-                notes: l.notes
+                notes: l.notes,
+                attachments: l.attachments || []
             }));
 
             const attendance: Attendance[] = (attendanceRes.data || []).map(a => ({
@@ -262,6 +298,15 @@ export const useStore = create<AppState>((set, get) => ({
                 type: l.type,
                 reason: l.reason,
                 createdAt: l.created_at
+            }));
+
+            const studentEvaluations: StudentEvaluation[] = (evaluationsRes.data || []).map(e => ({
+                id: e.id,
+                studentId: e.student_id,
+                teacherId: e.teacher_id,
+                score: e.score,
+                note: e.note,
+                createdAt: e.created_at
             }));
 
             // Handle System Settings
@@ -296,12 +341,75 @@ export const useStore = create<AppState>((set, get) => ({
                 document.documentElement.classList.remove('dark');
             }
 
-            set({ schools, students, classGroups, payments, teachers, assignments, lessons, attendance, notificationTemplates, leaves, systemSettings, theme: themeToApply, initialized: true });
+            const teacherEvaluations: TeacherEvaluation[] = (teacherEvaluationsRes.data || []).map(e => ({
+                id: e.id,
+                teacherId: e.teacher_id,
+                evaluatorId: e.evaluator_id,
+                score: e.score,
+                note: e.note,
+                createdAt: e.created_at
+            }));
+
+            set({ schools, students, classGroups, payments, teachers, assignments, lessons, attendance, studentEvaluations, teacherEvaluations, notificationTemplates, leaves, systemSettings, theme: themeToApply, initialized: true });
         } catch (error) {
             console.error('Supabase fetch error:', error);
         } finally {
             set({ loading: false });
         }
+    },
+
+    addStudentEvaluation: async (evaluation) => {
+        const { data, error } = await supabase
+            .from('student_evaluations')
+            .insert([{
+                student_id: evaluation.studentId,
+                teacher_id: evaluation.teacherId, // Can be null for admins
+                evaluator_id: evaluation.evaluatorId, // New: Admin ID or Teacher User ID
+                score: evaluation.score,
+                note: evaluation.note
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        set(state => ({
+            studentEvaluations: [...state.studentEvaluations, {
+                id: data.id,
+                studentId: data.student_id,
+                teacherId: data.teacher_id,
+                evaluatorId: data.evaluator_id,
+                score: data.score,
+                note: data.note,
+                createdAt: data.created_at
+            }]
+        }));
+    },
+
+    addTeacherEvaluation: async (evaluation) => {
+        const { data, error } = await supabase
+            .from('teacher_evaluations')
+            .insert([{
+                teacher_id: evaluation.teacherId,
+                evaluator_id: evaluation.evaluatorId,
+                score: evaluation.score,
+                note: evaluation.note
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        set(state => ({
+            teacherEvaluations: [...state.teacherEvaluations, {
+                id: data.id,
+                teacherId: data.teacher_id,
+                evaluatorId: data.evaluator_id,
+                score: data.score,
+                note: data.note,
+                createdAt: data.created_at
+            }]
+        }));
     },
 
     addSchool: async (school) => {
@@ -327,7 +435,10 @@ export const useStore = create<AppState>((set, get) => ({
             default_price: school.defaultPrice,
             payment_terms: school.paymentTerms,
             color: school.color,
-            image_url: school.imageUrl
+            image_url: school.imageUrl,
+            manager_name: school.managerName,
+            manager_phone: school.managerPhone,
+            manager_email: school.managerEmail
         }]);
 
         if (error) {
@@ -346,6 +457,9 @@ export const useStore = create<AppState>((set, get) => ({
         if (updated.paymentTerms) dbUpdate.payment_terms = updated.paymentTerms;
         if (updated.color) dbUpdate.color = updated.color;
         if (updated.imageUrl) dbUpdate.image_url = updated.imageUrl;
+        if (updated.managerName) dbUpdate.manager_name = updated.managerName;
+        if (updated.managerPhone) dbUpdate.manager_phone = updated.managerPhone;
+        if (updated.managerEmail) dbUpdate.manager_email = updated.managerEmail;
         if (Object.keys(dbUpdate).length > 0) {
             await supabase.from('schools').update(dbUpdate).eq('id', id);
         }
@@ -367,7 +481,7 @@ export const useStore = create<AppState>((set, get) => ({
             };
             set(state => ({ logs: [log, ...state.logs] }));
         }
-        await supabase.from('students').insert([{
+        const { error } = await supabase.from('students').insert([{
             id: student.id,
             school_id: student.schoolId,
             class_group_id: student.classGroupId,
@@ -377,10 +491,19 @@ export const useStore = create<AppState>((set, get) => ({
             joined_date: student.joinedDate,
             birth_date: student.birthDate,
             grade_level: student.gradeLevel,
+            parent_name: student.parentName,
             parent_email: student.parentEmail,
             address: student.address,
-            medical_notes: student.medicalNotes
+            medical_notes: student.medicalNotes,
+            payment_status: student.paymentStatus,
+            discount_percentage: student.discountPercentage
         }]);
+
+        if (error) {
+            console.error('Error adding student:', error);
+            // Revert local state if needed, or notify user.
+            // For now, we log it. Ideally we should throw or show a toast.
+        }
     },
 
     updateStudent: async (id, updated) => {
@@ -422,6 +545,7 @@ export const useStore = create<AppState>((set, get) => ({
 
         if (updated.birthDate) dbUpdate.birth_date = updated.birthDate;
         if (updated.gradeLevel) dbUpdate.grade_level = updated.gradeLevel;
+        if (updated.parentName) dbUpdate.parent_name = updated.parentName;
         if (updated.parentEmail) dbUpdate.parent_email = updated.parentEmail;
         if (updated.address) dbUpdate.address = updated.address;
         if (updated.medicalNotes) dbUpdate.medical_notes = updated.medicalNotes;
@@ -429,6 +553,10 @@ export const useStore = create<AppState>((set, get) => ({
         if (updated.status === 'Left') {
             if ((updated as any).leftDate) dbUpdate.left_date = (updated as any).leftDate;
         }
+
+        if (updated.paymentStatus) dbUpdate.payment_status = updated.paymentStatus;
+        if (updated.discountPercentage !== undefined) dbUpdate.discount_percentage = updated.discountPercentage;
+
         if (Object.keys(dbUpdate).length > 0) {
             await supabase.from('students').update(dbUpdate).eq('id', id);
         }
@@ -686,7 +814,8 @@ export const useStore = create<AppState>((set, get) => ({
             type: lesson.type,
             cancel_reason: lesson.cancelReason,
             topic: lesson.topic,
-            notes: lesson.notes
+            notes: lesson.notes,
+            attachments: lesson.attachments // JSONB
         }]);
     },
 

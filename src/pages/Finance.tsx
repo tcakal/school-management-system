@@ -19,10 +19,23 @@ export function Finance() {
     let totalExpected = 0;
 
     schools.forEach(school => {
-        const activeStudentCount = students.filter(s => s.schoolId === school.id && s.status === 'Active').length;
-        if (school.defaultPrice) {
-            totalExpected += (activeStudentCount * school.defaultPrice);
-        }
+        const activeStudents = students.filter(s => s.schoolId === school.id && s.status === 'Active');
+
+        const schoolExpected = activeStudents.reduce((total, student) => {
+            // Free student
+            if (student.paymentStatus === 'free') return total;
+
+            // Discounted student
+            if (student.paymentStatus === 'discounted' && student.discountPercentage) {
+                const discountMultiplier = (100 - student.discountPercentage) / 100;
+                return total + ((school.defaultPrice || 0) * discountMultiplier);
+            }
+
+            // Standard student
+            return total + (school.defaultPrice || 0);
+        }, 0);
+
+        totalExpected += schoolExpected;
     });
 
     // 2. Calculate Total Collected
@@ -143,7 +156,13 @@ export function Finance() {
                             {schools.map(school => {
                                 const schoolStudents = students.filter(s => s.schoolId === school.id && s.status === 'Active');
                                 const activeCount = schoolStudents.length;
-                                const monthlyPotential = activeCount * (school.defaultPrice || 0);
+                                const monthlyPotential = schoolStudents.reduce((total, student) => {
+                                    if (student.paymentStatus === 'free') return total;
+                                    if (student.paymentStatus === 'discounted' && student.discountPercentage) {
+                                        return total + ((school.defaultPrice || 0) * (100 - student.discountPercentage) / 100);
+                                    }
+                                    return total + (school.defaultPrice || 0);
+                                }, 0);
 
                                 const schoolPayments = payments.filter(p => p.schoolId === school.id);
                                 const totalPaid = schoolPayments.reduce((acc, p) => acc + p.amount, 0);

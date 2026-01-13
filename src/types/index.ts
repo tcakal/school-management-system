@@ -8,6 +8,9 @@ export interface School {
     imageUrl?: string; // Background image URL
     defaultPrice?: number;
     paymentTerms?: string; // e.g. "Monthly", "Termly"
+    managerName?: string;
+    managerPhone?: string;
+    managerEmail?: string;
 }
 
 export interface ClassGroup {
@@ -25,8 +28,8 @@ export interface Student {
     schoolId: string;
     classGroupId?: string;
     name: string;
+    parentName?: string; // New field
     phone: string;
-    parentName?: string;
     parentPhone?: string;
     parentEmail?: string; // Mandatory in logic, optional in type until migration
     role?: string; // Removed or unused?
@@ -39,6 +42,9 @@ export interface Student {
     leftDate?: string; // ISO Date
     leftReason?: string;
     notes?: string;
+    // Financials
+    paymentStatus?: 'paid' | 'free' | 'discounted'; // Default 'paid'
+    discountPercentage?: number; // 0-100
 }
 
 export type PaymentType = 'Tuition' | 'Book' | 'Uniform' | 'Other';
@@ -79,6 +85,8 @@ export interface TeacherLeave {
     createdAt: string;
 }
 
+
+
 export interface TeacherAssignment {
     id: string;
     teacherId: string;
@@ -117,6 +125,7 @@ export interface Lesson {
     notes?: string;
     originalTeacherId?: string; // For substitutions
     isSubstitute?: boolean; // UI flag
+    attachments?: { name: string; url: string; type: 'pdf' | 'link' }[];
 }
 
 export interface NotificationTemplate {
@@ -142,4 +151,22 @@ export interface SystemSettings {
     id: string;
     logoUrl?: string;
     systemName: string;
+}
+export interface StudentEvaluation {
+    id: string;
+    studentId: string;
+    teacherId?: string | null;
+    evaluatorId?: string;
+    score: number;
+    note: string;
+    createdAt: string;
+}
+
+export interface TeacherEvaluation {
+    id: string;
+    teacherId: string;
+    evaluatorId?: string;
+    score: number;
+    note: string;
+    createdAt: string;
 }

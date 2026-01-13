@@ -12,10 +12,13 @@ import { Schedule } from './pages/Schedule';
 import { Login } from './pages/Login';
 import { ActivityLog } from './pages/ActivityLog';
 import { Settings } from './pages/Settings';
+import { StudentPanel } from './pages/StudentPanel';
 import { useAuth } from './store/useAuth';
 
-const RequireAuth = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+import { ParentDashboard } from './pages/ParentDashboard';
+
+const RequireAuth = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
+  const { isAuthenticated, user } = useAuth();
 
   // Force dark mode implementation
   React.useEffect(() => {
@@ -28,7 +31,15 @@ const RequireAuth = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  // Role-based redirect
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    if (user.role === 'parent') return <Navigate to="/parent" replace />;
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
 };
 
 function App() {
@@ -37,8 +48,19 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
 
+        {/* Parent Portal */}
+        {/* Parent Portal */}
+        <Route path="/parent" element={
+          <RequireAuth allowedRoles={['parent']}>
+            <Layout />
+          </RequireAuth>
+        }>
+          <Route index element={<ParentDashboard />} />
+        </Route>
+
+        {/* Main Admin/Teacher Portal */}
         <Route path="/" element={
-          <RequireAuth>
+          <RequireAuth allowedRoles={['admin', 'teacher', 'manager']}>
             <Layout />
           </RequireAuth>
         }>
@@ -46,6 +68,7 @@ function App() {
           <Route path="schools" element={<Schools />} />
           <Route path="school/:id" element={<SchoolDetail />} />
           <Route path="students" element={<Students />} />
+          <Route path="student-panel/:studentId" element={<StudentPanel />} />
           <Route path="finance" element={<Finance />} />
           <Route path="teachers" element={<Teachers />} />
           <Route path="schedule" element={<Schedule />} />

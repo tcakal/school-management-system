@@ -5,8 +5,17 @@ import { Building2, Users, Banknote, ArrowUpRight, Image as ImageIcon } from 'lu
 import { Modal } from '../components/Modal';
 import type { School } from '../types';
 
+import { SchoolDetail } from './SchoolDetail';
+import { useAuth } from '../store/useAuth';
+
 export function Dashboard() {
+    const { user } = useAuth();
     const { schools, students, payments } = useStore();
+
+    // If manager, show their school detail directly
+    if (user?.role === 'manager') {
+        return <SchoolDetail schoolId={user.id} />;
+    }
 
     // Mock data initialization is no longer needed with Supabase
 
@@ -204,8 +213,23 @@ function SchoolCard({ school }: { school: any }) {
     const studentCount = students.filter(s => s.schoolId === school.id && s.status === 'Active').length;
 
     // Payment Status Calculation (Same logic as Schools.tsx)
+    // Payment Status Calculation (Same logic as Schools.tsx)
     const activeStudents = students.filter(s => s.schoolId === school.id && s.status === 'Active');
-    const expectedAmount = activeStudents.length * (school.defaultPrice || 0);
+
+    // Calculate expected amount considering discounts
+    const expectedAmount = activeStudents.reduce((total, student) => {
+        // If student is free, add 0
+        if (student.paymentStatus === 'free') return total;
+
+        // If student is discount, calculate discounted price
+        if (student.paymentStatus === 'discounted' && student.discountPercentage) {
+            const discountMultiplier = (100 - student.discountPercentage) / 100;
+            return total + ((school.defaultPrice || 0) * discountMultiplier);
+        }
+
+        // Default: Paid (full price)
+        return total + (school.defaultPrice || 0);
+    }, 0);
     const collectedAmount = payments
         .filter(p => p.schoolId === school.id)
         .reduce((sum, p) => sum + Number(p.amount), 0);

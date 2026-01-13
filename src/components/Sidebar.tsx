@@ -28,8 +28,21 @@ export function Sidebar() {
 
         // Teacher sees only specific items
         // Teacher sees: Dashboard, Schedule, Schools, Students, Reports
-        const teacherAllowed = ['/', '/schedule', '/schools', '/students', '/reports'];
-        return teacherAllowed.includes(item.to);
+        if (user.role === 'teacher') {
+            const teacherAllowed = ['/', '/schedule', '/schools', '/students', '/reports'];
+            return teacherAllowed.includes(item.to);
+        }
+
+        // Manager sees: Dashboard, Students, Teachers, Reports, Schedule
+        if (user.role === 'manager') {
+            // Dashboard (shows school detail), Students (all), Teachers (all), Reports, Schedule
+            // Note: Students and Teachers pages need to be filtered by school for managers! 
+            // We will handle page-level filtering separately.
+            const managerAllowed = ['/', '/students', '/teachers', '/reports', '/schedule'];
+            return managerAllowed.includes(item.to);
+        }
+
+        return false;
     });
 
     return (

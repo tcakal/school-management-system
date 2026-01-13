@@ -1,19 +1,25 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
+import { useAuth } from '../store/useAuth';
 import { Search, ArrowRight, User } from 'lucide-react';
 import { Modal } from '../components/Modal';
+import { EvaluateStudentModal } from '../components/EvaluateStudentModal';
+import { Star } from 'lucide-react';
 
 export function Students() {
-    const { students, schools, classGroups } = useStore();
+    const { students, schools, classGroups, studentEvaluations, teachers } = useStore();
     const navigate = useNavigate();
 
+    const { user } = useAuth(); // Import useAuth
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedSchoolId, setSelectedSchoolId] = useState<string>('all');
+    // Initialize with manager's school ID if manager, else 'all'
+    const [selectedSchoolId, setSelectedSchoolId] = useState<string>(user?.role === 'manager' ? user.id : 'all');
     const [statusFilter, setStatusFilter] = useState<'Active' | 'Left' | 'All'>('All');
 
     const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
 
     const filteredStudents = useMemo(() => {
         return students.filter(student => {
@@ -56,16 +62,18 @@ export function Students() {
                 </div>
 
                 <div className="flex gap-3 w-full md:w-auto">
-                    <select
-                        value={selectedSchoolId}
-                        onChange={(e) => setSelectedSchoolId(e.target.value)}
-                        className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm text-slate-900"
-                    >
-                        <option value="all">Tüm Okullar</option>
-                        {schools.map(school => (
-                            <option key={school.id} value={school.id}>{school.name}</option>
-                        ))}
-                    </select>
+                    {user?.role !== 'manager' && (
+                        <select
+                            value={selectedSchoolId}
+                            onChange={(e) => setSelectedSchoolId(e.target.value)}
+                            className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm text-slate-900"
+                        >
+                            <option value="all">Tüm Okullar</option>
+                            {schools.map(school => (
+                                <option key={school.id} value={school.id}>{school.name}</option>
+                            ))}
+                        </select>
+                    )}
 
                     <div className="flex rounded-lg border border-slate-300 overflow-hidden shrink-0">
                         <button
@@ -146,7 +154,18 @@ export function Students() {
                                             {student.status === 'Active' ? 'Aktif' : 'Ayrıldı'}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 text-right">
+                                    <td className="px-6 py-4 text-right flex justify-end gap-2">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedStudent(student);
+                                                setIsEvaluationModalOpen(true);
+                                            }}
+                                            className="text-slate-400 hover:text-yellow-500 transition-colors p-1"
+                                            title="Öğrenciyi Değerlendir"
+                                        >
+                                            <Star size={18} />
+                                        </button>
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -157,6 +176,18 @@ export function Students() {
                                         >
                                             <ArrowRight size={18} />
                                         </button>
+                                        {(user?.role === 'admin' || user?.role === 'manager') && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    navigate(`/student-panel/${student.id}`);
+                                                }}
+                                                className="text-slate-400 hover:text-indigo-600 transition-colors p-1"
+                                                title="Öğrenci Paneline Git"
+                                            >
+                                                <User size={18} />
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             );
@@ -242,6 +273,40 @@ export function Students() {
                             </div>
                         )}
 
+                        {/* Evaluations List */}
+                        <div className="border-t border-slate-100 pt-4">
+                            <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                                <Star size={18} className="text-yellow-500 fill-yellow-500" />
+                                Gelişim Notları
+                            </h4>
+                            <div className="space-y-3 max-h-60 overflow-y-auto">
+                                {studentEvaluations.filter(e => e.studentId === selectedStudent.id).length === 0 ? (
+                                    <p className="text-sm text-slate-500 italic">Henüz değerlendirme yapılmamış.</p>
+                                ) : (
+                                    studentEvaluations
+                                        .filter(e => e.studentId === selectedStudent.id)
+                                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                        .map(evaluation => {
+                                            const teacherName = teachers.find(t => t.id === evaluation.teacherId)?.name || 'Eski Öğretmen';
+                                            return (
+                                                <div key={evaluation.id} className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <span className="text-xs font-bold text-slate-700">{teacherName}</span>
+                                                        <span className="text-xs text-slate-400">{new Date(evaluation.createdAt).toLocaleDateString('tr-TR')}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <div className="flex bg-white px-2 py-0.5 rounded border border-slate-200">
+                                                            <span className="text-sm font-bold text-blue-600">{evaluation.score / 10}/10</span>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-sm text-slate-600">{evaluation.note}</p>
+                                                </div>
+                                            );
+                                        })
+                                )}
+                            </div>
+                        </div>
+
                         <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                             <button
                                 onClick={() => {
@@ -251,6 +316,16 @@ export function Students() {
                             >
                                 Okul Sayfasına Git
                             </button>
+                            {(user?.role === 'admin' || user?.role === 'manager') && (
+                                <button
+                                    onClick={() => {
+                                        navigate(`/student-panel/${selectedStudent.id}`);
+                                    }}
+                                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg font-medium text-sm transition-all"
+                                >
+                                    Öğrenci Paneline Git
+                                </button>
+                            )}
                             {selectedStudent.status === 'Left' && (
                                 <button
                                     onClick={() => {
@@ -276,6 +351,12 @@ export function Students() {
                     </div>
                 </Modal>
             )}
+
+            <EvaluateStudentModal
+                isOpen={isEvaluationModalOpen}
+                onClose={() => setIsEvaluationModalOpen(false)}
+                student={selectedStudent}
+            />
         </div>
     );
 }
