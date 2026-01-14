@@ -150,17 +150,22 @@ export const NotificationCenter: React.FC = () => {
         return () => clearInterval(interval);
     }, [lessons, notificationTemplates, classGroups]);
 
-    if (dueNotifications.length === 0) return null;
+    // if (dueNotifications.length === 0) return null; // REMOVED: Always show bell
 
     return (
         <div className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="relative p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors"
-                title="Bekleyen Bildirimler"
+                className={`relative p-2 rounded-full transition-colors ${dueNotifications.length > 0
+                    ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                    : 'bg-white text-slate-400 hover:bg-slate-100 hover:text-slate-600 border border-slate-200'
+                    }`}
+                title={dueNotifications.length > 0 ? "Bekleyen Bildirimler" : "Bildirim Yok"}
             >
                 <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-600 border-2 border-white rounded-full animate-pulse" />
+                {dueNotifications.length > 0 && (
+                    <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-600 border-2 border-white rounded-full animate-pulse" />
+                )}
             </button>
 
             {isOpen && (
@@ -173,6 +178,14 @@ export const NotificationCenter: React.FC = () => {
                     </div>
 
                     <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                        {dueNotifications.length === 0 && (
+                            <div className="text-center py-8 text-slate-500 text-sm">
+                                <p>Şu an bekleyen bildirim yok.</p>
+                                <p className="text-xs text-slate-400 mt-1">
+                                    Ders zamanı yaklaştığında veya ayarlı saatlerde burada görünecektir.
+                                </p>
+                            </div>
+                        )}
                         {dueNotifications.map((notif, idx) => (
                             <div key={idx} className="p-3 border rounded-lg bg-slate-50 flex flex-col gap-2">
                                 <div>

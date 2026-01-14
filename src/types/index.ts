@@ -105,6 +105,8 @@ export interface ActivityLog {
     action: string;
     details: string;
     timestamp: string;
+    entityType?: string; // e.g. 'student', 'teacher', 'payment'
+    entityId?: string;
 }
 
 export type LessonStatus = 'scheduled' | 'completed' | 'cancelled';

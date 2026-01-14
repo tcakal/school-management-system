@@ -13,6 +13,7 @@ import { Login } from './pages/Login';
 import { ActivityLog } from './pages/ActivityLog';
 import { Settings } from './pages/Settings';
 import { StudentPanel } from './pages/StudentPanel';
+import { Guide } from './pages/Guide';
 import { useAuth } from './store/useAuth';
 
 import { ParentDashboard } from './pages/ParentDashboard';
@@ -74,7 +75,14 @@ function App() {
           <Route path="schedule" element={<Schedule />} />
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
-          <Route path="activity-log" element={<ActivityLog />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="activity-log" element={
+            <RequireAuth allowedRoles={['admin']}>
+              <ActivityLog />
+            </RequireAuth>
+          } />
+          <Route path="rehber" element={<Guide />} />
+          <Route path="rehber" element={<Guide />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

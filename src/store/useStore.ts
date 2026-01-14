@@ -73,6 +73,9 @@ interface AppState {
     addLeave: (leave: TeacherLeave) => Promise<void>;
     deleteLeave: (id: string) => Promise<void>;
     findAvailableTeachers: (date: string, startTime: string, endTime: string) => Teacher[];
+
+    // Activity Log Helper
+    logAction: (action: string, details: string, entityType: string, entityId?: string) => Promise<void>;
 }
 
 
@@ -310,7 +313,6 @@ export const useStore = create<AppState>((set, get) => ({
             }));
 
             // Handle System Settings
-            // Handle System Settings
             const settingsData = settingsRes.data;
             const settingsError = settingsRes.error;
 
@@ -332,7 +334,7 @@ export const useStore = create<AppState>((set, get) => ({
             const savedTheme = localStorage.getItem('theme');
             // Force dark mode if no theme saved OR if saved theme is light (migrating to dark)
             // This is a temporary override to ensure the user gets dark mode as requested
-            const themeToApply = savedTheme === 'dark' ? 'dark' : 'dark';
+            const themeToApply = 'dark'; // Enforce dark
 
             localStorage.setItem('theme', themeToApply);
             if (themeToApply === 'dark') {
@@ -350,7 +352,26 @@ export const useStore = create<AppState>((set, get) => ({
                 createdAt: e.created_at
             }));
 
-            set({ schools, students, classGroups, payments, teachers, assignments, lessons, attendance, studentEvaluations, teacherEvaluations, notificationTemplates, leaves, systemSettings, theme: themeToApply, initialized: true });
+            // FETCH ACTIVITY LOGS
+            const logsRes = await supabase
+                .from('activity_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(100); // Limit to last 100 for performance initially
+
+            const logs: ActivityLog[] = (logsRes.data || []).map(l => ({
+                id: l.id,
+                userId: l.user_id,
+                userName: l.user_name,
+                userRole: l.user_role,
+                action: l.action,
+                details: l.details,
+                timestamp: l.created_at,
+                entityType: l.entity_type,
+                entityId: l.entity_id
+            }));
+
+            set({ schools, students, classGroups, payments, teachers, assignments, lessons, attendance, studentEvaluations, teacherEvaluations, notificationTemplates, leaves, systemSettings, logs, theme: themeToApply, initialized: true });
         } catch (error) {
             console.error('Supabase fetch error:', error);
         } finally {
@@ -358,13 +379,47 @@ export const useStore = create<AppState>((set, get) => ({
         }
     },
 
+    // HELPER: Log Action to DB
+    logAction: async (action, details, entityType, entityId) => {
+        const currentUser = useAuth.getState().user;
+        if (!currentUser) return; // Should potentially log system actions too, but for now user actions are priority
+
+        const newLog = {
+            user_id: currentUser.id,
+            user_name: currentUser.name,
+            user_role: currentUser.role,
+            action: action,
+            details: details,
+            entity_type: entityType,
+            entity_id: entityId
+        };
+
+        // Optimistic Update
+        const optimisticLog: ActivityLog = {
+            id: crypto.randomUUID(),
+            userId: currentUser.id,
+            userName: currentUser.name,
+            userRole: currentUser.role,
+            action: action,
+            details: details,
+            timestamp: new Date().toISOString(),
+            entityType: entityType,
+            entityId: entityId
+        };
+
+        set(state => ({ logs: [optimisticLog, ...state.logs] }));
+
+        const { error } = await supabase.from('activity_logs').insert([newLog]);
+        if (error) console.error('Error logging action:', error);
+    },
+
     addStudentEvaluation: async (evaluation) => {
         const { data, error } = await supabase
             .from('student_evaluations')
             .insert([{
                 student_id: evaluation.studentId,
-                teacher_id: evaluation.teacherId, // Can be null for admins
-                evaluator_id: evaluation.evaluatorId, // New: Admin ID or Teacher User ID
+                teacher_id: evaluation.teacherId,
+                evaluator_id: evaluation.evaluatorId,
                 score: evaluation.score,
                 note: evaluation.note
             }])
@@ -384,6 +439,9 @@ export const useStore = create<AppState>((set, get) => ({
                 createdAt: data.created_at
             }]
         }));
+
+        const studentName = get().students.find(s => s.id === evaluation.studentId)?.name || 'Öğrenci';
+        get().logAction('DEGERLENDIRME', `${studentName} değerlendirildi. Puan: ${evaluation.score}`, 'student_evaluation', data.id);
     },
 
     addTeacherEvaluation: async (evaluation) => {
@@ -410,23 +468,15 @@ export const useStore = create<AppState>((set, get) => ({
                 createdAt: data.created_at
             }]
         }));
+
+        const teacherName = get().teachers.find(t => t.id === evaluation.teacherId)?.name || 'Öğretmen';
+        get().logAction('DEGERLENDIRME', `${teacherName} değerlendirildi. Puan: ${evaluation.score}`, 'teacher_evaluation', data.id);
     },
 
     addSchool: async (school) => {
         set((state) => ({ schools: [...state.schools, school] }));
-        const currentUser = useAuth.getState().user;
-        if (currentUser) {
-            const log: ActivityLog = {
-                id: crypto.randomUUID(),
-                userId: currentUser.id,
-                userName: currentUser.name,
-                userRole: currentUser.role,
-                action: 'OKUL_EKLE',
-                details: `${school.name} adlı okul eklendi.`,
-                timestamp: new Date().toISOString()
-            };
-            set(state => ({ logs: [log, ...state.logs] }));
-        }
+        get().logAction('OKUL_EKLE', `${school.name} okulu eklendi.`, 'school', school.id);
+
         const { error } = await supabase.from('schools').insert([{
             id: school.id,
             name: school.name,
@@ -443,14 +493,18 @@ export const useStore = create<AppState>((set, get) => ({
 
         if (error) {
             console.error('Supabase Error:', error);
-            alert(`Veritabanı Kayıt Hatası: ${error.message}\nLütfen Supabase RLS (Güvenlik) ayarlarınızı kontrol edin.`);
+            alert(`Veritabanı Kayıt Hatası: ${error.message}`);
         }
     },
 
     updateSchool: async (id, updated) => {
+        const oldSchool = get().schools.find(s => s.id === id);
         set((state) => ({
             schools: state.schools.map((s) => (s.id === id ? { ...s, ...updated } : s)),
         }));
+
+        get().logAction('OKUL_GUNCELLE', `${oldSchool?.name} bilgileri güncellendi.`, 'school', id);
+
         const dbUpdate: any = {};
         if (updated.name) dbUpdate.name = updated.name;
         if (updated.defaultPrice !== undefined) dbUpdate.default_price = updated.defaultPrice;
@@ -468,19 +522,8 @@ export const useStore = create<AppState>((set, get) => ({
 
     addStudent: async (student) => {
         set((state) => ({ students: [...state.students, student] }));
-        const currentUser = useAuth.getState().user;
-        if (currentUser) {
-            const log: ActivityLog = {
-                id: crypto.randomUUID(),
-                userId: currentUser.id,
-                userName: currentUser.name,
-                userRole: currentUser.role,
-                action: 'OGRENCI_EKLE',
-                details: `${student.name} kayıt edildi.`, // Changed from "sisteme eklendi" to "kayıt edildi"
-                timestamp: new Date().toISOString()
-            };
-            set(state => ({ logs: [log, ...state.logs] }));
-        }
+        get().logAction('OGRENCI_EKLE', `${student.name} kayıt edildi.`, 'student', student.id);
+
         const { error } = await supabase.from('students').insert([{
             id: student.id,
             school_id: student.schoolId,
@@ -501,8 +544,6 @@ export const useStore = create<AppState>((set, get) => ({
 
         if (error) {
             console.error('Error adding student:', error);
-            // Revert local state if needed, or notify user.
-            // For now, we log it. Ideally we should throw or show a toast.
         }
     },
 
@@ -512,29 +553,24 @@ export const useStore = create<AppState>((set, get) => ({
             students: state.students.map((s) => (s.id === id ? { ...s, ...updated } : s)),
         }));
 
-        const currentUser = useAuth.getState().user;
-        if (currentUser && student) {
+        if (student) {
             let actionType = 'OGRENCI_GUNCELLE';
             let details = `${student.name} bilgileri güncellendi.`;
 
             // Check for specific actions
             if (updated.status === 'Left') {
-                actionType = 'OGRENCI_SIL'; // Or OGRENCI_AYRILDI
+                actionType = 'OGRENCI_SIL'; // Keeping as SIL/AYRILDI logic in logs
                 const reason = updated.leftReason || 'Belirtilmedi';
-                details = `${student.name} kaydı silindi. Sebep: ${reason}`;
+                details = `${student.name} kaydı silindi/ayrıldı. Sebep: ${reason}`;
+            } else if (updated.name && updated.name !== student.name) {
+                details = `${student.name} adı ${updated.name} olarak değiştirildi.`;
+            } else if (updated.classGroupId && updated.classGroupId !== student.classGroupId) {
+                details = `${student.name} sınıfı değiştirildi.`;
             }
 
-            const log: ActivityLog = {
-                id: crypto.randomUUID(),
-                userId: currentUser.id,
-                userName: currentUser.name,
-                userRole: currentUser.role,
-                action: actionType as any,
-                details: details,
-                timestamp: new Date().toISOString()
-            };
-            set(state => ({ logs: [log, ...state.logs] }));
+            get().logAction(actionType as any, details, 'student', id);
         }
+
         const dbUpdate: any = {};
         if (updated.name) dbUpdate.name = updated.name;
         if (updated.phone) dbUpdate.phone = updated.phone;
@@ -542,7 +578,6 @@ export const useStore = create<AppState>((set, get) => ({
         if (updated.status) dbUpdate.status = updated.status;
         if (updated.leftReason) dbUpdate.left_reason = updated.leftReason;
         if (updated.joinedDate) dbUpdate.joined_date = updated.joinedDate;
-
         if (updated.birthDate) dbUpdate.birth_date = updated.birthDate;
         if (updated.gradeLevel) dbUpdate.grade_level = updated.gradeLevel;
         if (updated.parentName) dbUpdate.parent_name = updated.parentName;
@@ -564,6 +599,8 @@ export const useStore = create<AppState>((set, get) => ({
 
     addClassGroup: async (group) => {
         set((state) => ({ classGroups: [...state.classGroups, group] }));
+        get().logAction('SINIF_EKLE', `${group.name} grubu oluşturuldu.`, 'class_group', group.id);
+
         await supabase.from('class_groups').insert([{
             id: group.id,
             school_id: group.schoolId,
@@ -574,6 +611,8 @@ export const useStore = create<AppState>((set, get) => ({
 
     addPayment: async (payment) => {
         set((state) => ({ payments: [...state.payments, payment] }));
+        get().logAction('ODEME_AL', `${payment.amount} TL ödeme girişi yapıldı (${payment.type}).`, 'payment', payment.id);
+
         await supabase.from('payments').insert([{
             id: payment.id,
             school_id: payment.schoolId,
@@ -587,19 +626,8 @@ export const useStore = create<AppState>((set, get) => ({
 
     addTeacher: async (teacher) => {
         set((state) => ({ teachers: [...state.teachers, teacher] }));
-        const currentUser = useAuth.getState().user;
-        if (currentUser) {
-            const log: ActivityLog = {
-                id: crypto.randomUUID(),
-                userId: currentUser.id,
-                userName: currentUser.name,
-                userRole: currentUser.role,
-                action: 'OGRETMEN_EKLE',
-                details: `${teacher.name} eklendi.`,
-                timestamp: new Date().toISOString()
-            };
-            set(state => ({ logs: [log, ...state.logs] }));
-        }
+        get().logAction('OGRETMEN_EKLE', `${teacher.name} eklendi.`, 'teacher', teacher.id);
+
         await supabase.from('teachers').insert([{
             id: teacher.id,
             name: teacher.name,
@@ -613,22 +641,13 @@ export const useStore = create<AppState>((set, get) => ({
     },
 
     updateTeacher: async (id, updated) => {
+        const oldTeacher = get().teachers.find(t => t.id === id);
         set((state) => ({
             teachers: state.teachers.map((t) => (t.id === id ? { ...t, ...updated } : t)),
         }));
-        const currentUser = useAuth.getState().user;
-        if (currentUser) {
-            const log: ActivityLog = {
-                id: crypto.randomUUID(),
-                userId: currentUser.id,
-                userName: currentUser.name,
-                userRole: currentUser.role,
-                action: 'OGRETMEN_GUNCELLE',
-                details: `${updated.name || 'Öğretmen'} bilgileri güncellendi.`,
-                timestamp: new Date().toISOString()
-            };
-            set(state => ({ logs: [log, ...state.logs] }));
-        }
+
+        get().logAction('OGRETMEN_GUNCELLE', `${oldTeacher?.name} bilgileri güncellendi.`, 'teacher', id);
+
         const dbUpdate: any = {};
         if (updated.name) dbUpdate.name = updated.name;
         if (updated.phone) dbUpdate.phone = updated.phone;

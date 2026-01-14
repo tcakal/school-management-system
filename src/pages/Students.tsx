@@ -5,7 +5,8 @@ import { useAuth } from '../store/useAuth';
 import { Search, ArrowRight, User } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { EvaluateStudentModal } from '../components/EvaluateStudentModal';
-import { Star } from 'lucide-react';
+import { Star, Plus } from 'lucide-react';
+import { AddStudentModal } from '../components/AddStudentModal';
 
 export function Students() {
     const { students, schools, classGroups, studentEvaluations, teachers } = useStore();
@@ -20,6 +21,7 @@ export function Students() {
     const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
+    const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
 
     const filteredStudents = useMemo(() => {
         return students.filter(student => {
@@ -45,7 +47,17 @@ export function Students() {
         <div className="space-y-6">
             <div>
                 <h2 className="text-3xl font-bold text-slate-900">Tüm Öğrenciler</h2>
-                <p className="text-slate-500 mt-1">Sistemdeki kayıtlı tüm öğrencileri görüntüleyin ve arayın.</p>
+                <h2 className="text-3xl font-bold text-slate-900">Tüm Öğrenciler</h2>
+                <div className="flex justify-between items-center mt-1">
+                    <p className="text-slate-500">Sistemdeki kayıtlı tüm öğrencileri görüntüleyin ve arayın.</p>
+                    <button
+                        onClick={() => setIsAddStudentModalOpen(true)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium"
+                    >
+                        <Plus size={18} />
+                        Yeni Öğrenci
+                    </button>
+                </div>
             </div>
 
             {/* Filters */}
@@ -356,6 +368,11 @@ export function Students() {
                 isOpen={isEvaluationModalOpen}
                 onClose={() => setIsEvaluationModalOpen(false)}
                 student={selectedStudent}
+            />
+
+            <AddStudentModal
+                isOpen={isAddStudentModalOpen}
+                onClose={() => setIsAddStudentModalOpen(false)}
             />
         </div>
     );

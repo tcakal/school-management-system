@@ -1,74 +1,169 @@
+import { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { History, Clock } from 'lucide-react';
+import { History, Clock, Search, Filter, UserCog, UserCheck, Shield, Receipt } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 export function ActivityLog() {
     const { logs } = useStore();
+    const [activeTab, setActiveTab] = useState<'all' | 'teacher' | 'manager' | 'parent' | 'system'>('all');
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Filter logs based on tab and search term
+    const filteredLogs = logs.filter(log => {
+        // Tab Filter
+        if (activeTab === 'teacher' && log.userRole !== 'teacher') return false;
+        if (activeTab === 'manager' && log.userRole !== 'manager') return false;
+        if (activeTab === 'parent' && log.userRole !== 'parent') return false;
+        if (activeTab === 'system' && log.userRole !== 'admin') return false; // Assuming 'admin' is system for now, or check log.entityType === 'system'
+
+        // Search Filter
+        if (searchTerm) {
+            const searchLower = searchTerm.toLowerCase();
+            return (
+                log.userName?.toLowerCase().includes(searchLower) ||
+                log.details?.toLowerCase().includes(searchLower) ||
+                log.action?.toLowerCase().includes(searchLower)
+            );
+        }
+        return true;
+    });
+
+    // Helper to get icon based on action or entity type
+    const getActionIcon = (log: any) => {
+        if (log.entityType === 'payment' || log.action.includes('ODEME')) return <Receipt size={16} className="text-green-600" />;
+        if (log.action.includes('OGRETMEN')) return <UserCheck size={16} className="text-blue-600" />;
+        if (log.action.includes('YONETICI') || log.userRole === 'admin') return <Shield size={16} className="text-purple-600" />;
+        return <UserCog size={16} className="text-slate-500" />;
+    };
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center gap-3">
-                <div className="p-3 bg-purple-100 text-purple-600 rounded-xl">
-                    <History size={24} />
-                </div>
-                <div>
-                    <h2 className="text-3xl font-bold text-slate-900">İşlem Geçmişi</h2>
-                    <p className="text-slate-500">Sistem üzerinde yapılan tüm değişikliklerin kayıtları.</p>
+        <div className="space-y-6 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="p-3 bg-orange-500/10 text-orange-400 rounded-xl border border-orange-500/20">
+                        <History size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-3xl font-bold text-white">İşlem Geçmişi</h2>
+                        <p className="text-white">Sistem üzerindeki tüm hareketler ve değişiklikler.</p>
+                    </div>
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <table className="w-full text-left">
-                    <thead className="bg-slate-50 border-b border-slate-200">
-                        <tr>
-                            <th className="px-6 py-4 font-semibold text-slate-600 text-sm">Zaman</th>
-                            <th className="px-6 py-4 font-semibold text-slate-600 text-sm">Kullanıcı</th>
-                            <th className="px-6 py-4 font-semibold text-slate-600 text-sm">İşlem</th>
-                            <th className="px-6 py-4 font-semibold text-slate-600 text-sm">Detay</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {logs.map((log) => (
-                            <tr key={log.id} className="hover:bg-slate-50 transition-colors">
-                                <td className="px-6 py-4 text-sm text-slate-500 whitespace-nowrap">
-                                    <div className="flex items-center gap-2">
+            {/* Tabs & Search */}
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+                <div className="flex bg-slate-900/80 p-1 rounded-lg border border-slate-700">
+                    {[
+                        { id: 'all', label: 'Tümü' },
+                        { id: 'teacher', label: 'Öğretmen' },
+                        { id: 'manager', label: 'Müdür' },
+                        { id: 'parent', label: 'Veli' },
+                        { id: 'system', label: 'Sistem/Admin' }
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === tab.id
+                                ? 'bg-purple-600 text-white shadow-lg'
+                                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                                }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="relative w-full md:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                    <input
+                        type="text"
+                        placeholder="İşlem veya kişi ara..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-lg focus:ring-2 focus:ring-purple-500/50 transition-all border-slate-700 !bg-slate-800 !text-slate-200 !border-slate-700 placeholder:text-slate-500"
+                        style={{ backgroundColor: '#1e293b', color: '#e2e8f0', borderColor: '#334155' }}
+                    />
+                </div>
+            </div>
+
+            {/* Logs List */}
+            <div className="space-y-4">
+                {filteredLogs.length > 0 ? (
+                    filteredLogs.map((log) => (
+                        <div
+                            key={log.id}
+                            className="bg-slate-800 rounded-xl p-4 border border-slate-700/50 hover:border-slate-600 transition-all flex flex-col md:flex-row gap-4 items-center md:items-start"
+                        >
+                            {/* User Avatar */}
+                            <div className="shrink-0">
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg 
+                                    ${log.userRole === 'admin' ? 'bg-purple-900/50 text-purple-400 ring-2 ring-purple-500/20' :
+                                        log.userRole === 'teacher' ? 'bg-blue-900/50 text-blue-400 ring-2 ring-blue-500/20' :
+                                            'bg-emerald-900/50 text-emerald-400 ring-2 ring-emerald-500/20'}`}
+                                >
+                                    {log.userName?.substring(0, 2).toUpperCase()}
+                                </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 w-full text-center md:text-left">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-1">
+                                    <h4 className="font-semibold text-slate-200 flex items-center justify-center md:justify-start gap-2">
+                                        {log.userName}
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider
+                                            ${log.userRole === 'admin' ? 'bg-purple-500/10 text-purple-400' :
+                                                log.userRole === 'teacher' ? 'bg-blue-500/10 text-blue-400' :
+                                                    'bg-emerald-500/10 text-emerald-400'}`}
+                                        >
+                                            {log.userRole === 'admin' ? 'Yönetici' :
+                                                log.userRole === 'teacher' ? 'Öğretmen' :
+                                                    log.userRole === 'manager' ? 'Müdür' :
+                                                        log.userRole === 'parent' ? 'Veli' : log.userRole}
+                                        </span>
+                                    </h4>
+                                    <div className="flex items-center justify-center md:justify-end gap-2 text-xs text-slate-500">
                                         <Clock size={14} />
                                         {format(new Date(log.timestamp), 'd MMMM yyyy HH:mm', { locale: tr })}
                                     </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${log.userRole === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                                            }`}>
-                                            {log.userName.substring(0, 2).toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <div className="font-medium text-slate-900 text-sm">{log.userName}</div>
-                                            <div className="text-xs text-slate-500 capitalize">{log.userRole === 'admin' ? 'Yönetici' : 'Öğretmen'}</div>
-                                        </div>
+                                </div>
+
+                                <div className="flex items-start gap-3 mt-2 bg-slate-900/50 p-3 rounded-lg border border-slate-800">
+                                    <div className="mt-1 shrink-0">
+                                        {getActionIcon(log)}
                                     </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className="inline-flex px-2 py-1 rounded-md bg-slate-100 text-slate-700 text-xs font-medium font-mono border border-slate-200">
-                                        {log.action}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-sm text-slate-600">
-                                    {log.details}
-                                </td>
-                            </tr>
-                        ))}
-                        {logs.length === 0 && (
-                            <tr>
-                                <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
-                                    Henüz kayıtlı bir işlem bulunmuyor.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                                    <div>
+                                        <div className="text-sm font-medium text-slate-300 font-mono mb-1">
+                                            {log.action}
+                                        </div>
+                                        <p className="text-sm text-slate-400 leading-relaxed">
+                                            {log.details}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="bg-slate-800 rounded-xl p-12 text-center border border-slate-700 border-dashed">
+                        <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-500">
+                            <Filter size={32} />
+                        </div>
+                        <h3 className="text-lg font-medium text-slate-300 mb-2">Kayıt Bulunamadı</h3>
+                        <p className="text-slate-500 max-w-sm mx-auto">
+                            Seçilen filtre kriterlerine uygun işlem geçmişi kaydı bulunamadı.
+                        </p>
+                    </div>
+                )}
             </div>
+
+            {logs.length > 0 && (
+                <div className="text-center text-xs text-slate-600 pt-4">
+                    Son 100 işlem gösteriliyor.
+                </div>
+            )}
         </div>
     );
 }
+
+export default ActivityLog;

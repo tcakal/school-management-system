@@ -301,6 +301,13 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                                             .getPublicUrl(filePath);
 
                                                         setNewAttachmentUrl(data.publicUrl);
+
+                                                        // Auto-add to list
+                                                        setAttachments(prev => [...prev, { name: file.name, url: data.publicUrl, type: 'pdf' }]);
+
+                                                        // Reset
+                                                        setNewAttachmentName('');
+                                                        setNewAttachmentUrl('');
                                                     } catch (error) {
                                                         console.error('Upload error:', error);
                                                         alert('Dosya yüklenirken bir hata oluştu.');
@@ -308,6 +315,8 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                                         setNewAttachmentUrl('');
                                                     } finally {
                                                         setIsUploading(false);
+                                                        // Reset file input so same file can be selected again if needed
+                                                        e.target.value = '';
                                                     }
                                                 }}
                                             />
