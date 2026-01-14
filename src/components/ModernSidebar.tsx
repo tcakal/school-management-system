@@ -2,10 +2,9 @@
 import { NavLink } from 'react-router-dom';
 import {
     Building2, Users, GraduationCap, LayoutDashboard,
-    Wallet, Calendar, FileText, Settings, LogOut, ChevronLeft, ChevronRight, Activity, BookOpen
+    Wallet, Calendar, FileText, Settings, LogOut, Activity, BookOpen
 } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
-import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
 
 export function ModernSidebar() {

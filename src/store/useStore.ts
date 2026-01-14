@@ -331,7 +331,7 @@ export const useStore = create<AppState>((set, get) => ({
             }
 
             // Apply Theme
-            const savedTheme = localStorage.getItem('theme');
+            // const savedTheme = localStorage.getItem('theme'); // Unused
             // Force dark mode if no theme saved OR if saved theme is light (migrating to dark)
             // This is a temporary override to ensure the user gets dark mode as requested
             const themeToApply = 'dark'; // Enforce dark
