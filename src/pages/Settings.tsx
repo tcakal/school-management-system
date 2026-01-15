@@ -530,6 +530,11 @@ export function Settings() {
                             </div>
                         </div>
                     </div>
+
+                    <div className="mt-8 border-t border-slate-200 pt-6">
+                        <h4 className="font-bold text-slate-900 mb-2">Sistem Logları</h4>
+                        <DebugLogs />
+                    </div>
                 </div>
             )}
 
