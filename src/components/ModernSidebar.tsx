@@ -6,9 +6,11 @@ import {
 } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { useAuth } from '../store/useAuth';
+import { useStore } from '../store/useStore';
 
 export function ModernSidebar() {
     const { user, logout } = useAuth();
+    const { systemSettings } = useStore();
 
     const navItems = [
         { to: '/', icon: LayoutDashboard, label: 'Panel' },
@@ -26,13 +28,28 @@ export function ModernSidebar() {
     return (
         <div className="h-screen w-64 bg-slate-900 text-white flex flex-col transition-all duration-300">
             {/* Logo Area */}
-            <div className="p-6 border-b border-slate-800 flex items-center justify-center">
-                <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20">
-                    <GraduationCap size={28} className="text-white" />
-                </div>
-                <div className="ml-3 font-bold text-lg tracking-tight">
-                    <span className="text-blue-400">Okul</span>Yönetim
-                </div>
+            <div className="p-6 border-b border-slate-800 flex flex-col items-center justify-center gap-3 text-center">
+                {systemSettings?.logoUrl ? (
+                    <img
+                        src={systemSettings.logoUrl}
+                        alt="Logo"
+                        className="w-16 h-16 object-contain rounded bg-white/5 p-1"
+                    />
+                ) : (
+                    <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20 shrink-0">
+                        <GraduationCap size={28} className="text-white" />
+                    </div>
+                )}
+
+                {systemSettings?.systemName ? (
+                    <div className="font-bold text-lg tracking-tight break-words w-full">
+                        {systemSettings.systemName}
+                    </div>
+                ) : (
+                    <div className="font-bold text-lg tracking-tight">
+                        <span className="text-blue-400">Okul</span>Yönetim
+                    </div>
+                )}
             </div>
 
             {/* Navigation */}

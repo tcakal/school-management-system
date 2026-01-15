@@ -11,6 +11,7 @@ export interface School {
     managerName?: string;
     managerPhone?: string;
     managerEmail?: string;
+    telegramChatId?: string;
 }
 
 export interface ClassGroup {
@@ -45,6 +46,7 @@ export interface Student {
     // Financials
     paymentStatus?: 'paid' | 'free' | 'discounted'; // Default 'paid'
     discountPercentage?: number; // 0-100
+    telegramChatId?: string;
 }
 
 export type PaymentType = 'Tuition' | 'Book' | 'Uniform' | 'Other';
@@ -71,6 +73,17 @@ export interface Teacher {
     color?: string; // For calendar visualization
     role: 'admin' | 'teacher';
     password?: string; // Optional for now to handle migration, but ideally required
+    telegramChatId?: string; // For Telegram notifications
+}
+
+// ... (Student interface was not requested to be updated in the prompt, but the SQL migration included it. Let's update it too for consistency if needed, but the focus is Teacher/Admin first.)
+// Actually, let's update SystemSettings first as per plan.
+
+export interface SystemSettings {
+    id: string;
+    logoUrl?: string;
+    systemName: string;
+    telegramBotToken?: string;
 }
 
 export interface TeacherLeave {
@@ -139,7 +152,10 @@ export interface NotificationTemplate {
     offsetMinutes: number; // For last_lesson_end, this can be offset (e.g. +30 mins after last lesson)
     triggerTime?: string; // For fixed_time (e.g. "18:00")
     daysFilter?: number[]; // [1, 2, 3, 4, 5] for Weekdays, [0, 6] for Weekends
+    targetRoles?: ('student' | 'teacher' | 'manager' | 'admin')[];
+    isActive?: boolean;
 }
+
 
 export interface Attendance {
     id: string;
@@ -153,6 +169,8 @@ export interface SystemSettings {
     id: string;
     logoUrl?: string;
     systemName: string;
+    telegramBotToken?: string;
+    adminChatId?: string;
 }
 export interface StudentEvaluation {
     id: string;

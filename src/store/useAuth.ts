@@ -8,6 +8,7 @@ interface User {
     email: string;
     role: 'admin' | 'teacher' | 'parent' | 'manager';
     linkedStudentId?: string;
+    telegramChatId?: string;
 }
 
 interface AuthState {
@@ -49,6 +50,7 @@ export const useAuth = create<AuthState>()(
                             name: teacher.name,
                             email: teacher.email || '',
                             role: teacher.role, // 'admin' or 'teacher'
+                            telegramChatId: teacher.telegramChatId
                         },
                         isAuthenticated: true
                     });

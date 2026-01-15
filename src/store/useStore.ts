@@ -107,24 +107,33 @@ export const useStore = create<AppState>((set, get) => ({
 
         // If we have an existing ID, update it
         if (current?.id) {
-            const { error } = await supabase
-                .from('system_settings')
-                .update({
-                    logo_url: updates.logoUrl,
-                    system_name: updates.systemName
-                })
-                .eq('id', current.id);
+            const dbUpdate: any = {};
+            if (updates.logoUrl !== undefined) dbUpdate.logo_url = updates.logoUrl;
+            if (updates.systemName !== undefined) dbUpdate.system_name = updates.systemName;
+            if (updates.telegramBotToken !== undefined) dbUpdate.telegram_bot_token = updates.telegramBotToken;
+            if (updates.adminChatId !== undefined) dbUpdate.admin_chat_id = updates.adminChatId;
 
-            if (error) {
-                console.error('Error updating system settings:', error);
-                return;
+
+            if (Object.keys(dbUpdate).length > 0) {
+                const { error } = await supabase
+                    .from('system_settings')
+                    .update(dbUpdate)
+                    .eq('id', current.id);
+
+                if (error) {
+                    console.error('Error updating system settings:', error);
+                    throw error;
+                }
+                set({ systemSettings: { ...current, ...updates } });
             }
-            set({ systemSettings: { ...current, ...updates } });
         } else {
             // No existing settings, insert new row
             const newSettings = {
                 logo_url: updates.logoUrl,
-                system_name: updates.systemName
+                system_name: updates.systemName,
+                telegram_bot_token: updates.telegramBotToken,
+                admin_chat_id: updates.adminChatId,
+
             };
 
             const { data, error } = await supabase
@@ -135,18 +144,20 @@ export const useStore = create<AppState>((set, get) => ({
 
             if (error || !data) {
                 console.error('Error creating system settings:', error);
-                return;
+                throw error;
             }
-
             set({
                 systemSettings: {
                     id: data.id,
+                    systemName: data.system_name,
                     logoUrl: data.logo_url,
-                    systemName: data.system_name
+                    telegramBotToken: data.telegram_bot_token,
+                    adminChatId: data.admin_chat_id
                 }
             });
         }
     },
+
 
     loading: false,
     initialized: false,
@@ -198,7 +209,8 @@ export const useStore = create<AppState>((set, get) => ({
                 imageUrl: s.image_url,
                 managerName: s.manager_name,
                 managerPhone: s.manager_phone,
-                managerEmail: s.manager_email
+                managerEmail: s.manager_email,
+                telegramChatId: s.telegram_chat_id
             }));
 
             const students: Student[] = (studentsRes.data || []).map(s => ({
@@ -216,7 +228,8 @@ export const useStore = create<AppState>((set, get) => ({
                 birthDate: s.birth_date,
                 address: s.address,
                 medicalNotes: s.medical_notes,
-                gradeLevel: s.grade_level
+                gradeLevel: s.grade_level,
+                telegramChatId: s.telegram_chat_id
             }));
 
             const classGroups: ClassGroup[] = (classGroupsRes.data || []).map(c => ({
@@ -245,7 +258,8 @@ export const useStore = create<AppState>((set, get) => ({
                 specialties: t.specialties,
                 color: t.color,
                 role: t.role || 'teacher',
-                password: t.password
+                password: t.password,
+                telegramChatId: t.telegram_chat_id
             }));
 
             const assignments: TeacherAssignment[] = (assignmentsRes.data || []).map(a => ({
@@ -290,7 +304,8 @@ export const useStore = create<AppState>((set, get) => ({
                 messageTemplate: t.message_template,
                 offsetMinutes: t.offset_minutes,
                 triggerTime: t.trigger_time,
-                daysFilter: t.days_filter
+                daysFilter: t.days_filter,
+                targetRoles: t.target_roles || ['student']
             }));
 
             const leaves: TeacherLeave[] = (leavesRes.data || []).map(l => ({
@@ -313,7 +328,7 @@ export const useStore = create<AppState>((set, get) => ({
             }));
 
             // Handle System Settings
-            const settingsData = settingsRes.data;
+            const settingsData = (settingsRes.data && Array.isArray(settingsRes.data)) ? settingsRes.data[0] : settingsRes.data;
             const settingsError = settingsRes.error;
 
             // Ignore error code PGRST116 (no rows), but log others
@@ -326,7 +341,30 @@ export const useStore = create<AppState>((set, get) => ({
                 systemSettings = {
                     id: settingsData.id,
                     logoUrl: settingsData.logo_url,
-                    systemName: settingsData.system_name
+                    systemName: settingsData.system_name,
+                    telegramBotToken: settingsData.telegram_bot_token,
+                    adminChatId: settingsData.admin_chat_id
+                };
+            } else {
+                // Initialize default if not exists
+                const defaultId = crypto.randomUUID();
+                const defaultSettings = {
+                    id: defaultId,
+                    system_name: 'Atölye Vizyon',
+                    logo_url: ''
+                };
+
+                // Fire and forget insert to ensure DB has a row
+                supabase.from('system_settings').insert([defaultSettings]).then(({ error }) => {
+                    if (error) console.error('Error creating default settings:', error);
+                });
+
+                systemSettings = {
+                    id: defaultId,
+                    systemName: 'Atölye Vizyon',
+                    logoUrl: '',
+                    telegramBotToken: undefined,
+                    adminChatId: undefined
                 };
             }
 
@@ -1138,7 +1176,7 @@ export const useStore = create<AppState>((set, get) => ({
     },
 
     addNotificationTemplate: async (template) => {
-        set(state => ({ notificationTemplates: [...state.notificationTemplates, template] }));
+        set(state => ({ notificationTemplates: [...state.notificationTemplates, { ...template, isActive: template.isActive ?? true }] }));
         await supabase.from('notification_templates').insert([{
             id: template.id,
             school_id: template.schoolId,
@@ -1147,7 +1185,9 @@ export const useStore = create<AppState>((set, get) => ({
             message_template: template.messageTemplate,
             offset_minutes: template.offsetMinutes,
             trigger_time: template.triggerTime,
-            days_filter: template.daysFilter
+            days_filter: template.daysFilter,
+            target_roles: template.targetRoles || ['student'],
+            is_active: template.isActive ?? true
         }]);
     },
 
@@ -1161,8 +1201,10 @@ export const useStore = create<AppState>((set, get) => ({
         if (updates.offsetMinutes !== undefined) dbUpdate.offset_minutes = updates.offsetMinutes;
         if (updates.triggerType) dbUpdate.trigger_type = updates.triggerType;
         if (updates.classGroupId !== undefined) dbUpdate.class_group_id = updates.classGroupId;
+        if (updates.targetRoles !== undefined) dbUpdate.target_roles = updates.targetRoles;
         if (updates.triggerTime !== undefined) dbUpdate.trigger_time = updates.triggerTime;
         if (updates.daysFilter !== undefined) dbUpdate.days_filter = updates.daysFilter;
+        if (updates.isActive !== undefined) dbUpdate.is_active = updates.isActive;
 
         if (Object.keys(dbUpdate).length > 0) {
             await supabase.from('notification_templates').update(dbUpdate).eq('id', id);

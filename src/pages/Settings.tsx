@@ -1,12 +1,14 @@
+
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { Plus, Trash2, RefreshCw, Database, Palette } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Database, Palette, Phone, Edit2, Copy, ToggleLeft, ToggleRight, PlayCircle, Send } from 'lucide-react';
+import { TelegramService } from '../services/TelegramService';
 import { useAuth } from '../store/useAuth';
 import type { NotificationTemplate } from '../types';
 import { Tabs } from '../components/Tabs';
 
 export function Settings() {
-    const { notificationTemplates, schools, addNotificationTemplate, deleteNotificationTemplate } = useStore();
+    const { notificationTemplates, schools, addNotificationTemplate, deleteNotificationTemplate, updateNotificationTemplate } = useStore();
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('notifications');
 
@@ -14,21 +16,19 @@ export function Settings() {
     const [newTemplate, setNewTemplate] = useState<Partial<NotificationTemplate>>({
         triggerType: 'lesson_start',
         offsetMinutes: 0,
-        messageTemplate: ''
+        messageTemplate: '',
+        targetRoles: ['teacher'], // Default
+        isActive: true
     });
     const [selectedSchoolId, setSelectedSchoolId] = useState(schools[0]?.id || '');
+    const [editId, setEditId] = useState<string | null>(null);
 
-    // Data Management State
-    // const [orphanCounts, setOrphanCounts] = useState<{ students: number; payments: number; classes: number } | null>(null);
-    // const [scanning, setScanning] = useState(false); // Unused
-
-    /*
+    // Sync selectedSchoolId when schools load
     useEffect(() => {
-        if (activeTab === 'data' && !orphanCounts) {
-            // handleScan();
+        if (!selectedSchoolId && schools.length > 0) {
+            setSelectedSchoolId(schools[0].id);
         }
-    }, [activeTab]);
-    */
+    }, [schools, selectedSchoolId]);
 
     if (user?.role !== 'admin') {
         return (
@@ -39,38 +39,80 @@ export function Settings() {
         );
     }
 
-    const handleAdd = async () => {
-        if (!selectedSchoolId || !newTemplate.messageTemplate) return;
+    const handleSave = async () => {
+        console.log('Saving template for School:', selectedSchoolId);
+        if (!selectedSchoolId || !newTemplate.messageTemplate) {
+            alert('Lütfen Okul ve Mesaj şablonunu doldurunuz.');
+            return;
+        }
 
-        await addNotificationTemplate({
-            id: crypto.randomUUID(),
-            schoolId: selectedSchoolId,
-            triggerType: newTemplate.triggerType as any,
-            messageTemplate: newTemplate.messageTemplate || '',
-            offsetMinutes: newTemplate.offsetMinutes || 0,
-            triggerTime: newTemplate.triggerTime
-        });
+        if (editId) {
+            // Update
+            await updateNotificationTemplate(editId, {
+                ...newTemplate,
+                schoolId: selectedSchoolId, // Allow moving schools? Maybe.
+            });
+            setEditId(null);
+        } else {
+            // Create New
+            const templateData = {
+                id: crypto.randomUUID(),
+                schoolId: selectedSchoolId,
+                classGroupId: newTemplate.classGroupId,
+                triggerType: newTemplate.triggerType as any,
+                messageTemplate: newTemplate.messageTemplate || '',
+                offsetMinutes: newTemplate.offsetMinutes || 0,
+                triggerTime: newTemplate.triggerTime,
+                daysFilter: newTemplate.daysFilter,
+                targetRoles: newTemplate.targetRoles,
+                isActive: newTemplate.isActive ?? true
+            };
+            console.log('Template Data:', templateData);
+            await addNotificationTemplate(templateData);
+        }
 
+        // Reset Form
         setNewTemplate({
             triggerType: 'lesson_start',
             offsetMinutes: 0,
-            messageTemplate: ''
+            messageTemplate: '',
+            targetRoles: ['teacher'],
+            isActive: true
         });
     };
 
-    /*
-    const handleScan = async () => {
-        setScanning(true);
-        // Simulate a small delay for better UX
-        setTimeout(async () => {
-            const result = await deleteOrphanData();
-            setOrphanCounts(result);
-            setScanning(false);
-        }, 500);
+    const loadExample = (type: string) => {
+        if (type === 'lesson_reminder') {
+            setNewTemplate({
+                triggerType: 'lesson_start',
+                offsetMinutes: -30, // 30 mins before
+                targetRoles: ['student', 'teacher'],
+                isActive: true,
+                messageTemplate: `🔔 Ders Hatırlatması\n\nSayın Velimiz,\n\n{class_name} dersi 30 dakika sonra başlayacaktır.\n\nİyi dersler dileriz.`
+            });
+        }
+        else if (type === 'daily_summary') {
+            setNewTemplate({
+                triggerType: 'last_lesson_end',
+                offsetMinutes: 60, // 1 hour after last lesson
+                targetRoles: ['admin', 'manager'],
+                isActive: true,
+                messageTemplate: `📊 Gün Sonu Raporu\n\nBugünkü dersler tamamlanmıştır.\nLütfen yoklamaları kontrol ediniz.`
+            });
+        }
+        else if (type === 'teacher_schedule') {
+            setNewTemplate({
+                triggerType: 'fixed_time',
+                triggerTime: '08:00',
+                targetRoles: ['teacher'],
+                isActive: true,
+                messageTemplate: `Günaydın Hocam ☀️\n\nBugünkü ders programınızı kontrol etmeyi unutmayınız.\n\nİyi çalışmalar.`
+            });
+        }
     };
-    */
 
     const templates = notificationTemplates.filter(t => t.schoolId === selectedSchoolId);
+    console.log(`Visible Templates: ${templates.length} / Total: ${notificationTemplates.length}`);
 
     return (
         <div className="space-y-6">
@@ -83,6 +125,7 @@ export function Settings() {
                 tabs={[
                     { id: 'appearance', label: 'Görünüm', icon: Palette },
                     { id: 'notifications', label: 'Bildirim Şablonları' },
+                    { id: 'telegram', label: 'Telegram & İletişim', icon: Phone },
                     { id: 'data', label: 'Veri Yönetimi', icon: Database }
                 ]}
                 activeTab={activeTab}
@@ -106,53 +149,194 @@ export function Settings() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         {/* List */}
                         <div className="space-y-3">
                             <h4 className="font-medium text-slate-900">Mevcut Şablonlar</h4>
                             {templates.length === 0 && <p className="text-sm text-slate-400">Tanımlı şablon yok.</p>}
                             {templates.map(t => (
-                                <div key={t.id} className="p-3 border border-slate-200 rounded-lg bg-slate-50 flex justify-between items-start group hover:border-slate-300 transition-colors">
-                                    <div>
-                                        <div className="text-xs font-bold text-blue-600 uppercase mb-1">
-                                            {t.triggerType === 'fixed_time' ? `Saat: ${t.triggerTime}` :
-                                                t.triggerType === 'last_lesson_end' ? 'Son Ders Bitimi' :
-                                                    t.triggerType === 'lesson_start' ? 'Ders Başlangıcı' :
-                                                        t.triggerType === 'lesson_end' ? 'Ders Bitişi' :
-                                                            'Zaman Ayarlı'}
-                                            {t.triggerType !== 'fixed_time' && ` (${t.offsetMinutes} dk)`}
-                                        </div>
-                                        <div className="text-xs text-slate-400 mb-1">
-                                            {t.classGroupId
-                                                ? `Özel: ${useStore.getState().classGroups.find(c => c.id === t.classGroupId)?.name}`
-                                                : 'Genel (Tüm Sınıflar)'
-                                            }
-                                        </div>
-                                        {t.daysFilter && (
-                                            <div className="flex gap-1 mb-1">
-                                                {t.daysFilter.map(d => (
-                                                    <span key={d} className="text-[10px] bg-slate-100 px-1 rounded text-slate-500">
-                                                        {['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'][d]}
-                                                    </span>
-                                                ))}
+                                <div key={t.id} className={`p-3 border rounded-lg flex flex-col gap-2 transition-colors ${t.isActive === false ? 'bg-slate-100 border-slate-200 opacity-75' : 'bg-slate-50 border-slate-200 hover:border-blue-300'}`}>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-2 h-2 rounded-full ${t.isActive === false ? 'bg-slate-400' : 'bg-green-500'}`} />
+                                                <div className="text-xs font-bold text-blue-600 uppercase">
+                                                    {t.triggerType === 'fixed_time' ? `Saat: ${t.triggerTime}` :
+                                                        t.triggerType === 'last_lesson_end' ? 'Son Ders Bitimi' :
+                                                            t.triggerType === 'lesson_start' ? 'Ders Başlangıcı' :
+                                                                t.triggerType === 'lesson_end' ? 'Ders Bitişi' :
+                                                                    'Zaman Ayarlı'}
+                                                    {t.triggerType !== 'fixed_time' && ` (${t.offsetMinutes} dk)`}
+                                                </div>
                                             </div>
-                                        )}
-                                        <p className="text-sm text-slate-700">{t.messageTemplate}</p>
+                                            <div className="text-xs text-slate-400 mt-1">
+                                                {t.classGroupId
+                                                    ? `Özel: ${useStore.getState().classGroups.find(c => c.id === t.classGroupId)?.name}`
+                                                    : 'Genel (Tüm Sınıflar)'
+                                                }
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            {/* Toggle Active */}
+                                            <button
+                                                onClick={() => updateNotificationTemplate(t.id, { isActive: !t.isActive })}
+                                                className={`p-1 rounded hover:bg-slate-200 ${t.isActive === false ? 'text-slate-400' : 'text-green-600'}`}
+                                                title={t.isActive === false ? "Aktifleştir" : "Pasifleştir"}
+                                            >
+                                                {t.isActive === false ? <ToggleLeft size={18} /> : <ToggleRight size={18} />}
+                                            </button>
+
+                                            {/* Edit */}
+                                            <button
+                                                onClick={() => {
+                                                    setEditId(t.id);
+                                                    setNewTemplate({
+                                                        triggerType: t.triggerType,
+                                                        messageTemplate: t.messageTemplate,
+                                                        offsetMinutes: t.offsetMinutes,
+                                                        triggerTime: t.triggerTime,
+                                                        daysFilter: t.daysFilter,
+                                                        targetRoles: t.targetRoles,
+                                                        classGroupId: t.classGroupId,
+                                                        isActive: t.isActive
+                                                    });
+                                                }}
+                                                className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                                title="Düzenle"
+                                            >
+                                                <Edit2 size={16} />
+                                            </button>
+
+                                            {/* Clone */}
+                                            <button
+                                                onClick={() => {
+                                                    setEditId(null); // Ensure creation mode
+                                                    setNewTemplate({
+                                                        triggerType: t.triggerType,
+                                                        messageTemplate: t.messageTemplate,
+                                                        offsetMinutes: t.offsetMinutes,
+                                                        triggerTime: t.triggerTime,
+                                                        daysFilter: t.daysFilter,
+                                                        targetRoles: t.targetRoles,
+                                                        classGroupId: t.classGroupId,
+                                                        isActive: true
+                                                    });
+                                                }}
+                                                className="p-1 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded"
+                                                title="Kopyasını Oluştur"
+                                            >
+                                                <Copy size={16} />
+                                            </button>
+
+                                            {/* Test Send */}
+                                            <button
+                                                onClick={async () => {
+                                                    let targetChatId = user?.telegramChatId;
+                                                    if (!targetChatId && user?.role === 'admin' && user?.id === 'super-admin') {
+                                                        targetChatId = useStore.getState().systemSettings?.adminChatId;
+                                                    }
+
+                                                    if (!targetChatId) {
+                                                        alert('Telegram Chat ID\'niz bulunamadı. Lütfen önce kendi profilinize Telegram bağlayın.');
+                                                        return;
+                                                    }
+
+                                                    if (!confirm('Bu şablonu test etmek için kendinize bir mesaj göndermek istiyor musunuz?')) return;
+
+                                                    // Replace variables with dummy data for test
+                                                    const testMessage = t.messageTemplate
+                                                        .replace('{class_name}', 'TEST GRUBU')
+                                                        .replace('{start_time}', '12:00');
+
+                                                    const res = await TelegramService.sendMessage(
+                                                        useStore.getState().systemSettings?.telegramBotToken || '',
+                                                        targetChatId,
+                                                        `[TEST MESAJI]\n\n${testMessage}`
+                                                    );
+
+                                                    if (res.success) alert('Test mesajı başarıyla gönderildi!');
+                                                    else alert('Mesaj gönderilemedi. Bot Token veya Chat ID hatalı olabilir.');
+                                                }}
+                                                className="p-1 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded"
+                                                title="Test Mesajı Gönder"
+                                            >
+                                                <Send size={16} />
+                                            </button>
+
+                                            {/* Delete */}
+                                            <button
+                                                onClick={() => deleteNotificationTemplate(t.id)}
+                                                className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                                title="Sil"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <button
-                                        onClick={() => deleteNotificationTemplate(t.id)}
-                                        className="text-slate-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+
+                                    <div className="flex gap-1 flex-wrap">
+                                        {t.targetRoles && t.targetRoles.map(role => (
+                                            <span key={role} className={`text-[10px] px-1 rounded border ${role === 'student' ? 'bg-green-50 text-green-700 border-green-200' :
+                                                role === 'teacher' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                                    'bg-orange-50 text-orange-700 border-orange-200'
+                                                }`}>
+                                                {role === 'student' ? 'Veli/Öğrenci' : role === 'teacher' ? 'Öğretmen' : role === 'manager' ? 'Yönetici' : 'Admin'}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <p className="text-sm text-slate-700 line-clamp-2">{t.messageTemplate}</p>
                                 </div>
                             ))}
                         </div>
 
-                        {/* Add Form */}
-                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 h-fit">
-                            <h4 className="font-medium text-slate-900 mb-3">Yeni Şablon Ekle</h4>
+                        {/* Add/Edit Form */}
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 h-fit sticky top-4">
+                            <h4 className="font-bold text-slate-900 mb-3 flex items-center justify-between">
+                                {editId ? 'Şablonu Düzenle' : 'Yeni Şablon Ekle'}
+                                {editId && (
+                                    <button
+                                        onClick={() => {
+                                            setEditId(null);
+                                            setNewTemplate({ triggerType: 'lesson_start', offsetMinutes: 0, messageTemplate: '', targetRoles: ['teacher'], isActive: true });
+                                        }}
+                                        className="text-xs text-red-500 hover:underline"
+                                    >
+                                        İptal
+                                    </button>
+                                )}
+                            </h4>
+
+                            {!editId && (
+                                <div className="mb-4 flex gap-2 overflow-x-auto pb-2 border-b border-slate-200">
+                                    <button onClick={() => loadExample('lesson_reminder')} className="whitespace-nowrap px-3 py-1.5 bg-white border border-slate-200 rounded-full text-xs hover:border-blue-400 hover:text-blue-600 flex items-center gap-1 transition-colors">
+                                        <PlayCircle size={12} /> Ders Hatırlatması
+                                    </button>
+                                    <button onClick={() => loadExample('teacher_schedule')} className="whitespace-nowrap px-3 py-1.5 bg-white border border-slate-200 rounded-full text-xs hover:border-purple-400 hover:text-purple-600 flex items-center gap-1 transition-colors">
+                                        <PlayCircle size={12} /> Hoca Programı
+                                    </button>
+                                    <button onClick={() => loadExample('daily_summary')} className="whitespace-nowrap px-3 py-1.5 bg-white border border-slate-200 rounded-full text-xs hover:border-orange-400 hover:text-orange-600 flex items-center gap-1 transition-colors">
+                                        <PlayCircle size={12} /> Yönetici Raporu
+                                    </button>
+                                </div>
+                            )}
+
                             <div className="space-y-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Durum</label>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setNewTemplate(prev => ({ ...prev, isActive: !prev.isActive }))}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${newTemplate.isActive !== false
+                                                ? 'bg-green-50 border-green-200 text-green-700'
+                                                : 'bg-slate-100 border-slate-200 text-slate-500'
+                                                }`}
+                                        >
+                                            {newTemplate.isActive !== false ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                                            <span className="text-xs font-bold">{newTemplate.isActive !== false ? 'AKTİF' : 'PASİF'}</span>
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label className="block text-xs font-medium text-slate-500 mb-1">Özel Grup (Opsiyonel)</label>
                                     <select
@@ -215,34 +399,38 @@ export function Settings() {
                                 {/* Fixed Time Input */}
                                 {newTemplate.triggerType === 'fixed_time' && (
                                     <div>
-                                        <label className="block text-xs font-medium text-slate-500 mb-1">Saat Seçin (24 Saat ve 15dk aralıklı)</label>
+                                        <label className="block text-xs font-medium text-slate-500 mb-1">Saat Seçin (24 Saat)</label>
                                         <div className="flex gap-2">
+                                            {/* Hours */}
                                             <select
-                                                className="w-20 text-sm border-slate-300 rounded-md bg-white text-slate-900"
-                                                value={newTemplate.triggerTime ? newTemplate.triggerTime.split(':')[0] : '09'}
+                                                className="w-20 p-2 border border-slate-300 rounded-lg bg-white text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+                                                value={newTemplate.triggerTime?.split(':')[0] || '09'}
                                                 onChange={e => {
-                                                    const currentMinute = newTemplate.triggerTime ? newTemplate.triggerTime.split(':')[1] : '00';
-                                                    setNewTemplate(prev => ({ ...prev, triggerTime: `${e.target.value}:${currentMinute}` }));
+                                                    const currentMin = newTemplate.triggerTime?.split(':')[1] || '00';
+                                                    setNewTemplate({ ...newTemplate, triggerTime: `${e.target.value}:${currentMin}` });
                                                 }}
                                             >
-                                                {Array.from({ length: 24 }).map((_, i) => {
-                                                    const val = i.toString().padStart(2, '0');
-                                                    return <option key={val} value={val}>{val}</option>;
-                                                })}
+                                                {Array.from({ length: 24 }).map((_, i) => (
+                                                    <option key={i} value={i.toString().padStart(2, '0')}>
+                                                        {i.toString().padStart(2, '0')}
+                                                    </option>
+                                                ))}
                                             </select>
-                                            <span className="self-center font-bold text-slate-400">:</span>
+                                            <span className="self-center text-slate-400">:</span>
+                                            {/* Minutes */}
                                             <select
-                                                className="w-20 text-sm border-slate-300 rounded-md bg-white text-slate-900"
-                                                value={newTemplate.triggerTime ? newTemplate.triggerTime.split(':')[1] : '00'}
+                                                className="w-20 p-2 border border-slate-300 rounded-lg bg-white text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+                                                value={newTemplate.triggerTime?.split(':')[1] || '00'}
                                                 onChange={e => {
-                                                    const currentHour = newTemplate.triggerTime ? newTemplate.triggerTime.split(':')[0] : '09';
-                                                    setNewTemplate(prev => ({ ...prev, triggerTime: `${currentHour}:${e.target.value}` }));
+                                                    const currentHour = newTemplate.triggerTime?.split(':')[0] || '09';
+                                                    setNewTemplate({ ...newTemplate, triggerTime: `${currentHour}:${e.target.value}` });
                                                 }}
                                             >
-                                                <option value="00">00</option>
-                                                <option value="15">15</option>
-                                                <option value="30">30</option>
-                                                <option value="45">45</option>
+                                                {Array.from({ length: 60 }).map((_, i) => (
+                                                    <option key={i} value={i.toString().padStart(2, '0')}>
+                                                        {i.toString().padStart(2, '0')}
+                                                    </option>
+                                                ))}
                                             </select>
                                         </div>
                                     </div>
@@ -277,6 +465,43 @@ export function Settings() {
                                     <p className="text-[10px] text-slate-400 mt-1">Seçili günlerde çalışır.</p>
                                 </div>
 
+                                {/* Target Roles Selection */}
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-500 mb-2">Hedef Kitle</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[
+                                            { id: 'student', label: 'Veli/Öğrenci' },
+                                            { id: 'teacher', label: 'Öğretmen' },
+                                            { id: 'manager', label: 'Yönetici' },
+                                            { id: 'admin', label: 'Admin (Ben)' }
+                                        ].map((role) => {
+                                            const isSelected = newTemplate.targetRoles?.includes(role.id as any);
+                                            return (
+                                                <button
+                                                    key={role.id}
+                                                    onClick={() => {
+                                                        const current = newTemplate.targetRoles || [];
+                                                        let next;
+                                                        if (current.includes(role.id as any)) {
+                                                            next = current.filter(r => r !== role.id);
+                                                        } else {
+                                                            next = [...current, role.id];
+                                                        }
+                                                        setNewTemplate(prev => ({ ...prev, targetRoles: next as any }));
+                                                    }}
+                                                    className={`px-2 py-1 text-xs rounded border transition-colors ${isSelected
+                                                        ? 'bg-slate-800 border-slate-700 text-white font-medium'
+                                                        : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                                                        }`}
+                                                >
+                                                    {isSelected ? '✓ ' : ''}{role.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-1">Mesaj otomatik olarak kimlere gidecek?</p>
+                                </div>
+
                                 <div>
                                     <label className="block text-xs font-medium text-slate-500 mb-1">Mesaj Metni</label>
                                     <textarea
@@ -293,13 +518,14 @@ export function Settings() {
 
                                 <button
                                     onClick={async () => {
-                                        await handleAdd();
-                                        alert('Şablon başarıyla kaydedildi!');
+                                        await handleSave();
+                                        alert(editId ? 'Şablon güncellendi!' : 'Şablon başarıyla kaydedildi!');
                                     }}
-                                    className="w-full bg-slate-900 text-white py-2 rounded-md text-sm font-medium hover:bg-slate-800 flex justify-center items-center gap-2"
+                                    className={`w-full py-2 rounded-md text-sm font-medium flex justify-center items-center gap-2 ${editId ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-slate-900 hover:bg-slate-800 text-white'
+                                        }`}
                                 >
-                                    <Plus size={16} />
-                                    Şablonu Kaydet
+                                    {editId ? <Edit2 size={16} /> : <Plus size={16} />}
+                                    {editId ? 'Değişiklikleri Kaydet' : 'Şablonu Kaydet'}
                                 </button>
                             </div>
                         </div>
@@ -309,18 +535,6 @@ export function Settings() {
 
             {activeTab === 'data' && (
                 <div className="space-y-6">
-                    {/* Orphan Data Cleanup */}
-                    {/* Orphan Data Cleanup - TEMPORARILY DISABLED DUE TO DATA LOSS RISK
-                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm opacity-50 pointer-events-none grayscale">
-                        <div className="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-900">Veri Temizliği (Bakımda)</h3>
-                                <p className="text-sm text-slate-500">Bu özellik geçici olarak devre dışı bırakılmıştır.</p>
-                            </div>
-                        </div>
-                    </div> 
-                    */}
-
                     {/* Regenerate Schedule */}
                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
@@ -341,15 +555,26 @@ export function Settings() {
 
             {activeTab === 'appearance' && (
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-8">
-                    {/* Theme Settings Removed - Permanently Dark Mode */}
-
-                    {/* Branding Settings (Admin Only) */}
                     <div>
                         <h3 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-200 pb-2">Marka ve Logo</h3>
                         <SettingsForm />
                     </div>
                 </div>
             )}
+
+            {activeTab === 'telegram' && (
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-8">
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-900 mb-4 border-b border-slate-200 pb-2">Telegram Entegrasyonu</h3>
+                        <p className="text-sm text-slate-500 mb-6">
+                            Sistemin otomatik mesaj gönderebilmesi için Telegram Bot kurulumu yapılması gerekir.
+                            Bu işlem sadece 1 kere yapılır.
+                        </p>
+                        <TelegramSettings />
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }
@@ -360,7 +585,6 @@ function SettingsForm() {
     const [logo, setLogo] = useState(systemSettings?.logoUrl || '');
     const [saving, setSaving] = useState(false);
 
-    // Sync with store when it loads
     useEffect(() => {
         if (systemSettings) {
             setName(systemSettings.systemName || '');
@@ -449,5 +673,155 @@ function RegenerateButton() {
             {regenerating ? <RefreshCw className="animate-spin" size={18} /> : <RefreshCw size={18} />}
             {regenerating ? 'Onarılıyor...' : 'Programı Onar / Yenile'}
         </button>
+    );
+}
+
+function TelegramSettings() {
+    const { systemSettings, updateSystemSettings, updateTeacher } = useStore();
+    const { user } = useAuth();
+
+    const [botToken, setBotToken] = useState(systemSettings?.telegramBotToken || '');
+    const [myChatId, setMyChatId] = useState(user?.telegramChatId || '');
+
+    const [saving, setSaving] = useState(false);
+    const [testing, setTesting] = useState(false);
+
+    useEffect(() => {
+        if (systemSettings?.telegramBotToken) setBotToken(systemSettings.telegramBotToken);
+
+        // Auto-fill Chat ID for Super Admin
+        if (user?.role === 'admin' && user?.id === 'super-admin' && systemSettings?.adminChatId) {
+            setMyChatId(systemSettings.adminChatId);
+        }
+    }, [systemSettings, user]);
+
+    const handleSaveToken = async () => {
+        setSaving(true);
+        try {
+            await updateSystemSettings({ telegramBotToken: botToken });
+            alert('Bot Token kaydedildi!');
+        } catch (e: any) {
+            console.error(e);
+            alert('Hata oluştu: ' + (e.message || 'Bilinmeyen hata'));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleTestMessage = async () => {
+        if (!botToken || !myChatId) {
+            alert('Lütfen önce Bot Token ve Chat ID giriniz.');
+            return;
+        }
+        setTesting(true);
+        const res = await TelegramService.sendMessage(botToken, myChatId, "🔔 *Deneme Mesajı* \n\nSistemden başarıyla mesaj alıyorsunuz.");
+        setTesting(false);
+
+        if (res.success) {
+            alert('Mesaj başarıyla gönderildi! Telegramınızı kontrol edin.');
+        } else {
+            alert('Mesaj gönderilemedi: ' + res.error);
+        }
+    };
+
+    return (
+        <div className="space-y-6 max-w-2xl">
+            {/* 1. Bot Token Configuration */}
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <h4 className="font-bold text-slate-900 mb-2">1. Bot Tanımlama (Sadece Yönetici)</h4>
+                <div className="space-y-3">
+                    <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-1">Bot Token</label>
+                        <input
+                            type="text"
+                            className="w-full text-sm border-slate-300 rounded-md p-2 bg-white text-slate-900"
+                            placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+                            value={botToken}
+                            onChange={e => setBotToken(e.target.value)}
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                            @BotFather üzerinden aldığınız token.
+                        </p>
+                    </div>
+                    <button
+                        onClick={handleSaveToken}
+                        disabled={saving}
+                        className="bg-slate-900 text-white px-4 py-2 rounded text-xs font-medium hover:bg-slate-800 disabled:opacity-50"
+                    >
+                        {saving ? 'Kaydediliyor...' : 'Tokeni Kaydet'}
+                    </button>
+                </div>
+            </div>
+
+            {/* 2. User Connection */}
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <h4 className="font-bold text-blue-900 mb-2">2. Kendi Hesabını Bağla</h4>
+                <div className="space-y-3">
+                    <p className="text-xs text-blue-800">
+                        Bildirimleri alabilmek için Telegram Chat ID'nizi girmeniz gerekir.
+                        <br />
+                        Botunuzu başlattıktan sonra size ID'nizi söylemesini sağlayabilir veya @userinfobot kullanabilirsiniz.
+                    </p>
+
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            className="flex-1 text-sm border-blue-200 rounded-md p-2 text-slate-900"
+                            placeholder="Örn: 14752899"
+                            value={myChatId}
+                            onChange={e => setMyChatId(e.target.value)}
+                        />
+                        <button
+                            onClick={handleTestMessage}
+                            disabled={testing}
+                            className="bg-blue-600 text-white px-4 py-2 rounded text-xs font-medium hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
+                        >
+                            <Phone size={14} />
+                            {testing ? 'Gönderiliyor...' : 'Test Mesajı Gönder'}
+                        </button>
+
+                        <button
+                            onClick={async () => {
+                                if (!user?.id || !myChatId) return;
+
+                                try {
+                                    if (user.role === 'admin' && user.id === 'super-admin') {
+                                        await updateSystemSettings({ adminChatId: myChatId });
+                                        alert('Chat ID sistem ayarlarına kaydedildi (Super Admin).');
+                                    } else {
+                                        await updateTeacher(user.id, { telegramChatId: myChatId });
+                                        alert('Chat ID profilinize kaydedildi!');
+                                    }
+                                } catch (error: any) {
+                                    console.error('Save error:', error);
+                                    alert('Kaydetme başarısız: ' + (error.message || 'Bilinmeyen hata'));
+                                }
+                            }}
+                            className="bg-green-600 text-white px-4 py-2 rounded text-xs font-medium hover:bg-green-700 flex items-center gap-2"
+                        >
+                            <Database size={14} />
+                            Kaydet
+                        </button>
+                    </div>
+
+                    <p className="text-[10px] text-blue-400">
+                        * "Kaydet" derseniz bu ID profilinize işlenir ve Admin bildirimlerini alırsınız.
+                    </p>
+                </div>
+            </div>
+
+            {/* Guide Step */}
+            <div className="text-sm text-slate-600 space-y-2 border-t pt-4">
+                <p><strong>Nasıl Kurulur?</strong></p>
+                <ol className="list-decimal pl-4 space-y-1 text-xs">
+                    <li>Telegram'da <strong>@BotFather</strong>'ı bulun ve başlatın.</li>
+                    <li><code>/newbot</code> komutunu gönderin.</li>
+                    <li>Botunuza bir isim (Örn: Okul Bilgilendirme) ve kullanıcı adı (Örn: OkulXBot) verin.</li>
+                    <li>Size verilen <strong>HTTP API Token</strong>'ı yukarıdaki 1. alana yapıştırıp kaydedin.</li>
+                    <li>Kendi oluşturduğunuz botu Telegram'da aratıp <strong>Başlat (Start)</strong> deyin.</li>
+                    <li>ID'nizi öğrenip 2. alanda test edin.</li>
+                </ol>
+            </div>
+        </div>
     );
 }
