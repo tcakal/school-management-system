@@ -167,33 +167,8 @@ export const NotificationCenter: React.FC = () => {
     }, [lessons, notificationTemplates, classGroups]);
 
 
-    // Track sent notifications to prevent duplicates using LocalStorage
-    // Key format: "sent_notifications_yyyy-MM-dd" -> JSON array of IDs
-    const getSentIds = (): Set<string> => {
-        const today = format(new Date(), 'yyyy-MM-dd');
-        const key = `sent_notifications_${today}`;
-        const stored = localStorage.getItem(key);
-        return new Set(stored ? JSON.parse(stored) : []);
-    };
+    // Auto-send logic moved to server-side (pg_cron)
 
-    const addSentId = (id: string) => {
-        const today = format(new Date(), 'yyyy-MM-dd');
-        const key = `sent_notifications_${today}`;
-        const current = getSentIds();
-        current.add(id);
-        localStorage.setItem(key, JSON.stringify(Array.from(current)));
-    };
-
-    // Auto-send effect
-    useEffect(() => {
-        const sentIds = getSentIds();
-        dueNotifications.forEach(notif => {
-            if (!sentIds.has(notif.id)) {
-                addSentId(notif.id);
-                handleSendTelegram(notif, true); // True = auto send
-            }
-        });
-    }, [dueNotifications]);
 
     const handleSendTelegram = async (notif: any, isAuto = false) => {
         if (!systemSettings?.telegramBotToken) {
@@ -235,7 +210,7 @@ export const NotificationCenter: React.FC = () => {
                 // Also find teachers with manager role in this school
                 const managerTeachers = teachers.filter(t => t.role === 'manager' && t.schoolIds.includes(notif.schoolId) && t.telegramChatId);
                 managerTeachers.forEach(m => recipientChatIds.add(m.telegramChatId!));
-
+ 
                 if (school?.telegramChatId) recipientChatIds.add(school.telegramChatId);
             }
             */

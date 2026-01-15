@@ -86,9 +86,7 @@ export function TeacherLeaveModal({ isOpen, onClose, teacherId }: TeacherLeaveMo
         if (!teacherId || !startDate || !endDate) return;
 
         // 1. Create Leave Record
-        const leaveId = crypto.randomUUID();
         await addLeave({
-            id: leaveId,
             teacherId,
             startDate,
             endDate,

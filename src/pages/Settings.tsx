@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { Plus, Trash2, RefreshCw, Database, Palette, Phone, Edit2, Copy, ToggleLeft, ToggleRight, PlayCircle, Send } from 'lucide-react';
+import { supabase } from '../supabase';
+import { Plus, Trash2, RefreshCw, Database, Palette, Phone, Edit2, Copy, ToggleLeft, ToggleRight, PlayCircle, Send, Upload, Loader2 } from 'lucide-react';
 import { TelegramService } from '../services/TelegramService';
 import { useAuth } from '../store/useAuth';
 import type { NotificationTemplate } from '../types';
@@ -584,6 +585,8 @@ function SettingsForm() {
     const [name, setName] = useState(systemSettings?.systemName || '');
     const [logo, setLogo] = useState(systemSettings?.logoUrl || '');
     const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
+
 
     useEffect(() => {
         if (systemSettings) {
@@ -591,6 +594,51 @@ function SettingsForm() {
             setLogo(systemSettings.logoUrl || '');
         }
     }, [systemSettings]);
+
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        // Check file type
+        if (!file.type.startsWith('image/')) {
+            alert('Lütfen sadece resim dosyası seçiniz.');
+            return;
+        }
+
+        // Limit size (2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            alert('Dosya boyutu 2MB\'dan küçük olmalıdır.');
+            return;
+        }
+
+        setUploading(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `logo-${crypto.randomUUID()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            // Upload
+            const { error: uploadError } = await supabase.storage
+                .from('school-assets')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            // Get Public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('school-assets')
+                .getPublicUrl(filePath);
+
+            setLogo(publicUrl);
+        } catch (error: any) {
+            console.error('Upload Error:', error);
+            alert('Yükleme hatası: ' + error.message);
+        } finally {
+            setUploading(false);
+            // Clear input value
+            if (event.target) event.target.value = '';
+        }
+    };
 
     const handleSave = async () => {
         setSaving(true);
@@ -618,19 +666,46 @@ function SettingsForm() {
                 />
                 <p className="text-xs text-slate-500 mt-1">Sol menüde üst kısımda görünen ana başlık.</p>
             </div>
+
             <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Logo URL</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Logo</label>
                 <div className="flex gap-2">
-                    <input
-                        type="text"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
-                        placeholder="https://..."
-                        value={logo}
-                        onChange={(e) => setLogo(e.target.value)}
-                    />
+                    <div className="flex-1">
+                        <input
+                            type="text"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
+                            placeholder="https://..."
+                            value={logo}
+                            onChange={(e) => setLogo(e.target.value)}
+                        />
+                    </div>
+                    <div className="relative">
+                        <input
+                            type="file"
+                            accept="image/*"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            onChange={handleFileUpload}
+                            disabled={uploading}
+                        />
+                        <button
+                            type="button"
+                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-300 flex items-center gap-2 transition-colors"
+                        >
+                            {uploading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
+                            <span className="text-sm font-medium">Yükle</span>
+                        </button>
+                    </div>
                 </div>
+
+                {/* Preview */}
+                {logo && (
+                    <div className="mt-2 p-2 bg-slate-100 rounded border border-slate-200 inline-block">
+                        <img src={logo} alt="Logo Önizleme" className="h-12 object-contain" />
+                    </div>
+                )}
+
                 <p className="text-xs text-slate-500 mt-1">
-                    Şeffaf PNG veya SVG formatında bir görsel URL'i giriniz.
+                    Şeffaf PNG veya SVG formatında bir görsel yükleyiniz veya URL giriniz.
                 </p>
             </div>
 

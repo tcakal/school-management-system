@@ -1,13 +1,75 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { History, Clock, Search, Filter, UserCog, UserCheck, Shield, Receipt } from 'lucide-react';
+import { supabase } from '../supabase';
+import { History, Clock, Search, Filter, UserCog, UserCheck, Shield, Receipt, Download, Loader2, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { utils, writeFile } from 'xlsx';
 
 export function ActivityLog() {
-    const { logs } = useStore();
+    const { logs, fetchMoreLogs, markActivityLogSeen } = useStore();
     const [activeTab, setActiveTab] = useState<'all' | 'teacher' | 'manager' | 'parent' | 'system'>('all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [exporting, setExporting] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+
+    // Mark as seen on mount
+    useEffect(() => {
+        markActivityLogSeen();
+    }, []);
+
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const { data } = await supabase
+                .from('activity_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(5000);
+
+            if (data) {
+                const headers = ['Tarih', 'Kullanıcı', 'Rol', 'İşlem', 'Detay'];
+                const rows = data.map(l => [
+                    format(new Date(l.created_at), 'dd.MM.yyyy HH:mm', { locale: tr }),
+                    l.user_name,
+                    l.user_role === 'admin' ? 'Yönetici' : l.user_role === 'manager' ? 'Müdür' : l.user_role === 'teacher' ? 'Öğretmen' : l.user_role,
+                    l.action,
+                    l.details
+                ]);
+
+                const wb = utils.book_new();
+                const ws = utils.aoa_to_sheet([headers, ...rows]);
+
+                // Column widths
+                ws['!cols'] = [
+                    { wch: 20 }, // Date
+                    { wch: 20 }, // User
+                    { wch: 15 }, // Role
+                    { wch: 25 }, // Action
+                    { wch: 50 }, // Details
+                ];
+
+                utils.book_append_sheet(wb, ws, "Aktivite Logları");
+                writeFile(wb, `Aktivite_Gecmisi_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+            }
+        } catch (error) {
+            console.error('Export error:', error);
+            alert('Rapor oluşturulurken hata oluştu.');
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const handleLoadMore = async () => {
+        setLoadingMore(true);
+        try {
+            await fetchMoreLogs();
+        } catch (error) {
+            console.error('Load more error:', error);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
 
     // Filter logs based on tab and search term
     const filteredLogs = logs.filter(log => {
@@ -49,6 +111,15 @@ export function ActivityLog() {
                         <p className="text-white">Sistem üzerindeki tüm hareketler ve değişiklikler.</p>
                     </div>
                 </div>
+
+                <button
+                    onClick={handleExport}
+                    disabled={exporting}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                    Excel İndir
+                </button>
             </div>
 
             {/* Tabs & Search */}
@@ -158,8 +229,15 @@ export function ActivityLog() {
             </div>
 
             {logs.length > 0 && (
-                <div className="text-center text-xs text-slate-600 pt-4">
-                    Son 100 işlem gösteriliyor.
+                <div className="flex justify-center pt-4 pb-2">
+                    <button
+                        onClick={handleLoadMore}
+                        disabled={loadingMore}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full border border-slate-700 transition-all font-medium disabled:opacity-50"
+                    >
+                        {loadingMore ? <Loader2 size={16} className="animate-spin" /> : <ChevronDown size={16} />}
+                        Daha Fazla Yükle
+                    </button>
                 </div>
             )}
         </div>

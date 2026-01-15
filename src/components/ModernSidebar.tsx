@@ -10,7 +10,9 @@ import { useStore } from '../store/useStore';
 
 export function ModernSidebar() {
     const { user, logout } = useAuth();
-    const { systemSettings } = useStore();
+    const { systemSettings, logs, lastActivityLogView } = useStore();
+
+    const hasNewLogs = logs.length > 0 && (!lastActivityLogView || new Date(logs[0].timestamp).getTime() > new Date(lastActivityLogView).getTime());
 
     const navItems = [
         { to: '/', icon: LayoutDashboard, label: 'Panel' },
@@ -77,6 +79,9 @@ export function ModernSidebar() {
                                     )}
                                 />
                                 <span>{item.label}</span>
+                                {item.to === '/activity-log' && hasNewLogs && !isActive && (
+                                    <div className="ml-auto w-2 h-2 rounded-full bg-red-500 shadow-md shadow-red-500/50 animate-pulse" />
+                                )}
                                 {isActive && (
                                     <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-sm" />
                                 )}
