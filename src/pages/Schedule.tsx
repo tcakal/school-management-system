@@ -6,7 +6,7 @@ import { tr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Wand2, Phone } from 'lucide-react';
 import { LessonModal } from '../components/LessonModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { NotificationCenter } from '../components/NotificationCenter';
+
 import type { Lesson } from '../types';
 
 export function Schedule() {
@@ -61,7 +61,7 @@ export function Schedule() {
                         </button>
                     </div>
 
-                    <NotificationCenter />
+
 
                     <div className="flex bg-white rounded-lg border border-slate-200 p-1">
                         <button onClick={() => setCurrentDate(addDays(currentDate, -7))} className="p-2 hover:bg-slate-50 rounded-md">
