@@ -249,7 +249,6 @@ export const NotificationCenter: React.FC = () => {
 
             await Promise.all(Array.from(recipientChatIds).map(async (chatId) => {
                 const res = await TelegramService.sendMessage(
-                    systemSettings.telegramBotToken!,
                     chatId,
                     notif.message
                 );
