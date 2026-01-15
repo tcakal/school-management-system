@@ -250,7 +250,6 @@ export function Settings() {
                                                         .replace('{start_time}', '12:00');
 
                                                     const res = await TelegramService.sendMessage(
-                                                        useStore.getState().systemSettings?.telegramBotToken || '',
                                                         targetChatId,
                                                         `[TEST MESAJI]\n\n${testMessage}`
                                                     );
@@ -789,7 +788,7 @@ function TelegramSettings() {
             return;
         }
         setTesting(true);
-        const res = await TelegramService.sendMessage(botToken, myChatId, "🔔 *Deneme Mesajı* \n\nSistemden başarıyla mesaj alıyorsunuz.");
+        const res = await TelegramService.sendMessage(myChatId, "🔔 *Deneme Mesajı* \n\nSistemden başarıyla mesaj alıyorsunuz.");
         setTesting(false);
 
         if (res.success) {
@@ -896,6 +895,72 @@ function TelegramSettings() {
                     <li>Kendi oluşturduğunuz botu Telegram'da aratıp <strong>Başlat (Start)</strong> deyin.</li>
                     <li>ID'nizi öğrenip 2. alanda test edin.</li>
                 </ol>
+                <div className="space-y-3">
+                    <p className="text-sm text-slate-600">
+                        Bildirim sisteminin durumunu kontrol etmek için sistem loglarını inceleyebilirsiniz.
+                    </p>
+                    <DebugLogs />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function DebugLogs() {
+    const [logs, setLogs] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    const fetchLogs = async () => {
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('debug_notification_logs')
+                .select('*')
+                .order('id', { ascending: false })
+                .limit(20);
+
+            if (error) throw error;
+            setLogs(data || []);
+        } catch (err: any) {
+            console.error('Log fetch error:', err);
+            // Ignore error if table doesn't exist (user might not have run the SQL yet)
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
+                <h5 className="font-bold text-xs text-slate-700">Sistem Logları (Son 20)</h5>
+                <button
+                    onClick={fetchLogs}
+                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                >
+                    <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+                    Yenile
+                </button>
+            </div>
+            <div className="max-h-60 overflow-y-auto bg-slate-900 text-slate-50 p-2 text-[10px] font-mono">
+                {logs.length === 0 ? (
+                    <div className="text-slate-500 italic p-2 text-center">
+                        Henüz log bulunamadı veya "Yenile" butonuna basınız.
+                    </div>
+                ) : (
+                    <div className="space-y-1">
+                        {logs.map(log => (
+                            <div key={log.id} className="border-b border-slate-800 pb-1 mb-1 last:border-0">
+                                <span className="text-yellow-500">[{new Date(log.log_time).toLocaleTimeString()}]</span>{' '}
+                                <span className="text-green-400">{log.message}</span>
+                                {log.details && (
+                                    <pre className="text-slate-400 mt-0.5 overflow-x-auto">
+                                        {JSON.stringify(log.details, null, 2)}
+                                    </pre>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );
