@@ -1318,6 +1318,13 @@ export const useStore = create<AppState>()(
         }),
         {
             name: 'school-storage',
+            partialize: (state) => ({
+                systemSettings: state.systemSettings,
+                lastActivityLogView: state.lastActivityLogView,
+                schools: state.schools,
+                classGroups: state.classGroups,
+                // Persist other essential data as needed
+            }),
         }
     )
 );
