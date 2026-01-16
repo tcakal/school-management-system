@@ -26,6 +26,7 @@ export function Teachers() {
     const [specialties, setSpecialties] = useState('');
     const [role, setRole] = useState<'teacher' | 'admin'>('teacher');
     const [password, setPassword] = useState('');
+    const [telegramChatId, setTelegramChatId] = useState('');
 
     const openModal = (teacher?: Teacher) => {
         if (teacher) {
@@ -36,6 +37,7 @@ export function Teachers() {
             setSpecialties(teacher.specialties?.join(', ') || '');
             setRole(teacher.role);
             setPassword(teacher.password || '');
+            setTelegramChatId(teacher.telegramChatId || '');
         } else {
             setEditingId(null);
             setName('');
@@ -44,6 +46,7 @@ export function Teachers() {
             setSpecialties('');
             setRole('teacher');
             setPassword('');
+            setTelegramChatId('');
         }
         setIsModalOpen(true);
     };
@@ -58,7 +61,8 @@ export function Teachers() {
             email,
             specialties: specialties.split(',').map(s => s.trim()).filter(Boolean),
             role,
-            password: password || '123456'
+            password: password || '123456',
+            telegramChatId: telegramChatId || undefined
         };
 
         if (editingId) {
@@ -263,6 +267,18 @@ export function Teachers() {
                                 onChange={e => setPhone(e.target.value)}
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Telegram Chat ID</label>
+                            <input
+                                type="text"
+                                placeholder="Örn: 123456789"
+                                value={telegramChatId}
+                                onChange={e => setTelegramChatId(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 font-mono"
+                            />
+                            <p className="text-[10px] text-slate-500 mt-1">Bildirimler için gereklidir (@userinfobot)</p>
                         </div>
 
                         <div>

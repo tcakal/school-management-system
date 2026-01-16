@@ -23,6 +23,7 @@ export function AddStudentModal({ isOpen, onClose }: AddStudentModalProps) {
     const [gradeLevel, setGradeLevel] = useState<number | ''>('');
     const [address, setAddress] = useState('');
     const [medicalNotes, setMedicalNotes] = useState('');
+    const [telegramChatId, setTelegramChatId] = useState('');
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -68,7 +69,8 @@ export function AddStudentModal({ isOpen, onClose }: AddStudentModalProps) {
                 birthDate: birthDate || undefined,
                 gradeLevel: gradeLevel ? Number(gradeLevel) : undefined,
                 address,
-                medicalNotes
+                medicalNotes,
+                telegramChatId: telegramChatId || undefined
             };
 
             await addStudent(newStudent);
@@ -82,6 +84,7 @@ export function AddStudentModal({ isOpen, onClose }: AddStudentModalProps) {
             setGradeLevel('');
             setAddress('');
             setMedicalNotes('');
+            setTelegramChatId('');
             // Keep schoolId if possible
 
             onClose();
@@ -159,6 +162,16 @@ export function AddStudentModal({ isOpen, onClose }: AddStudentModalProps) {
                             className="w-full border-slate-300 rounded-lg focus:ring-blue-500"
                             placeholder="555..."
                             required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Telegram Chat ID</label>
+                        <input
+                            type="text"
+                            value={telegramChatId}
+                            onChange={(e) => setTelegramChatId(e.target.value)}
+                            className="w-full border-slate-300 rounded-lg focus:ring-blue-500 font-mono text-sm"
+                            placeholder="Örn: 12345678"
                         />
                     </div>
                     <div>
