@@ -928,7 +928,7 @@ function DebugLogs() {
             setLogs(data || []);
         } catch (err: any) {
             console.error('Log fetch error:', err);
-            // Ignore error if table doesn't exist (user might not have run the SQL yet)
+            alert('Loglar yüklenemedi: ' + (err.message || err.error_description || 'Bilinmeyen hata'));
         } finally {
             setLoading(false);
         }
