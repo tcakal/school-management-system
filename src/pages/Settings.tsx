@@ -934,6 +934,10 @@ function DebugLogs() {
         }
     };
 
+    useEffect(() => {
+        fetchLogs();
+    }, []);
+
     return (
         <div className="border border-slate-200 rounded-lg overflow-hidden">
             <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
