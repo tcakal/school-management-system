@@ -803,6 +803,24 @@ function TelegramSettings() {
         }
     };
 
+    const [processing, setProcessing] = useState(false);
+    const handleProcessUpdates = async () => {
+        setProcessing(true);
+        try {
+            const res = await TelegramService.processUpdates();
+            if (res.success) {
+                alert(`İşlem Tamamlandı:\n- İşlenen: ${res.processed}\n- Eşleşen: ${res.matched}\n- Başarısız: ${res.failed}`);
+            } else {
+                alert('Hata: ' + res.error);
+            }
+        } catch (e: any) {
+            console.error(e);
+            alert('Hata: ' + e.message);
+        } finally {
+            setProcessing(false);
+        }
+    };
+
     return (
         <div className="space-y-6 max-w-2xl">
             {/* 1. Bot Token Configuration */}
@@ -831,6 +849,30 @@ function TelegramSettings() {
                     </button>
                 </div>
             </div>
+
+            {/* Automation Tools */}
+            <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                <h4 className="font-bold text-slate-900 mb-2">Otomasyon Araçları</h4>
+
+                <div className="flex items-center justify-between gap-4">
+                    <div>
+                        <div className="text-sm font-medium text-slate-800">Gelen Mesajları İşle</div>
+                        <div className="text-xs text-slate-500">
+                            Bekleyen mesajları tarar, yeni kişileri eşleştirir ve yabancılara red yanıtı döner.
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleProcessUpdates}
+                        disabled={processing}
+                        className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-50 whitespace-nowrap"
+                    >
+                        {processing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                        Şimdi Kontrol Et
+                    </button>
+                </div>
+            </div>
+
+
 
             {/* 2. User Connection */}
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">

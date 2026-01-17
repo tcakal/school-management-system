@@ -6,6 +6,8 @@ import { Modal } from '../components/Modal';
 import { TeacherLeaveModal } from '../components/TeacherLeaveModal';
 import { EvaluateTeacherModal } from '../components/EvaluateTeacherModal';
 import type { Teacher } from '../types';
+import { TelegramService } from '../services/TelegramService';
+import { Link, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export function Teachers() {
     const { teachers, schools, assignments, addTeacher, updateTeacher, deleteTeacher } = useStore();
@@ -28,6 +30,10 @@ export function Teachers() {
     const [password, setPassword] = useState('');
     const [telegramChatId, setTelegramChatId] = useState('');
 
+    // Telegram Connect State
+    const [connectCode, setConnectCode] = useState<string | null>(null);
+    const [isVerifying, setIsVerifying] = useState(false);
+
     const openModal = (teacher?: Teacher) => {
         if (teacher) {
             setEditingId(teacher.id);
@@ -46,9 +52,48 @@ export function Teachers() {
             setSpecialties('');
             setRole('teacher');
             setPassword('');
+            setPassword('');
             setTelegramChatId('');
+            setConnectCode(null);
         }
         setIsModalOpen(true);
+    };
+
+    const generateTelegramCode = async () => {
+        if (!editingId) {
+            alert('Otomatik bağlama için önce kişiyi kaydetmelisiniz. Lütfen bilgileri doldurup "Kaydet" butonuna basın, sonra tekrar düzenleyerek bu işlemi yapın.');
+            return;
+        }
+        try {
+            const res = await TelegramService.generateCode(editingId, 'teacher');
+            if (res.success) {
+                setConnectCode(res.code);
+            } else {
+                alert('Kod oluşturulamadı: ' + res.error);
+            }
+        } catch (e: any) {
+            console.error(e);
+            alert('Hata: ' + e.message);
+        }
+    };
+
+    const verifyTelegramCode = async () => {
+        if (!editingId) return;
+        setIsVerifying(true);
+        try {
+            const res = await TelegramService.verifyConnection(editingId, 'teacher');
+            if (res.success) {
+                setTelegramChatId(res.chat_id.toString());
+                setConnectCode(null); // Close the code view
+                alert(`✅ Başarıyla Bağlandı! (@${res.username})`);
+            } else {
+                alert('Henüz mesaj bulunamadı. Lütfen kodu bota gönderdiğinizden emin olun ve tekrar deneyin.');
+            }
+        } catch (e: any) {
+            alert('Hata: ' + e.message);
+        } finally {
+            setIsVerifying(false);
+        }
     };
 
     const handleSave = async (e: React.FormEvent) => {
@@ -279,6 +324,57 @@ export function Teachers() {
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 font-mono"
                             />
                             <p className="text-[10px] text-slate-500 mt-1">Bildirimler için gereklidir (@userinfobot)</p>
+
+                            {/* Connect Flow */}
+                            {editingId && (
+                                <div className="mt-2">
+                                    {!connectCode ? (
+                                        <button
+                                            type="button"
+                                            onClick={generateTelegramCode}
+                                            className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium"
+                                        >
+                                            <Link size={14} />
+                                            Telegram'ı Otomatik Bağla
+                                        </button>
+                                    ) : (
+                                        <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 space-y-2">
+                                            <div className="text-xs text-blue-800 font-medium text-center">
+                                                Aşağıdaki kodu Telegram botuna gönderin:
+                                            </div>
+                                            <div className="text-xl font-bold font-mono text-center text-blue-900 tracking-wider bg-white py-1 rounded border border-blue-100 select-all">
+                                                {connectCode}
+                                            </div>
+                                            <div className="flex gap-2 justify-center">
+                                                <a
+                                                    href={`https://t.me/${useStore.getState().systemSettings?.telegramBotToken?.split(':')[0] ? 'MySchoolBot' : ''}?start=${connectCode}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 flex items-center gap-1"
+                                                >
+                                                    Bot'u Aç
+                                                </a>
+                                                <button
+                                                    type="button"
+                                                    onClick={verifyTelegramCode}
+                                                    disabled={isVerifying}
+                                                    className="px-3 py-1.5 bg-white text-blue-700 border border-blue-200 text-xs rounded hover:bg-blue-50 flex items-center gap-1"
+                                                >
+                                                    {isVerifying ? <RefreshCw size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                                    Kontrol Et
+                                                </button>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setConnectCode(null)}
+                                                className="w-full text-[10px] text-blue-400 hover:underline text-center"
+                                            >
+                                                İptal
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <div>

@@ -41,5 +41,31 @@ export const TelegramService = {
             console.error('Telegram GetUpdates Error:', error);
             return null;
         }
+    },
+
+    // Automated Connect Flow
+    generateCode: async (entityId: string, type: 'teacher' | 'student') => {
+        const { data, error } = await supabase.rpc('generate_telegram_code', {
+            p_entity_id: entityId,
+            p_type: type
+        });
+        if (error) throw error;
+        return data;
+    },
+
+    verifyConnection: async (entityId: string, type: 'teacher' | 'student') => {
+        const { data, error } = await supabase.rpc('verify_telegram_connection', {
+            p_entity_id: entityId,
+            p_type: type
+        });
+        if (error) throw error;
+        return data; // { success: true, chat_id: 12345, username: '...' }
+    },
+
+    // Global Process (for "Sync Messages" button)
+    processUpdates: async () => {
+        const { data, error } = await supabase.rpc('process_telegram_updates');
+        if (error) throw error;
+        return data; // { success: true, processed: 10, matched: 2, failed: 1 }
     }
 };

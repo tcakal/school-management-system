@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { ModernSidebar } from '../components/ModernSidebar';
 import { useStore } from '../store/useStore';
 import { NotificationCenter } from '../components/NotificationCenter';
+import { TelegramOnboardingModal } from '../components/TelegramOnboardingModal';
 
 export function Layout() {
     const { fetchData, initialized } = useStore();
@@ -15,6 +16,7 @@ export function Layout() {
 
     return (
         <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
+            <TelegramOnboardingModal />
             <ModernSidebar />
             <main className="flex-1 overflow-auto relative scroll-smooth">
                 {/* Notification Center Floating Top Right */}

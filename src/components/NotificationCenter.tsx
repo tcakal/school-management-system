@@ -5,36 +5,38 @@ import { differenceInMinutes, parseISO, format } from 'date-fns';
 import { TelegramService } from '../services/TelegramService';
 
 export const NotificationCenter: React.FC = () => {
-    const { lessons, notificationTemplates, classGroups, students, systemSettings, teachers } = useStore();
+    const { lessons, notificationTemplates, classGroups, students, systemSettings, teachers, schools } = useStore();
     const [dueNotifications, setDueNotifications] = useState<any[]>([]);
+    const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
     const [isOpen, setIsOpen] = useState(false);
     const [sendingId, setSendingId] = useState<string | null>(null);
 
+    // Single Effect to Calculate Notifications
     useEffect(() => {
-        const checkNotifications = () => {
+        const calculateNotifications = () => {
             const now = new Date();
-            const currentDay = now.getDay(); // 0=Sun, 6=Sat
-            const pending: any[] = [];
+            const currentDay = now.getDay(); // 0=Sun
+            const todayStr = format(now, 'yyyy-MM-dd');
+            const yesterdayStr = format(new Date(now.getTime() - 86400000), 'yyyy-MM-dd');
 
-            // 1. Process "Lesson-Based" Templates (Loop through lessons)
+            const active: any[] = [];
+
+            // 1. Process "Lesson-Based" Templates
             lessons.forEach(lesson => {
                 if (lesson.status === 'cancelled') return;
 
-                // Parse lesson time
+                // Check Today AND Yesterday (to handle midnight overlap)
+                if (lesson.date !== todayStr && lesson.date !== yesterdayStr) return;
+
                 const lessonStart = parseISO(`${lesson.date}T${lesson.startTime}`);
                 const lessonEnd = parseISO(`${lesson.date}T${lesson.endTime}`);
 
-                // Only relevant if lesson is today (roughly check to optimize)
-                if (lesson.date !== format(now, 'yyyy-MM-dd')) return;
-
                 notificationTemplates.forEach(template => {
                     if (template.schoolId !== lesson.schoolId) return;
-                    if (template.isActive === false) return; // Skip inactive
+                    if (template.isActive === false) return;
                     if (template.classGroupId && template.classGroupId !== lesson.classGroupId) return;
-                    // Skip if day filter exists and today is not in it
-                    if (template.daysFilter && !template.daysFilter.includes(currentDay)) return;
+                    if (template.daysFilter && !template.daysFilter.includes(new Date(lesson.date).getDay())) return; // Use lesson day, not current day for safety? Or stick to currentDay? Standard is currentDay check? Actually lesson day is better for consistency.
 
-                    // Skip non-lesson types here
                     if (['fixed_time', 'last_lesson_end'].includes(template.triggerType)) return;
 
                     let targetTime: Date;
@@ -45,18 +47,21 @@ export const NotificationCenter: React.FC = () => {
                     } else if (template.triggerType === 'lesson_end') {
                         targetTime = new Date(lessonEnd.getTime() + offset * 60000);
                     } else {
-                        // 15_min_before fallback
                         targetTime = new Date(lessonStart.getTime() + offset * 60000);
                     }
 
                     const diff = differenceInMinutes(now, targetTime);
-                    // allow up to 60 mins late, but don't send early (diff < 0 means target is in future)
-                    // limit early send to 2 mins just in case of clock drift
+                    // Window: -2 mins (future) to 60 mins (past)
+                    // diff = now - target. 
+                    // If now=10:00, target=10:05. diff = -5. (Too early)
+                    // If now=10:02, target=10:00. diff = 2. (Show)
+                    // If now=11:00, target=10:00. diff = 60. (Show)
+                    // If now=11:01, target=10:00. diff = 61. (Hide)
                     if (diff >= -2 && diff <= 60) {
-                        const group = classGroups.find(g => g.id === lesson.classGroupId);
                         const id = `${lesson.id}-${template.id}`;
-                        if (!dueNotifications.some(n => n.id === id)) {
-                            pending.push({
+                        if (!dismissedIds.has(id)) {
+                            const group = classGroups.find(g => g.id === lesson.classGroupId);
+                            active.push({
                                 id,
                                 title: `Ders Bildirimi: ${group?.name}`,
                                 message: template.messageTemplate
@@ -67,19 +72,25 @@ export const NotificationCenter: React.FC = () => {
                                 schoolId: lesson.schoolId,
                                 classGroupId: lesson.classGroupId,
                                 targetRoles: template.targetRoles || ['student'],
-                                lessonTeacherId: lesson.teacherId // Pass teacher info
+                                lessonTeacherId: lesson.teacherId
                             });
                         }
                     }
                 });
             });
 
-            // 2. Process "End of Day" / "Fixed Time" Templates (Loop though templates)
+            // 2. Process "End of Day" / "Fixed Time"
             notificationTemplates.forEach(template => {
-                if (template.isActive === false) return; // Skip inactive
-                // Skip if day filter exists and today is not in it
+                if (template.isActive === false) return;
+                // For fixed time, we key off TODAY's date.
+                // If it's a fixed time at 23:30, and now is 00:15, "today's" 23:30 hasn't happened. "yesterday's" did.
+                // We should check both today instance and yesterday instance?
+                // For simplicity, let's stick to Today for fixed times, assuming they don't overlap midnight often.
+                // Or checking yesterday is safer. Let's start with just Today for now to avoid complexity, unless needed.
+
                 if (template.daysFilter && !template.daysFilter.includes(currentDay)) return;
 
+                // Fixed Time
                 if (template.triggerType === 'fixed_time' && template.triggerTime) {
                     const [hours, minutes] = template.triggerTime.split(':').map(Number);
                     const targetTime = new Date(now);
@@ -88,8 +99,8 @@ export const NotificationCenter: React.FC = () => {
                     const diff = differenceInMinutes(now, targetTime);
                     if (diff >= -2 && diff <= 60) {
                         const id = `fixed-${template.id}-${format(now, 'yyyy-MM-dd')}`;
-                        if (!dueNotifications.some(n => n.id === id)) {
-                            pending.push({
+                        if (!dismissedIds.has(id)) {
+                            active.push({
                                 id,
                                 title: `Zamanlı Bildirim`,
                                 message: template.messageTemplate
@@ -107,67 +118,55 @@ export const NotificationCenter: React.FC = () => {
                     }
                 }
 
+                // Last Lesson End
                 if (template.triggerType === 'last_lesson_end') {
-                    // Find last lesson of TODAY for this school (and class if specified)
-                    const todayStr = format(now, 'yyyy-MM-dd');
+                    // Check logic for Today's lessons
                     const todaysLessons = lessons.filter(l =>
                         l.schoolId === template.schoolId &&
-                        l.date === todayStr &&
+                        l.date === todayStr && // Strict on date for 'End of Day'
                         l.status !== 'cancelled' &&
                         (!template.classGroupId || l.classGroupId === template.classGroupId)
                     );
 
-                    if (todaysLessons.length === 0) return;
+                    if (todaysLessons.length > 0) {
+                        todaysLessons.sort((a, b) => b.endTime.localeCompare(a.endTime));
+                        const lastLesson = todaysLessons[0];
+                        const lastLessonEnd = parseISO(`${lastLesson.date}T${lastLesson.endTime}`);
 
-                    // Sort by end time descending
-                    todaysLessons.sort((a, b) => b.endTime.localeCompare(a.endTime));
-                    const lastLesson = todaysLessons[0];
-                    const lastLessonEnd = parseISO(`${lastLesson.date}T${lastLesson.endTime}`);
+                        const offset = template.offsetMinutes || 0;
+                        const targetTime = new Date(lastLessonEnd.getTime() + offset * 60000);
 
-                    const offset = template.offsetMinutes || 0;
-                    const targetTime = new Date(lastLessonEnd.getTime() + offset * 60000);
-
-                    const diff = differenceInMinutes(now, targetTime);
-                    if (diff >= -2 && diff <= 60) {
-                        const id = `last-${template.id}-${lastLesson.id}`;
-                        if (!dueNotifications.some(n => n.id === id)) {
-                            pending.push({
-                                id,
-                                title: `Gün Sonu Bildirimi`,
-                                message: template.messageTemplate
-                                    .replace('{class_name}', 'Son Ders')
-                                    .replace('{start_time}', lastLesson.endTime),
-                                targetTime,
-                                type: 'last_lesson_end',
-                                schoolId: template.schoolId,
-                                classGroupId: template.classGroupId || undefined,
-                                targetRoles: template.targetRoles || ['student'],
-                                lessonTeacherId: lastLesson.teacherId
-                            });
+                        const diff = differenceInMinutes(now, targetTime);
+                        if (diff >= -2 && diff <= 60) {
+                            const id = `last-${template.id}-${lastLesson.id}`;
+                            if (!dismissedIds.has(id)) {
+                                active.push({
+                                    id,
+                                    title: `Gün Sonu Bildirimi`,
+                                    message: template.messageTemplate
+                                        .replace('{class_name}', 'Son Ders')
+                                        .replace('{start_time}', lastLesson.endTime),
+                                    targetTime,
+                                    type: 'last_lesson_end',
+                                    schoolId: template.schoolId,
+                                    classGroupId: template.classGroupId || undefined,
+                                    targetRoles: template.targetRoles || ['student'],
+                                    lessonTeacherId: lastLesson.teacherId
+                                });
+                            }
                         }
                     }
                 }
             });
 
-            if (pending.length > 0) {
-                setDueNotifications(prev => {
-                    // Merge new pending with existing, avoiding dupes
-                    const combined = [...prev];
-                    pending.forEach(p => {
-                        if (!combined.some(c => c.id === p.id)) combined.push(p);
-                    });
-                    return combined;
-                });
-            }
+            // Update State (Replace entire list)
+            setDueNotifications(active);
         };
 
-        checkNotifications();
-        const interval = setInterval(checkNotifications, 60000); // Check every minute
+        calculateNotifications();
+        const interval = setInterval(calculateNotifications, 60000); // Re-calc every minute
         return () => clearInterval(interval);
-    }, [lessons, notificationTemplates, classGroups]);
-
-
-    // Auto-send logic moved to server-side (pg_cron)
+    }, [lessons, notificationTemplates, classGroups, dismissedIds]); // Re-create effect if dismissedIds changes! This ensures instant update.
 
 
     const handleSendTelegram = async (notif: any, isAuto = false) => {
@@ -190,7 +189,7 @@ export const NotificationCenter: React.FC = () => {
                     if (notif.classGroupId && s.classGroupId !== notif.classGroupId) return false;
                     return !!s.telegramChatId;
                 });
-                studentRecipients.forEach(s => recipientChatIds.add(s.telegramChatId!));
+                studentRecipients.forEach(s => recipientChatIds.add(s.telegramChatId!.trim()));
             }
 
             // 2. Teachers
@@ -198,32 +197,31 @@ export const NotificationCenter: React.FC = () => {
                 // If it's a specific lesson notification, prioritize that lesson's teacher
                 if (notif.lessonTeacherId) {
                     const teacher = teachers.find(t => t.id === notif.lessonTeacherId);
-                    if (teacher?.telegramChatId) recipientChatIds.add(teacher.telegramChatId);
+                    if (teacher?.telegramChatId) recipientChatIds.add(teacher.telegramChatId.trim());
                 }
             }
 
             // 3. Managers
-            // 3. Managers
-            /*
             if (roles.includes('manager')) {
                 const school = schools.find(s => s.id === notif.schoolId);
-                // Also find teachers with manager role in this school
-                const managerTeachers = teachers.filter(t => t.role === 'manager' && t.schoolIds.includes(notif.schoolId) && t.telegramChatId);
-                managerTeachers.forEach(m => recipientChatIds.add(m.telegramChatId!));
- 
-                if (school?.telegramChatId) recipientChatIds.add(school.telegramChatId);
+                // Send to School Account (Principal)
+                if (school?.telegramChatId) {
+                    recipientChatIds.add(school.telegramChatId.trim());
+                }
+
+                // TODO: If we track which teachers manage which schools, add them here.
+                // Currently 'Teacher' object doesn't have schoolIds linkage for managers.
             }
-            */
 
             // 4. Admins
             if (roles.includes('admin')) {
                 // Admins get everything regardless of school/class constraints
                 const admins = teachers.filter(t => t.role === 'admin' && t.telegramChatId);
-                admins.forEach(a => recipientChatIds.add(a.telegramChatId!));
+                admins.forEach(a => recipientChatIds.add(a.telegramChatId!.trim()));
 
                 // Also include Super Admin from System Settings
                 if (systemSettings?.adminChatId) {
-                    recipientChatIds.add(systemSettings.adminChatId);
+                    recipientChatIds.add(systemSettings.adminChatId.trim());
                 }
             }
 
@@ -270,19 +268,22 @@ export const NotificationCenter: React.FC = () => {
         }
     };
 
-    // Filter out old notifications (older than 1 hour)
-    useEffect(() => {
-        const cleanupInterval = setInterval(() => {
-            const now = new Date();
-            setDueNotifications(prev => prev.filter(n => {
-                const diff = differenceInMinutes(now, n.targetTime);
-                return diff < 60; // Keep only if less than 60 mins age
-            }));
-        }, 60000); // Check every minute
-        return () => clearInterval(cleanupInterval);
-    }, []);
+    const handleDismiss = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setDismissedIds(prev => {
+            const next = new Set(prev);
+            next.add(id);
+            return next;
+        });
+        // Optimistically remove from view immediately via state update triggered by useEffect
+    };
 
     const handleClearAll = () => {
+        // Mark all current due IDs as dismissed
+        const newDismissed = new Set(dismissedIds);
+        dueNotifications.forEach(n => newDismissed.add(n.id));
+        setDismissedIds(newDismissed);
+
         setDueNotifications([]);
         setIsOpen(false);
     };
@@ -310,7 +311,7 @@ export const NotificationCenter: React.FC = () => {
                         <div className="flex gap-2">
                             {dueNotifications.length > 0 && (
                                 <button onClick={handleClearAll} className="text-xs text-red-500 hover:text-red-700 font-medium">
-                                    Temizle
+                                    Tümünü Temizle
                                 </button>
                             )}
                             <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-slate-600">
@@ -329,38 +330,48 @@ export const NotificationCenter: React.FC = () => {
                             </div>
                         )}
                         {dueNotifications.map((notif, idx) => (
-                            <div key={idx} className="p-3 border rounded-lg bg-slate-50 flex flex-col gap-2">
+                            <div key={idx} className="p-3 border rounded-lg bg-slate-50 flex flex-col gap-2 relative group">
+                                <button
+                                    onClick={(e) => handleDismiss(notif.id, e)}
+                                    className="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title="Bildirimi Kapat"
+                                >
+                                    <X size={14} />
+                                </button>
+
                                 <div>
-                                    <h4 className="font-semibold text-sm">{notif.title}</h4>
+                                    <h4 className="font-semibold text-sm pr-6">{notif.title}</h4>
                                     <p className="text-xs text-slate-500 line-clamp-2">{notif.message}</p>
                                     <p className="text-[10px] text-slate-400 mt-1">
                                         {format(notif.targetTime, 'HH:mm')} ({notif.type})
                                     </p>
                                 </div>
-                                <button
-                                    onClick={() => {
-                                        window.open(`https://wa.me/?text=${encodeURIComponent(notif.message)}`, '_blank');
-                                    }}
-                                    className="w-full py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium flex items-center justify-center gap-1"
-                                >
-                                    <Phone className="h-3 w-3" />
-                                    WhatsApp İle Gönder
-                                </button>
-
-                                {systemSettings?.telegramBotToken && (
+                                <div className="flex gap-2">
                                     <button
-                                        onClick={() => handleSendTelegram(notif)}
-                                        disabled={sendingId === notif.id}
-                                        className="w-full py-1.5 bg-sky-500 hover:bg-sky-600 text-white rounded text-xs font-medium flex items-center justify-center gap-1 disabled:opacity-50"
+                                        onClick={() => {
+                                            window.open(`https://wa.me/?text=${encodeURIComponent(notif.message)}`, '_blank');
+                                        }}
+                                        className="flex-1 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium flex items-center justify-center gap-1"
                                     >
-                                        {sendingId === notif.id ? (
-                                            <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                        ) : (
-                                            <Send className="h-3 w-3" />
-                                        )}
-                                        {sendingId === notif.id ? 'Gönderiliyor...' : 'Telegram (Otomatik)'}
+                                        <Phone className="h-3 w-3" />
+                                        WP
                                     </button>
-                                )}
+
+                                    {systemSettings?.telegramBotToken && (
+                                        <button
+                                            onClick={() => handleSendTelegram(notif)}
+                                            disabled={sendingId === notif.id}
+                                            className="flex-1 py-1.5 bg-sky-500 hover:bg-sky-600 text-white rounded text-xs font-medium flex items-center justify-center gap-1 disabled:opacity-50"
+                                        >
+                                            {sendingId === notif.id ? (
+                                                <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            ) : (
+                                                <Send className="h-3 w-3" />
+                                            )}
+                                            {sendingId === notif.id ? '...' : 'Telegram'}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>

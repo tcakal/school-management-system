@@ -7,6 +7,9 @@ import { Modal } from '../components/Modal';
 import { EvaluateStudentModal } from '../components/EvaluateStudentModal';
 import { Star, Plus } from 'lucide-react';
 import { AddStudentModal } from '../components/AddStudentModal';
+import { TelegramService } from '../services/TelegramService';
+import { Link, RefreshCw, CheckCircle2 } from 'lucide-react';
+
 
 export function Students() {
     const { students, schools, classGroups, studentEvaluations, teachers } = useStore();
@@ -22,6 +25,47 @@ export function Students() {
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
     const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+
+
+
+    // Telegram Connect State
+    const [connectCode, setConnectCode] = useState<string | null>(null);
+    const [isVerifying, setIsVerifying] = useState(false);
+
+    const generateTelegramCode = async (studentId: string) => {
+        try {
+            const res = await TelegramService.generateCode(studentId, 'student');
+            if (res.success) {
+                setConnectCode(res.code);
+            } else {
+                alert('Kod oluşturulamadı: ' + res.error);
+            }
+        } catch (e: any) {
+            console.error(e);
+            alert('Hata: ' + e.message);
+        }
+    };
+
+    const verifyTelegramCode = async (studentId: string) => {
+        setIsVerifying(true);
+        try {
+            const res = await TelegramService.verifyConnection(studentId, 'student');
+            if (res.success) {
+                // Update local state temporarily
+                if (selectedStudent && selectedStudent.id === studentId) {
+                    setSelectedStudent({ ...selectedStudent, telegramChatId: res.chat_id.toString() });
+                }
+                setConnectCode(null);
+                alert(`✅ Başarıyla Bağlandı! (@${res.username})`);
+            } else {
+                alert('Henüz mesaj bulunamadı. Lütfen kodu bota gönderdiğinizden emin olun ve tekrar deneyin.');
+            }
+        } catch (e: any) {
+            alert('Hata: ' + e.message);
+        } finally {
+            setIsVerifying(false);
+        }
+    };
 
     const filteredStudents = useMemo(() => {
         return students.filter(student => {
@@ -40,6 +84,7 @@ export function Students() {
 
     const handleViewDetail = (student: any) => {
         setSelectedStudent(student);
+        setConnectCode(null); // Reset
         setIsDetailModalOpen(true);
     };
 
@@ -260,6 +305,69 @@ export function Students() {
                                 <span className="font-medium text-slate-900">
                                     {selectedStudent.parentEmail || '-'}
                                 </span>
+                            </div>
+
+                            {/* Telegram Connect Section */}
+                            <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 col-span-2">
+                                <span className="text-xs text-slate-500 block mb-1">Telegram Bildirim</span>
+                                {selectedStudent.telegramChatId ? (
+                                    <div className="flex items-center gap-2 text-green-600 font-medium text-sm">
+                                        <CheckCircle2 size={16} />
+                                        <span>Bağlı (ID: {selectedStudent.telegramChatId})</span>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm('Bağlantıyı koparmak istediğinize emin misiniz?')) {
+                                                    // Ideally call an API to clear it. For now just UI or assume updateStudent works.
+                                                    useStore.getState().updateStudent(selectedStudent.id, { telegramChatId: null } as any);
+                                                    setSelectedStudent({ ...selectedStudent, telegramChatId: null });
+                                                }
+                                            }}
+                                            className="text-[10px] text-red-500 hover:underline ml-auto"
+                                        >
+                                            Kaldır
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        {!connectCode ? (
+                                            <button
+                                                onClick={() => generateTelegramCode(selectedStudent.id)}
+                                                className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium"
+                                            >
+                                                <Link size={14} />
+                                                Telegram'ı Bağla (Veli İçin)
+                                            </button>
+                                        ) : (
+                                            <div className="mt-2 bg-white border border-blue-100 rounded-lg p-3 space-y-2">
+                                                <div className="text-xs text-blue-800 font-medium text-center">
+                                                    Veliye iletilecek kod:
+                                                </div>
+                                                <div className="text-xl font-bold font-mono text-center text-blue-900 tracking-wider bg-slate-50 py-1 rounded border border-blue-50 select-all">
+                                                    {connectCode}
+                                                </div>
+                                                <div className="text-[10px] text-slate-500 text-center">
+                                                    Veli bu kodu 5 dakika içinde Telegram botuna göndermelidir.
+                                                </div>
+                                                <div className="flex gap-2 justify-center pt-1">
+                                                    <button
+                                                        onClick={() => verifyTelegramCode(selectedStudent.id)}
+                                                        disabled={isVerifying}
+                                                        className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 text-xs rounded hover:bg-blue-100 flex items-center gap-1"
+                                                    >
+                                                        {isVerifying ? <RefreshCw size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                                        Kontrol Et
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setConnectCode(null)}
+                                                        className="text-xs text-slate-400 hover:text-red-500"
+                                                    >
+                                                        İptal
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 

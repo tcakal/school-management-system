@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Book, Users, School, FileText, CheckSquare, Upload, Shield, LogOut, Star, Play, X } from 'lucide-react';
+import { Book, Users, School, FileText, CheckSquare, Upload, Shield, LogOut, Star, Play, X, MessageCircle, Send } from 'lucide-react';
 
 // Video Imports
 // Note: In Vite/React, we can reference public assets directly by string path in img src
@@ -315,6 +315,30 @@ export function Guide() {
                                 </div>
                             </div>
                         </div>
+                        {/* Telegram Guide for Teachers */}
+                        <div className="bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl p-6 text-white shadow-lg relative overflow-hidden mt-6">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                            <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
+                                <div className="bg-white/20 p-4 rounded-full backdrop-blur-sm">
+                                    <Send size={32} className="text-white fill-white" />
+                                </div>
+                                <div className="flex-1 text-center md:text-left">
+                                    <h4 className="text-lg font-bold mb-2">Ders Bildirimlerini Cebinize İsteyin!</h4>
+                                    <p className="text-blue-100 text-sm mb-4">
+                                        Telegram botumuz ile ders saatinden önce hatırlatmalar alın, yoklamayı unutmayın.
+                                    </p>
+                                    <div className="bg-black/20 rounded-lg p-3 inline-block text-left">
+                                        <div className="text-xs text-blue-200 uppercase font-bold mb-1">Kurulum (Tek Seferlik):</div>
+                                        <ol className="list-decimal list-inside text-sm space-y-1">
+                                            <li>Telegram'da <strong>@AtolyeVizyon_Bot</strong>'u aratın.</li>
+                                            <li>Sohbeti başlatıp <strong>"Merhaba"</strong> yazın.</li>
+                                            <li>Gelen <strong>"📱 Telefon Numaramı Paylaş"</strong> butonuna basın.</li>
+                                            <li><span className="text-green-300">İşlem Tamam!</span> Sistem sizi numaranızdan tanıyacaktır.</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -342,6 +366,29 @@ export function Guide() {
                                     </div>
                                 </li>
                             </ul>
+
+                        </section>
+
+                        {/* Telegram Guide for Managers */}
+                        <section className="bg-slate-50 border-t border-slate-200 pt-6">
+                            <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <MessageCircle size={20} className="text-blue-600" />
+                                Kurumsal Bildirimler İçin Telegram
+                            </h3>
+                            <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex gap-4 items-start">
+                                <div className="bg-blue-100 p-2 rounded-lg text-blue-600 mt-1">
+                                    <Send size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-slate-600 mb-3">
+                                        Okulunuzla ilgili kritik bildirimleri anında almak için botumuzu aktif edin.
+                                        Telefon numaranız sistemde "Okul Müdürü" olarak kayıtlıysa otomatik eşleşecektir.
+                                    </p>
+                                    <div className="text-xs bg-slate-50 border border-slate-200 p-2 rounded font-mono text-slate-500">
+                                        Bot: <strong>@AtolyeVizyon_Bot</strong> {'->'} "Merhaba" Yaz {'->'} "Telefonu Paylaş" Butonuna Bas
+                                    </div>
+                                </div>
+                            </div>
                         </section>
                     </div>
                 )}
@@ -371,6 +418,39 @@ export function Guide() {
                                 </div>
                             </div>
                         </section>
+
+                        {/* Telegram Guide for Parents */}
+                        <section className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 text-white shadow-md relative overflow-hidden">
+                            <div className="relative z-10">
+                                <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                                    <Send size={20} className="fill-white" />
+                                    Anlık Bildirim Sistemi
+                                </h3>
+                                <p className="text-green-50 text-sm mb-4">
+                                    Çocuğunuzun derse katılım bilgisi, ödevler ve duyurular Telegram üzerinden cebinize gelsin.
+                                </p>
+                                <div className="bg-white/10 backdrop-blur-md rounded-lg p-4 border border-white/20">
+                                    <h4 className="font-bold text-sm mb-2 text-white">Nasıl Aktif Ederim?</h4>
+                                    <ul className="text-sm space-y-2">
+                                        <li className="flex gap-2">
+                                            <div className="bg-white/20 w-5 h-5 rounded-full flex items-center justify-center text-xs">1</div>
+                                            <span>Telegram uygulamasını açın ve <strong>@AtolyeVizyon_Bot</strong> kullanıcısını bulun.</span>
+                                        </li>
+                                        <li className="flex gap-2">
+                                            <div className="bg-white/20 w-5 h-5 rounded-full flex items-center justify-center text-xs">2</div>
+                                            <span>Bota <strong>"Merhaba"</strong> yazıp gönderin.</span>
+                                        </li>
+                                        <li className="flex gap-2">
+                                            <div className="bg-white/20 w-5 h-5 rounded-full flex items-center justify-center text-xs">3</div>
+                                            <span>Klavye alanında çıkan <strong>"Telefon Numaramı Paylaş"</strong> butonuna tıklayın.</span>
+                                        </li>
+                                    </ul>
+                                    <div className="mt-3 text-xs text-green-200 bg-black/20 p-2 rounded">
+                                        * Bot, sistemdeki kayıtlı numaranızla sizi otomatik eşleştirir. Şifre veya kod gerekmez.
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
                     </div>
                 )}
 
@@ -378,9 +458,19 @@ export function Guide() {
                 {activeTab === 'admin' && (
                     <div className="space-y-6 animate-in fade-in duration-300">
                         <p className="text-slate-600">
-                            Sistem yöneticileri (Admin), tüm okulların, öğretmenlerin ve finansal verilerin yönetiminden sorumludur.
                             <strong>Ayarlar</strong> menüsünden logo, tema ve diğer sistem tercihlerini değiştirebilirsiniz.
                         </p>
+
+                        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <h4 className="font-bold text-yellow-800 mb-2 flex items-center gap-2">
+                                <Send size={16} />
+                                Sistem Yöneticisi Bildirimleri
+                            </h4>
+                            <p className="text-sm text-yellow-700">
+                                Sistem hataları ve kritik uyarıları almak için <strong>@AtolyeVizyon_Bot</strong> ile "Paylaş" yöntemini kullanarak eşleşin.
+                                Ayrıca <strong>Ayarlar {'>'} Telegram</strong> sayfasından "Şimdi Kontrol Et" butonu ile botun çalışmasını manuel tetikleyebilirsiniz.
+                            </p>
+                        </div>
                     </div>
                 )}
 
@@ -512,30 +602,32 @@ export function Guide() {
             </div>
 
             {/* Video Modal */}
-            {selectedVideo && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedVideo(null)}>
-                    <div className="relative w-full max-w-4xl bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
-                        <div className="absolute top-4 right-4 z-10">
-                            <button
-                                onClick={() => setSelectedVideo(null)}
-                                className="bg-black/50 hover:bg-black/80 text-white p-2 rounded-full transition-colors backdrop-blur-md"
-                            >
-                                <X size={24} />
-                            </button>
-                        </div>
-                        <div className="aspect-video w-full flex items-center justify-center bg-black">
-                            <img
-                                src={selectedVideo.src}
-                                alt={selectedVideo.title}
-                                className="w-full h-full object-contain"
-                            />
-                        </div>
-                        <div className="p-4 bg-slate-900 border-t border-white/10">
-                            <h3 className="text-white font-bold text-lg">{selectedVideo.title}</h3>
+            {
+                selectedVideo && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedVideo(null)}>
+                        <div className="relative w-full max-w-4xl bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
+                            <div className="absolute top-4 right-4 z-10">
+                                <button
+                                    onClick={() => setSelectedVideo(null)}
+                                    className="bg-black/50 hover:bg-black/80 text-white p-2 rounded-full transition-colors backdrop-blur-md"
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
+                            <div className="aspect-video w-full flex items-center justify-center bg-black">
+                                <img
+                                    src={selectedVideo.src}
+                                    alt={selectedVideo.title}
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+                            <div className="p-4 bg-slate-900 border-t border-white/10">
+                                <h3 className="text-white font-bold text-lg">{selectedVideo.title}</h3>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
