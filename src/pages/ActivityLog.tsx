@@ -7,8 +7,8 @@ import { tr } from 'date-fns/locale';
 import { utils, writeFile } from 'xlsx';
 
 export function ActivityLog() {
-    const { logs, fetchMoreLogs, markActivityLogSeen } = useStore();
-    const [activeTab, setActiveTab] = useState<'all' | 'teacher' | 'manager' | 'parent' | 'system'>('all');
+    const { logs, fetchMoreLogs, markActivityLogSeen, traceLogs, fetchTraceLogs } = useStore();
+    const [activeTab, setActiveTab] = useState<'all' | 'teacher' | 'manager' | 'parent' | 'system' | 'trace'>('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [exporting, setExporting] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -17,6 +17,15 @@ export function ActivityLog() {
     useEffect(() => {
         markActivityLogSeen();
     }, []);
+
+    // Fetch trace logs when tab is selected
+    useEffect(() => {
+        if (activeTab === 'trace') {
+            fetchTraceLogs();
+            const interval = setInterval(fetchTraceLogs, 10000); // Auto-refresh every 10s
+            return () => clearInterval(interval);
+        }
+    }, [activeTab]);
 
     const handleExport = async () => {
         setExporting(true);
@@ -74,6 +83,7 @@ export function ActivityLog() {
     // Filter logs based on tab and search term
     const filteredLogs = logs.filter(log => {
         // Tab Filter
+        if (activeTab === 'trace') return false; // Handled separately
         if (activeTab === 'teacher' && log.userRole !== 'teacher') return false;
         if (activeTab === 'manager' && log.userRole !== 'manager') return false;
         if (activeTab === 'parent' && log.userRole !== 'parent') return false;
@@ -112,31 +122,43 @@ export function ActivityLog() {
                     </div>
                 </div>
 
-                <button
-                    onClick={handleExport}
-                    disabled={exporting}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                    Excel İndir
-                </button>
+                <div className="flex gap-2">
+                    {activeTab === 'trace' && (
+                        <button
+                            onClick={() => fetchTraceLogs()}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all"
+                        >
+                            <Loader2 size={18} className={loadingMore ? "animate-spin" : ""} />
+                            Yenile
+                        </button>
+                    )}
+                    <button
+                        onClick={handleExport}
+                        disabled={exporting}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                        Excel İndir
+                    </button>
+                </div>
             </div>
 
             {/* Tabs & Search */}
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
-                <div className="flex bg-slate-900/80 p-1 rounded-lg border border-slate-700">
+                <div className="flex flex-wrap gap-1 bg-slate-900/80 p-1 rounded-lg border border-slate-700">
                     {[
                         { id: 'all', label: 'Tümü' },
                         { id: 'teacher', label: 'Öğretmen' },
                         { id: 'manager', label: 'Müdür' },
                         { id: 'parent', label: 'Veli' },
-                        { id: 'system', label: 'Sistem/Admin' }
+                        { id: 'system', label: 'Yönetici' },
+                        { id: 'trace', label: 'Sistem İzleme (Debug)' }
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
                             className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === tab.id
-                                ? 'bg-purple-600 text-white shadow-lg'
+                                ? tab.id === 'trace' ? 'bg-red-900/80 text-red-200 shadow-lg ring-1 ring-red-500/50' : 'bg-purple-600 text-white shadow-lg'
                                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                                 }`}
                         >
@@ -145,90 +167,123 @@ export function ActivityLog() {
                     ))}
                 </div>
 
-                <div className="relative w-full md:w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                    <input
-                        type="text"
-                        placeholder="İşlem veya kişi ara..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 rounded-lg focus:ring-2 focus:ring-purple-500/50 transition-all border-slate-700 !bg-slate-800 !text-slate-200 !border-slate-700 placeholder:text-slate-500"
-                        style={{ backgroundColor: '#1e293b', color: '#e2e8f0', borderColor: '#334155' }}
-                    />
-                </div>
-            </div>
-
-            {/* Logs List */}
-            <div className="space-y-4">
-                {filteredLogs.length > 0 ? (
-                    filteredLogs.map((log) => (
-                        <div
-                            key={log.id}
-                            className="bg-slate-800 rounded-xl p-4 border border-slate-700/50 hover:border-slate-600 transition-all flex flex-col md:flex-row gap-4 items-center md:items-start"
-                        >
-                            {/* User Avatar */}
-                            <div className="shrink-0">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg 
-                                    ${log.userRole === 'admin' ? 'bg-purple-900/50 text-purple-400 ring-2 ring-purple-500/20' :
-                                        log.userRole === 'teacher' ? 'bg-blue-900/50 text-blue-400 ring-2 ring-blue-500/20' :
-                                            'bg-emerald-900/50 text-emerald-400 ring-2 ring-emerald-500/20'}`}
-                                >
-                                    {log.userName?.substring(0, 2).toUpperCase()}
-                                </div>
-                            </div>
-
-                            {/* Content */}
-                            <div className="flex-1 w-full text-center md:text-left">
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-1">
-                                    <h4 className="font-semibold text-slate-200 flex items-center justify-center md:justify-start gap-2">
-                                        {log.userName}
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider
-                                            ${log.userRole === 'admin' ? 'bg-purple-500/10 text-purple-400' :
-                                                log.userRole === 'teacher' ? 'bg-blue-500/10 text-blue-400' :
-                                                    'bg-emerald-500/10 text-emerald-400'}`}
-                                        >
-                                            {log.userRole === 'admin' ? 'Yönetici' :
-                                                log.userRole === 'teacher' ? 'Öğretmen' :
-                                                    log.userRole === 'manager' ? 'Müdür' :
-                                                        log.userRole === 'parent' ? 'Veli' : log.userRole}
-                                        </span>
-                                    </h4>
-                                    <div className="flex items-center justify-center md:justify-end gap-2 text-xs text-slate-500">
-                                        <Clock size={14} />
-                                        {format(new Date(log.timestamp), 'd MMMM yyyy HH:mm', { locale: tr })}
-                                    </div>
-                                </div>
-
-                                <div className="flex items-start gap-3 mt-2 bg-slate-900/50 p-3 rounded-lg border border-slate-800">
-                                    <div className="mt-1 shrink-0">
-                                        {getActionIcon(log)}
-                                    </div>
-                                    <div>
-                                        <div className="text-sm font-medium text-slate-300 font-mono mb-1">
-                                            {log.action}
-                                        </div>
-                                        <p className="text-sm text-slate-400 leading-relaxed">
-                                            {log.details}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    <div className="bg-slate-800 rounded-xl p-12 text-center border border-slate-700 border-dashed">
-                        <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-500">
-                            <Filter size={32} />
-                        </div>
-                        <h3 className="text-lg font-medium text-slate-300 mb-2">Kayıt Bulunamadı</h3>
-                        <p className="text-slate-500 max-w-sm mx-auto">
-                            Seçilen filtre kriterlerine uygun işlem geçmişi kaydı bulunamadı.
-                        </p>
+                {activeTab !== 'trace' && (
+                    <div className="relative w-full md:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                        <input
+                            type="text"
+                            placeholder="İşlem veya kişi ara..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 rounded-lg focus:ring-2 focus:ring-purple-500/50 transition-all border-slate-700 !bg-slate-800 !text-slate-200 !border-slate-700 placeholder:text-slate-500"
+                            style={{ backgroundColor: '#1e293b', color: '#e2e8f0', borderColor: '#334155' }}
+                        />
                     </div>
                 )}
             </div>
 
-            {logs.length > 0 && (
+            {/* TRACE LOGS VIEW */}
+            {activeTab === 'trace' ? (
+                <div className="space-y-0 bg-black/40 rounded-xl border border-slate-800 overflow-hidden font-mono text-xs md:text-sm">
+                    <div className="bg-slate-900/80 px-4 py-3 border-b border-slate-800 flex justify-between items-center">
+                        <span className="text-slate-400">Son Sistem Hareketleri (Otomatik Yenilenir)</span>
+                        <span className="text-slate-500">{traceLogs.length} kayıt</span>
+                    </div>
+                    <div className="max-h-[600px] overflow-y-auto p-4 space-y-1">
+                        {traceLogs.length > 0 ? (
+                            traceLogs.map((log) => (
+                                <div key={log.id} className="flex gap-3 hover:bg-slate-800/50 p-1 rounded transition-colors group">
+                                    <span className="text-slate-500 w-32 shrink-0">
+                                        {format(new Date(log.log_time), 'HH:mm:ss.SSS')}
+                                    </span>
+                                    <span className={`break-all ${log.message.includes('MATCH') ? 'text-green-400 font-bold' :
+                                            log.message.includes('SENDING') ? 'text-blue-400 font-bold' :
+                                                log.message.includes('SKIP') ? 'text-yellow-500' :
+                                                    log.message.includes('FAIL') || log.message.includes('ERROR') ? 'text-red-500 font-bold' :
+                                                        'text-slate-300'
+                                        }`}>
+                                        {log.message}
+                                    </span>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-slate-500 text-center py-8">Henüz kayıt yok.</div>
+                        )}
+                    </div>
+                </div>
+            ) : (
+                /* STANDARD LOGS LIST */
+                <div className="space-y-4">
+                    {filteredLogs.length > 0 ? (
+                        filteredLogs.map((log) => (
+                            <div
+                                key={log.id}
+                                className="bg-slate-800 rounded-xl p-4 border border-slate-700/50 hover:border-slate-600 transition-all flex flex-col md:flex-row gap-4 items-center md:items-start"
+                            >
+                                {/* User Avatar */}
+                                <div className="shrink-0">
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg 
+                                        ${log.userRole === 'admin' ? 'bg-purple-900/50 text-purple-400 ring-2 ring-purple-500/20' :
+                                            log.userRole === 'teacher' ? 'bg-blue-900/50 text-blue-400 ring-2 ring-blue-500/20' :
+                                                'bg-emerald-900/50 text-emerald-400 ring-2 ring-emerald-500/20'}`}
+                                    >
+                                        {log.userName?.substring(0, 2).toUpperCase()}
+                                    </div>
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 w-full text-center md:text-left">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-1">
+                                        <h4 className="font-semibold text-slate-200 flex items-center justify-center md:justify-start gap-2">
+                                            {log.userName}
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider
+                                                ${log.userRole === 'admin' ? 'bg-purple-500/10 text-purple-400' :
+                                                    log.userRole === 'teacher' ? 'bg-blue-500/10 text-blue-400' :
+                                                        'bg-emerald-500/10 text-emerald-400'}`}
+                                            >
+                                                {log.userRole === 'admin' ? 'Yönetici' :
+                                                    log.userRole === 'teacher' ? 'Öğretmen' :
+                                                        log.userRole === 'manager' ? 'Müdür' :
+                                                            log.userRole === 'parent' ? 'Veli' : log.userRole}
+                                            </span>
+                                        </h4>
+                                        <div className="flex items-center justify-center md:justify-end gap-2 text-xs text-slate-500">
+                                            <Clock size={14} />
+                                            {format(new Date(log.timestamp), 'd MMMM yyyy HH:mm', { locale: tr })}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-3 mt-2 bg-slate-900/50 p-3 rounded-lg border border-slate-800">
+                                        <div className="mt-1 shrink-0">
+                                            {getActionIcon(log)}
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-medium text-slate-300 font-mono mb-1">
+                                                {log.action}
+                                            </div>
+                                            <p className="text-sm text-slate-400 leading-relaxed">
+                                                {log.details}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="bg-slate-800 rounded-xl p-12 text-center border border-slate-700 border-dashed">
+                            <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-500">
+                                <Filter size={32} />
+                            </div>
+                            <h3 className="text-lg font-medium text-slate-300 mb-2">Kayıt Bulunamadı</h3>
+                            <p className="text-slate-500 max-w-sm mx-auto">
+                                Seçilen filtre kriterlerine uygun işlem geçmişi kaydı bulunamadı.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {activeTab !== 'trace' && logs.length > 0 && (
                 <div className="flex justify-center pt-4 pb-2">
                     <button
                         onClick={handleLoadMore}

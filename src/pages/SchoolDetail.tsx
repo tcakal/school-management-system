@@ -539,7 +539,14 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                                     {filteredStudents.map(student => {
                                         const group = classGroups.find(c => c.id === student.classGroupId);
                                         return (
-                                            <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                                            <tr key={student.id} className={`hover:bg-slate-50 transition-colors border-l-4 ${
+                                                // Payment Status Border Coloring (Traffic Light)
+                                                student.last_payment_status === 'paid'
+                                                    ? 'border-green-500' // Green: Paid
+                                                    : student.last_payment_status === 'claimed'
+                                                        ? 'border-blue-500' // Blue: Claimed
+                                                        : 'border-orange-400' // Orange: Pending
+                                                }`}>
                                                 <td className="px-6 py-4 font-medium text-slate-900">
                                                     {student.name}
                                                     {student.status === 'Left' && (
@@ -559,12 +566,20 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-600 font-mono text-sm">{student.phone}</td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${student.status === 'Active'
-                                                        ? 'bg-emerald-100 text-emerald-800'
-                                                        : 'bg-red-100 text-red-800'
-                                                        }`}>
-                                                        {student.status === 'Active' ? 'Aktif' : 'Ayrıldı'}
-                                                    </span>
+                                                    <div className="flex items-center">
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${student.status === 'Active'
+                                                            ? 'bg-emerald-100 text-emerald-800'
+                                                            : 'bg-red-100 text-red-800'
+                                                            }`}>
+                                                            {student.status === 'Active' ? 'Aktif' : 'Ayrıldı'}
+                                                        </span>
+                                                        {/* Payment Status Badge */}
+                                                        {student.last_payment_status === 'claimed' && (
+                                                            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 animate-pulse">
+                                                                Ödeme Bildirimi
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex justify-end gap-2">
@@ -595,6 +610,22 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                                                             Düzenle
                                                         </button>
                                                     </div>
+
+                                                    {/* Payment Action Button (Only for claimed) */}
+                                                    {student.last_payment_status === 'claimed' && student.status === 'Active' && (
+                                                        <div className="flex justify-end mt-2">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (window.confirm(`${student.name} için yapılan ödemeyi onaylıyor musunuz?`)) {
+                                                                        await updateStudent(student.id, { last_payment_status: 'paid', last_payment_date: new Date().toISOString() } as any);
+                                                                    }
+                                                                }}
+                                                                className="text-xs font-bold text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded-full shadow-sm transition-colors"
+                                                            >
+                                                                Ödemeyi Onayla
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </td>
                                             </tr>
                                         );

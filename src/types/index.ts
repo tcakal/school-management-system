@@ -47,6 +47,10 @@ export interface Student {
     paymentStatus?: 'paid' | 'free' | 'discounted'; // Default 'paid'
     discountPercentage?: number; // 0-100
     telegramChatId?: string;
+    // Manual Payment Tracking
+    last_payment_status?: 'paid' | 'claimed' | 'pending';
+    last_payment_date?: string; // ISO Date
+    last_claim_date?: string; // ISO Date
 }
 
 export type PaymentType = 'Tuition' | 'Book' | 'Uniform' | 'Other';

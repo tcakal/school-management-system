@@ -70,7 +70,11 @@ function App() {
           <Route path="school/:id" element={<SchoolDetail />} />
           <Route path="students" element={<Students />} />
           <Route path="student-panel/:studentId" element={<StudentPanel />} />
-          <Route path="finance" element={<Finance />} />
+          <Route path="finance" element={
+            <RequireAuth allowedRoles={['admin']}>
+              <Finance />
+            </RequireAuth>
+          } />
           <Route path="teachers" element={<Teachers />} />
           <Route path="schedule" element={<Schedule />} />
           <Route path="reports" element={<Reports />} />

@@ -175,6 +175,13 @@ export function Schools() {
                                     {/* <ArrowRight className="text-slate-300 group-hover:text-blue-500 transition-colors" /> */}
                                 </div>
                                 <div className="mb-4">
+                                    <div className="text-xs text-slate-400 font-normal">
+                                        {useAuth.getState().user?.role === 'teacher' ? (
+                                            <span className="italic">Detaylar için tıklayın</span>
+                                        ) : (
+                                            school.defaultPrice ? `${school.defaultPrice.toLocaleString('tr-TR')} ₺ / öğrenci` : 'Fiyat Belirlenmedi'
+                                        )}
+                                    </div>
                                     <h3
                                         className="font-bold text-lg text-slate-900 mb-1"
                                         style={{ color: school.color }}

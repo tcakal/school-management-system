@@ -10,10 +10,11 @@ interface StudentDashboardViewProps {
 }
 
 export function StudentDashboardView({ studentId }: StudentDashboardViewProps) {
-    const { students, schools, lessons, attendance, studentEvaluations, teachers } = useStore();
+    const { students, schools, lessons, attendance, studentEvaluations, teachers, updateStudent } = useStore();
     const [activeTab, setActiveTab] = useState<'lessons' | 'evaluations'>('lessons');
     const [selectedEvaluation, setSelectedEvaluation] = useState<any | null>(null);
     const [isEvalDetailModalOpen, setIsEvalDetailModalOpen] = useState(false);
+    const [paymentProcessing, setPaymentProcessing] = useState(false);
 
     // Get Student Data
     const student = useMemo(() => {
@@ -145,6 +146,65 @@ export function StudentDashboardView({ studentId }: StudentDashboardViewProps) {
                             <span className="text-xs text-slate-400">Puan</span>
                         </div>
                     </div>
+                </div>
+
+                {/* Payment Status Card (New) */}
+                <div className={`p-4 rounded-xl border shadow-sm flex flex-col justify-between mb-4 ${student.last_payment_status === 'paid'
+                    ? 'bg-green-50 border-green-200'
+                    : student.last_payment_status === 'claimed'
+                        ? 'bg-blue-50 border-blue-200'
+                        : 'bg-orange-50 border-orange-200'
+                    }`}>
+                    <div className="mb-3">
+                        <div className={`text-xs uppercase font-bold mb-1 ${student.last_payment_status === 'paid' ? 'text-green-600' : student.last_payment_status === 'claimed' ? 'text-blue-600' : 'text-orange-600'}`}>
+                            Ödeme Durumu
+                        </div>
+                        <div className="font-bold text-slate-900 text-lg">
+                            {student.last_payment_status === 'paid'
+                                ? 'Ödendi ✅'
+                                : student.last_payment_status === 'claimed'
+                                    ? 'İnceleme Bekliyor 🕒'
+                                    : 'Ödeme Bekleniyor ⚠️'}
+                        </div>
+                        {student.last_payment_date && student.last_payment_status === 'paid' && (
+                            <div className="text-xs text-green-700 mt-1">
+                                Son Ödeme: {format(parseISO(student.last_payment_date), 'dd MMMM', { locale: tr })}
+                            </div>
+                        )}
+                    </div>
+
+                    {student.last_payment_status !== 'paid' && student.last_payment_status !== 'claimed' && (
+                        <button
+                            disabled={paymentProcessing}
+                            onClick={async () => {
+                                if (window.confirm('Ödeme yaptığınızı bildirmek istiyor musunuz? Okul yönetimine bilgi verilecektir.')) {
+                                    setPaymentProcessing(true);
+                                    try {
+                                        // Update student status
+                                        await updateStudent(student.id, {
+                                            last_payment_status: 'claimed',
+                                            last_claim_date: new Date().toISOString()
+                                        } as any);
+                                        // alert('Ödeme bildiriminiz alındı. Teşekkürler!'); // UI refreshes automatically
+                                    } catch (error) {
+                                        console.error('Payment claim error:', error);
+                                        alert('Bir hata oluştu.');
+                                    } finally {
+                                        setPaymentProcessing(false);
+                                    }
+                                }
+                            }}
+                            className="w-full py-2 bg-white border border-orange-300 text-orange-700 rounded-lg text-sm font-bold shadow-sm hover:bg-orange-50 transition-colors disabled:opacity-50"
+                        >
+                            {paymentProcessing ? 'İşleniyor...' : 'Ödeme Yaptım ₺'}
+                        </button>
+                    )}
+
+                    {student.last_payment_status === 'claimed' && (
+                        <div className="text-xs text-blue-600 font-medium bg-blue-100/50 p-2 rounded-lg">
+                            Okul yönetimi onayladığında durum güncellenecektir.
+                        </div>
+                    )}
                 </div>
 
                 {/* Tabs */}

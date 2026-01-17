@@ -5,11 +5,23 @@ import { differenceInMinutes, parseISO, format } from 'date-fns';
 import { TelegramService } from '../services/TelegramService';
 
 export const NotificationCenter: React.FC = () => {
-    const { lessons, notificationTemplates, classGroups, students, systemSettings, teachers, schools } = useStore();
+    const { lessons, notificationTemplates, classGroups, students, systemSettings, teachers, schools, logAction } = useStore();
     const [dueNotifications, setDueNotifications] = useState<any[]>([]);
     const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
     const [isOpen, setIsOpen] = useState(false);
     const [sendingId, setSendingId] = useState<string | null>(null);
+    const [filterRole, setFilterRole] = useState<'all' | 'student' | 'teacher' | 'manager' | 'admin'>('all');
+
+    // Auto-Send Tracking (LocalStorage to prevent reprocessing)
+    const [autoSentIds, setAutoSentIds] = useState<Set<string>>(() => {
+        const saved = localStorage.getItem('autoSentNotificationIds');
+        return saved ? new Set(JSON.parse(saved)) : new Set();
+    });
+
+    // Persist autoSentIds
+    useEffect(() => {
+        localStorage.setItem('autoSentNotificationIds', JSON.stringify(Array.from(autoSentIds)));
+    }, [autoSentIds]);
 
     // Single Effect to Calculate Notifications
     useEffect(() => {
@@ -161,12 +173,33 @@ export const NotificationCenter: React.FC = () => {
 
             // Update State (Replace entire list)
             setDueNotifications(active);
+
+            // AUTO SEND LOGIC REMOVED (Moved to Server-Side pg_cron)
+            // active.forEach(notif => {
+            //     const diff = differenceInMinutes(now, notif.targetTime);
+
+            //     // Fix: Check strictly that NOW is after TARGET to prevent premature sending (-0 issue)
+            //     // And ensure it's not too old (within last 2 mins)
+            //     const isTime = now.getTime() >= notif.targetTime.getTime() && diff <= 2;
+
+            //     if (isTime && !autoSentIds.has(notif.id)) {
+            //         console.log(`Auto-sending notification: ${notif.title}`);
+            //         handleSendTelegram(notif, true); // Send automatically
+
+            //         // Mark as sent immediately
+            //         setAutoSentIds(prev => {
+            //             const next = new Set(prev);
+            //             next.add(notif.id);
+            //             return next;
+            //         });
+            //     }
+            // });
         };
 
         calculateNotifications();
-        const interval = setInterval(calculateNotifications, 60000); // Re-calc every minute
+        const interval = setInterval(calculateNotifications, 30000); // Check every 30s
         return () => clearInterval(interval);
-    }, [lessons, notificationTemplates, classGroups, dismissedIds]); // Re-create effect if dismissedIds changes! This ensures instant update.
+    }, [lessons, notificationTemplates, classGroups, dismissedIds, autoSentIds]); // Added autoSentIds dep
 
 
     const handleSendTelegram = async (notif: any, isAuto = false) => {
@@ -260,6 +293,26 @@ export const NotificationCenter: React.FC = () => {
                 console.log(`Auto-send complete. Success: ${successCount}, Fail: ${failCount}`);
             }
 
+            // LOG ACTION TO DB
+            if (successCount > 0) {
+                logAction(
+                    'BILDIRIM_GONDER',
+                    `${notif.title} - ${successCount} kişiye gönderildi. (${isAuto ? 'Otomatik' : 'Manuel'})`,
+                    'notification',
+                    notif.id
+                );
+            }
+
+            // LOG ACTION TO DB
+            if (successCount > 0) {
+                logAction(
+                    'BILDIRIM_GONDER',
+                    `${notif.title} - ${successCount} kişiye gönderildi. (${isAuto ? 'Otomatik' : 'Manuel'})`,
+                    'notification',
+                    notif.id
+                );
+            }
+
         } catch (error) {
             console.error('Telegram send error:', error);
             if (!isAuto) alert('Toplu gönderim sırasında bir hata oluştu.');
@@ -305,18 +358,22 @@ export const NotificationCenter: React.FC = () => {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 top-12 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50 p-4">
-                    <div className="flex justify-between items-center mb-4 border-b pb-2">
-                        <h3 className="font-bold text-slate-900 border-b-0">Bekleyenler ({dueNotifications.length})</h3>
-                        <div className="flex gap-2">
-                            {dueNotifications.length > 0 && (
-                                <button onClick={handleClearAll} className="text-xs text-red-500 hover:text-red-700 font-medium">
-                                    Tümünü Temizle
-                                </button>
-                            )}
-                            <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-slate-600">
-                                <X size={16} />
+                <div className="absolute right-0 top-12 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-[9999] p-4">
+                    <div className="flex flex-col mb-4 border-b pb-2 gap-2">
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-bold text-slate-900">Bekleyenler ({dueNotifications.length})</h3>
+                            <button onClick={handleClearAll} className="text-xs text-red-500 hover:text-red-700 font-medium">
+                                Temizle
                             </button>
+                        </div>
+
+                        {/* Filters */}
+                        <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
+                            <button onClick={() => setFilterRole('all')} className={`px-2 py-1 text-[10px] rounded-full border ${filterRole === 'all' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200'}`}>Tümü</button>
+                            <button onClick={() => setFilterRole('student')} className={`px-2 py-1 text-[10px] rounded-full border ${filterRole === 'student' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200'}`}>Veliler</button>
+                            <button onClick={() => setFilterRole('teacher')} className={`px-2 py-1 text-[10px] rounded-full border ${filterRole === 'teacher' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-500 border-slate-200'}`}>Öğretmenler</button>
+                            <button onClick={() => setFilterRole('manager')} className={`px-2 py-1 text-[10px] rounded-full border ${filterRole === 'manager' ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-500 border-slate-200'}`}>Müdürler</button>
+                            <button onClick={() => setFilterRole('admin')} className={`px-2 py-1 text-[10px] rounded-full border ${filterRole === 'admin' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-500 border-slate-200'}`}>Admin</button>
                         </div>
                     </div>
 
@@ -329,51 +386,53 @@ export const NotificationCenter: React.FC = () => {
                                 </p>
                             </div>
                         )}
-                        {dueNotifications.map((notif, idx) => (
-                            <div key={idx} className="p-3 border rounded-lg bg-slate-50 flex flex-col gap-2 relative group">
-                                <button
-                                    onClick={(e) => handleDismiss(notif.id, e)}
-                                    className="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    title="Bildirimi Kapat"
-                                >
-                                    <X size={14} />
-                                </button>
-
-                                <div>
-                                    <h4 className="font-semibold text-sm pr-6">{notif.title}</h4>
-                                    <p className="text-xs text-slate-500 line-clamp-2">{notif.message}</p>
-                                    <p className="text-[10px] text-slate-400 mt-1">
-                                        {format(notif.targetTime, 'HH:mm')} ({notif.type})
-                                    </p>
-                                </div>
-                                <div className="flex gap-2">
+                        {dueNotifications
+                            .filter(n => filterRole === 'all' || n.targetRoles?.includes(filterRole))
+                            .map((notif, idx) => (
+                                <div key={idx} className="p-3 border rounded-lg bg-slate-50 flex flex-col gap-2 relative group">
                                     <button
-                                        onClick={() => {
-                                            window.open(`https://wa.me/?text=${encodeURIComponent(notif.message)}`, '_blank');
-                                        }}
-                                        className="flex-1 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium flex items-center justify-center gap-1"
+                                        onClick={(e) => handleDismiss(notif.id, e)}
+                                        className="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        title="Bildirimi Kapat"
                                     >
-                                        <Phone className="h-3 w-3" />
-                                        WP
+                                        <X size={14} />
                                     </button>
 
-                                    {systemSettings?.telegramBotToken && (
+                                    <div>
+                                        <h4 className="font-semibold text-sm pr-6">{notif.title}</h4>
+                                        <p className="text-xs text-slate-500 line-clamp-2">{notif.message}</p>
+                                        <p className="text-[10px] text-slate-400 mt-1">
+                                            {format(notif.targetTime, 'HH:mm')} ({notif.type})
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-2">
                                         <button
-                                            onClick={() => handleSendTelegram(notif)}
-                                            disabled={sendingId === notif.id}
-                                            className="flex-1 py-1.5 bg-sky-500 hover:bg-sky-600 text-white rounded text-xs font-medium flex items-center justify-center gap-1 disabled:opacity-50"
+                                            onClick={() => {
+                                                window.open(`https://wa.me/?text=${encodeURIComponent(notif.message)}`, '_blank');
+                                            }}
+                                            className="flex-1 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium flex items-center justify-center gap-1"
                                         >
-                                            {sendingId === notif.id ? (
-                                                <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                            ) : (
-                                                <Send className="h-3 w-3" />
-                                            )}
-                                            {sendingId === notif.id ? '...' : 'Telegram'}
+                                            <Phone className="h-3 w-3" />
+                                            WP
                                         </button>
-                                    )}
+
+                                        {systemSettings?.telegramBotToken && (
+                                            <button
+                                                onClick={() => handleSendTelegram(notif)}
+                                                disabled={sendingId === notif.id}
+                                                className="flex-1 py-1.5 bg-sky-500 hover:bg-sky-600 text-white rounded text-xs font-medium flex items-center justify-center gap-1 disabled:opacity-50"
+                                            >
+                                                {sendingId === notif.id ? (
+                                                    <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                ) : (
+                                                    <Send className="h-3 w-3" />
+                                                )}
+                                                {sendingId === notif.id ? '...' : 'Telegram'}
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
                     </div>
                 </div>
             )}

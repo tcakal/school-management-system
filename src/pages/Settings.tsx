@@ -112,7 +112,7 @@ export function Settings() {
         }
     };
 
-    const templates = notificationTemplates.filter(t => t.schoolId === selectedSchoolId);
+    const templates = notificationTemplates.filter(t => selectedSchoolId ? t.schoolId === selectedSchoolId : !t.schoolId);
     console.log(`Visible Templates: ${templates.length} / Total: ${notificationTemplates.length}`);
 
     return (
@@ -145,6 +145,7 @@ export function Settings() {
                                 onChange={e => setSelectedSchoolId(e.target.value)}
                                 className="p-2 border border-slate-300 rounded-lg text-sm w-full bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                             >
+                                <option value="">Tüm Okullar (Global Şablonlar)</option>
                                 {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
@@ -280,7 +281,7 @@ export function Settings() {
                                                 role === 'teacher' ? 'bg-purple-50 text-purple-700 border-purple-200' :
                                                     'bg-orange-50 text-orange-700 border-orange-200'
                                                 }`}>
-                                                {role === 'student' ? 'Veli/Öğrenci' : role === 'teacher' ? 'Öğretmen' : role === 'manager' ? 'Yönetici' : 'Admin'}
+                                                {role === 'student' ? 'Veli/Öğrenci' : role === 'teacher' ? 'Öğretmen' : role === 'manager' ? 'Okul Müdürü' : 'Admin'}
                                             </span>
                                         ))}
                                     </div>
@@ -472,7 +473,7 @@ export function Settings() {
                                         {[
                                             { id: 'student', label: 'Veli/Öğrenci' },
                                             { id: 'teacher', label: 'Öğretmen' },
-                                            { id: 'manager', label: 'Yönetici' },
+                                            { id: 'manager', label: 'Okul Müdürü' },
                                             { id: 'admin', label: 'Admin (Ben)' }
                                         ].map((role) => {
                                             const isSelected = newTemplate.targetRoles?.includes(role.id as any);

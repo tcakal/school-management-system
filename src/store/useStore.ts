@@ -12,6 +12,7 @@ interface AppState {
     teachers: Teacher[];
     assignments: TeacherAssignment[];
     logs: ActivityLog[];
+    traceLogs: { id: string, log_time: string, message: string }[];
     lessons: Lesson[];
     attendance: Attendance[];
     notificationTemplates: NotificationTemplate[];
@@ -81,6 +82,7 @@ interface AppState {
     // Activity Log Helper
     logAction: (action: string, details: string, entityType?: string, entityId?: string) => Promise<void>; // entityType made optional
     fetchMoreLogs: () => Promise<void>; // Added fetchMoreLogs
+    fetchTraceLogs: () => Promise<void>;
 }
 
 import { persist } from 'zustand/middleware';
@@ -95,6 +97,7 @@ export const useStore = create<AppState>()(
             teachers: [],
             assignments: [],
             logs: [],
+            traceLogs: [],
             lessons: [],
             attendance: [],
             studentEvaluations: [],
@@ -399,6 +402,13 @@ export const useStore = create<AppState>()(
                         .order('created_at', { ascending: false })
                         .limit(100); // Limit to last 100 for performance initially
 
+                    // FETCH TRACE LOGS
+                    const traceLogsRes = await supabase
+                        .from('debug_trace_logs')
+                        .select('*')
+                        .order('log_time', { ascending: false })
+                        .limit(100);
+
                     const logs: ActivityLog[] = (logsRes.data || []).map(l => ({
                         id: l.id,
                         userId: l.user_id,
@@ -414,7 +424,7 @@ export const useStore = create<AppState>()(
                     set({
                         schools, students, classGroups, payments, teachers, assignments, lessons, attendance,
                         studentEvaluations, teacherEvaluations, notificationTemplates, leaves, systemSettings,
-                        logs, theme: themeToApply, initialized: true,
+                        logs, traceLogs: traceLogsRes.data || [], theme: themeToApply, initialized: true,
                         logsOffset: logs.length // Set offset to loaded length (e.g. 100)
                     });
                 } catch (error) {
@@ -422,17 +432,36 @@ export const useStore = create<AppState>()(
                 } finally {
                     set({ loading: false });
                 }
+
+            },
+
+            fetchTraceLogs: async () => {
+                const { data, error } = await supabase
+                    .from('debug_trace_logs')
+                    .select('*')
+                    .order('log_time', { ascending: false })
+                    .limit(100);
+
+                if (error) console.error('Error fetching trace logs:', error);
+
+                if (data) {
+                    set({ traceLogs: data });
+                }
             },
 
             // HELPER: Log Action to DB
             logAction: async (action, details, entityType, entityId) => {
                 const currentUser = useAuth.getState().user;
-                if (!currentUser) return; // Should potentially log system actions too, but for now user actions are priority
+
+                // Fallback for System Actions (if no user logged in or auto-process)
+                const userId = currentUser?.id || 'system-auto';
+                const userName = currentUser?.name || 'Sistem Otomasyonu';
+                const userRole = currentUser?.role || 'admin';
 
                 const newLog = {
-                    user_id: currentUser.id,
-                    user_name: currentUser.name,
-                    user_role: currentUser.role,
+                    user_id: userId,
+                    user_name: userName,
+                    user_role: userRole,
                     action: action,
                     details: details,
                     entity_type: entityType,
@@ -442,9 +471,9 @@ export const useStore = create<AppState>()(
                 // Optimistic Update
                 const optimisticLog: ActivityLog = {
                     id: crypto.randomUUID(),
-                    userId: currentUser.id,
-                    userName: currentUser.name,
-                    userRole: currentUser.role,
+                    userId: userId,
+                    userName: userName,
+                    userRole: userRole,
                     action: action,
                     details: details,
                     timestamp: new Date().toISOString(),
