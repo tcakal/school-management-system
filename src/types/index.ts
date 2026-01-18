@@ -66,6 +66,8 @@ export interface Payment {
     method: PaymentMethod;
     notes?: string;
     month?: string; // For tuition tracking "2023-10"
+    status?: 'paid' | 'pending';
+    paidAt?: string;
 }
 
 export interface Teacher {

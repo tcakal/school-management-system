@@ -38,10 +38,12 @@ interface AppState {
 
     addStudent: (student: Student) => Promise<void>;
     updateStudent: (id: string, student: Partial<Student>) => Promise<void>;
+    deleteStudent: (id: string) => Promise<void>;
 
     addClassGroup: (group: ClassGroup) => Promise<void>;
 
     addPayment: (payment: Payment) => Promise<void>;
+    updatePayment: (id: string, payment: Partial<Payment>) => Promise<void>;
 
     addTeacher: (teacher: Teacher) => Promise<void>;
     updateTeacher: (id: string, teacher: Partial<Teacher>) => Promise<void>;
@@ -77,7 +79,7 @@ interface AppState {
     addLeave: (leave: Omit<TeacherLeave, 'id'>) => Promise<void>; // Changed TeacherLeave to Leave and added Omit
     updateLeave: (id: string, updates: Partial<TeacherLeave>) => Promise<void>; // Added updateLeave
     deleteLeave: (id: string) => Promise<void>;
-    findAvailableTeachers: (date: string, startTime: string, endTime: string) => Teacher[];
+    findAvailableTeachers: (date: string, startTime: string, endTime: string) => Promise<Teacher[]>;
 
     // Activity Log Helper
     logAction: (action: string, details: string, entityType?: string, entityId?: string) => Promise<void>; // entityType made optional
@@ -252,7 +254,9 @@ export const useStore = create<AppState>()(
                         date: p.date,
                         type: p.type as any,
                         method: p.method as any,
-                        month: p.month
+                        month: p.month,
+                        status: p.status || 'paid',
+                        paidAt: p.paid_at
                     }));
 
                     const teachers: Teacher[] = (teachersRes.data || []).map(t => ({
@@ -671,6 +675,17 @@ export const useStore = create<AppState>()(
                 }
             },
 
+            deleteStudent: async (id) => {
+                const student = get().students.find(s => s.id === id);
+                const studentName = student?.name || 'Bilinmeyen Öğrenci';
+
+                set((state) => ({ students: state.students.filter(s => s.id !== id) }));
+
+                get().logAction('OGRENCI_SIL', `${studentName} silindi.`, 'student', id);
+
+                await supabase.from('students').delete().eq('id', id);
+            },
+
             addClassGroup: async (group) => {
                 set((state) => ({ classGroups: [...state.classGroups, group] }));
                 get().logAction('SINIF_EKLE', `${group.name} grubu oluşturuldu.`, 'class_group', group.id);
@@ -694,8 +709,38 @@ export const useStore = create<AppState>()(
                     date: payment.date,
                     type: payment.type,
                     method: payment.method,
-                    month: payment.month
+                    month: payment.month,
+                    status: payment.status || 'paid',
+                    paid_at: payment.paidAt
                 }]);
+            },
+
+            updatePayment: async (id, updated) => {
+                const oldPayment = get().payments.find(p => p.id === id);
+                set((state) => ({
+                    payments: state.payments.map((p) => (p.id === id ? { ...p, ...updated } : p)),
+                }));
+
+                const studentName = 'Öğrenci'; // Ideal would be to fetch student name if linked, but payments are often school-linked in this logic context
+
+                let details = `Ödeme güncellendi.`;
+                if (updated.status === 'paid' && oldPayment?.status !== 'paid') {
+                    details = `Ödeme "Tahsil Edildi" olarak işaretlendi. Tutar: ${oldPayment?.amount} TL`;
+                }
+
+                get().logAction('ODEME_GUNCELLE', details, 'payment', id);
+
+                const dbUpdate: any = {};
+                if (updated.amount) dbUpdate.amount = updated.amount;
+                if (updated.type) dbUpdate.type = updated.type;
+                if (updated.method) dbUpdate.method = updated.method;
+                if (updated.date) dbUpdate.date = updated.date;
+                if (updated.status) dbUpdate.status = updated.status;
+                if (updated.paidAt) dbUpdate.paid_at = updated.paidAt;
+
+                if (Object.keys(dbUpdate).length > 0) {
+                    await supabase.from('payments').update(dbUpdate).eq('id', id);
+                }
             },
 
             addTeacher: async (teacher) => {
@@ -1272,46 +1317,28 @@ export const useStore = create<AppState>()(
                 await supabase.from('notification_templates').delete().eq('id', id);
             },
 
-            findAvailableTeachers: (date, startTime, endTime) => {
-                const state = get();
-                const { teachers, leaves, lessons } = state;
 
-                return teachers.filter(t => {
-                    // Check for leaves
-                    const onLeave = leaves.some(l => {
-                        if (l.teacherId !== t.id) return false;
-
-                        // Date overlapping
-                        if (l.startDate <= date && l.endDate >= date) {
-                            // If full day leave (no time specified), then unavailable
-                            if (!l.startTime || !l.endTime) return true;
-
-                            // If it's a specific time leave on the queried date
-                            // We need to check if the LESSON time overlaps with the LEAVE time
-                            // Simple interval overlap check: (StartA < EndB) && (EndA > StartB)
-                            const lessonStart = startTime;
-                            const lessonEnd = endTime;
-                            const leaveStart = l.startTime;
-                            const leaveEnd = l.endTime;
-
-                            return (lessonStart < leaveEnd && lessonEnd > leaveStart);
-                        }
-                        return false;
-                    });
-
-                    if (onLeave) return false;
-
-                    // Check for lesson conflicts
-                    const hasConflict = lessons.some(l =>
-                        l.teacherId === t.id &&
-                        l.date === date &&
-                        l.status !== 'cancelled' &&
-                        l.startTime < endTime &&
-                        l.endTime > startTime
-                    );
-
-                    return !hasConflict;
+            findAvailableTeachers: async (date, startTime, endTime) => {
+                const { data, error } = await supabase.rpc('find_available_teachers', {
+                    p_date: date,
+                    p_start_time: startTime,
+                    p_end_time: endTime
                 });
+
+                if (error) {
+                    console.error('Error finding available teachers:', error);
+                    return [];
+                }
+
+                return (data || []).map((t: any) => ({
+                    id: t.id,
+                    name: t.name,
+                    phone: t.phone,
+                    role: 'teacher' as const,
+                    email: '',
+                    specialties: [],
+                    schoolId: 'system'
+                }));
             },
 
             fetchMoreLogs: async () => {

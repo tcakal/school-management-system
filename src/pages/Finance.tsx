@@ -229,9 +229,24 @@ export function Finance() {
                     <tbody className="divide-y divide-slate-100">
                         {sortedPayments.map(payment => {
                             const school = schools.find(s => s.id === payment.schoolId);
+                            const student = payment.studentId ? students.find(s => s.id === payment.studentId) : null;
+
                             return (
                                 <tr key={payment.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-6 py-4 font-medium text-slate-900">{school?.name || 'Bilinmeyen Okul'}</td>
+                                    <td className="px-6 py-4 font-medium text-slate-900">
+                                        {school?.name || 'Bilinmeyen Okul'}
+                                        {student && (
+                                            <div className="text-xs text-slate-400 font-normal flex items-center gap-1 mt-0.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                                                {student.name}
+                                            </div>
+                                        )}
+                                        {!student && (
+                                            <div className="text-xs text-slate-400 font-normal italic mt-0.5">
+                                                Okuldan Direkt Ödeme
+                                            </div>
+                                        )}
+                                    </td>
                                     <td className="px-6 py-4 text-slate-500 text-sm">{payment.date}</td>
                                     <td className="px-6 py-4 text-slate-500 text-sm">
                                         <span className="px-2 py-1 bg-slate-100 rounded text-xs">

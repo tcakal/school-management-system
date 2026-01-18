@@ -20,6 +20,7 @@ export function Students() {
     // Initialize with manager's school ID if manager, else 'all'
     const [selectedSchoolId, setSelectedSchoolId] = useState<string>(user?.role === 'manager' ? user.id : 'all');
     const [statusFilter, setStatusFilter] = useState<'Active' | 'Left' | 'All'>('All');
+    const [paymentStatusFilter, setPaymentStatusFilter] = useState<'All' | 'paid' | 'claimed' | 'unpaid'>('All'); // New Filter
 
     const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -75,12 +76,19 @@ export function Students() {
             // Filter by Status
             if (statusFilter !== 'All' && student.status !== statusFilter) return false;
 
+            // Filter by Payment Status
+            if (paymentStatusFilter !== 'All') {
+                if (paymentStatusFilter === 'paid' && student.last_payment_status !== 'paid') return false;
+                if (paymentStatusFilter === 'claimed' && student.last_payment_status !== 'claimed') return false;
+                if (paymentStatusFilter === 'unpaid' && (student.last_payment_status === 'paid' || student.last_payment_status === 'claimed')) return false;
+            }
+
             // Filter by Search Term
             if (searchTerm && !student.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
 
             return true;
         });
-    }, [students, selectedSchoolId, statusFilter, searchTerm]);
+    }, [students, selectedSchoolId, statusFilter, searchTerm, paymentStatusFilter]);
 
     const handleViewDetail = (student: any) => {
         setSelectedStudent(student);
@@ -91,7 +99,6 @@ export function Students() {
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-3xl font-bold text-slate-900">Tüm Öğrenciler</h2>
                 <h2 className="text-3xl font-bold text-slate-900">Tüm Öğrenciler</h2>
                 <div className="flex justify-between items-center mt-1">
                     <p className="text-slate-500">Sistemdeki kayıtlı tüm öğrencileri görüntüleyin ve arayın.</p>
@@ -106,53 +113,86 @@ export function Students() {
             </div>
 
             {/* Filters */}
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="relative w-full md:w-96">
-                    <Search size={18} className="absolute left-3 top-2.5 text-slate-400" />
-                    <input
-                        type="text"
-                        placeholder="İsim ile ara..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
-                    />
-                </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div className="relative w-full md:w-96">
+                        <Search size={18} className="absolute left-3 top-2.5 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="İsim ile ara..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                        />
+                    </div>
 
-                <div className="flex gap-3 w-full md:w-auto">
-                    {user?.role !== 'manager' && (
-                        <select
-                            value={selectedSchoolId}
-                            onChange={(e) => setSelectedSchoolId(e.target.value)}
-                            className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm text-slate-900"
-                        >
-                            <option value="all">Tüm Okullar</option>
-                            {schools.map(school => (
-                                <option key={school.id} value={school.id}>{school.name}</option>
-                            ))}
-                        </select>
-                    )}
+                    <div className="flex flex-wrap gap-3 w-full md:w-auto justify-end">
+                        {user?.role !== 'manager' && (
+                            <select
+                                value={selectedSchoolId}
+                                onChange={(e) => setSelectedSchoolId(e.target.value)}
+                                className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm text-slate-900"
+                            >
+                                <option value="all">Tüm Okullar</option>
+                                {schools.map(school => (
+                                    <option key={school.id} value={school.id}>{school.name}</option>
+                                ))}
+                            </select>
+                        )}
 
-                    <div className="flex rounded-lg border border-slate-300 overflow-hidden shrink-0">
-                        <button
-                            onClick={() => setStatusFilter('All')}
-                            className={`px-3 py-2 text-sm font-medium transition-colors ${statusFilter === 'All' ? 'bg-slate-100 text-slate-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-                        >
-                            Tümü
-                        </button>
-                        <div className="w-px bg-slate-300"></div>
-                        <button
-                            onClick={() => setStatusFilter('Active')}
-                            className={`px-3 py-2 text-sm font-medium transition-colors ${statusFilter === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-                        >
-                            Aktif
-                        </button>
-                        <div className="w-px bg-slate-300"></div>
-                        <button
-                            onClick={() => setStatusFilter('Left')}
-                            className={`px-3 py-2 text-sm font-medium transition-colors ${statusFilter === 'Left' ? 'bg-red-50 text-red-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-                        >
-                            Ayrılan
-                        </button>
+                        {/* Payment Status Filter */}
+                        <div className="flex rounded-lg border border-slate-300 overflow-hidden shrink-0">
+                            <button
+                                onClick={() => setPaymentStatusFilter('All')}
+                                className={`px-3 py-2 text-sm font-medium transition-colors ${paymentStatusFilter === 'All' ? 'bg-slate-100 text-slate-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                Tümü
+                            </button>
+                            <div className="w-px bg-slate-300"></div>
+                            <button
+                                onClick={() => setPaymentStatusFilter('paid')}
+                                className={`px-3 py-2 text-sm font-medium transition-colors ${paymentStatusFilter === 'paid' ? 'bg-green-50 text-green-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                Ödenen
+                            </button>
+                            <div className="w-px bg-slate-300"></div>
+                            <button
+                                onClick={() => setPaymentStatusFilter('claimed')}
+                                className={`px-3 py-2 text-sm font-medium transition-colors ${paymentStatusFilter === 'claimed' ? 'bg-blue-50 text-blue-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                Bildirilen
+                            </button>
+                            <div className="w-px bg-slate-300"></div>
+                            <button
+                                onClick={() => setPaymentStatusFilter('unpaid')}
+                                className={`px-3 py-2 text-sm font-medium transition-colors ${paymentStatusFilter === 'unpaid' ? 'bg-orange-50 text-orange-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                Bekleyen
+                            </button>
+                        </div>
+
+                        <div className="flex rounded-lg border border-slate-300 overflow-hidden shrink-0">
+                            <button
+                                onClick={() => setStatusFilter('All')}
+                                className={`px-3 py-2 text-sm font-medium transition-colors ${statusFilter === 'All' ? 'bg-slate-100 text-slate-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                Tümü
+                            </button>
+                            <div className="w-px bg-slate-300"></div>
+                            <button
+                                onClick={() => setStatusFilter('Active')}
+                                className={`px-3 py-2 text-sm font-medium transition-colors ${statusFilter === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                Aktif
+                            </button>
+                            <div className="w-px bg-slate-300"></div>
+                            <button
+                                onClick={() => setStatusFilter('Left')}
+                                className={`px-3 py-2 text-sm font-medium transition-colors ${statusFilter === 'Left' ? 'bg-red-50 text-red-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                Ayrılan
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -176,7 +216,15 @@ export function Students() {
                             const activeClassInfo = classGroups.find(c => c.id === student.classGroupId);
 
                             return (
-                                <tr key={student.id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => handleViewDetail(student)}>
+                                <tr key={student.id}
+                                    className={`hover:bg-slate-50 transition-colors cursor-pointer border-l-4 ${student.last_payment_status === 'paid'
+                                        ? 'border-green-500' // Green: Paid
+                                        : student.last_payment_status === 'claimed'
+                                            ? 'border-blue-500' // Blue: Claimed
+                                            : 'border-orange-400' // Orange: Pending
+                                        }`}
+                                    onClick={() => handleViewDetail(student)}
+                                >
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
@@ -204,12 +252,19 @@ export function Students() {
                                         {student.parentEmail || <span className="text-slate-300 italic">-</span>}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${student.status === 'Active'
-                                            ? 'bg-emerald-100 text-emerald-800'
-                                            : 'bg-red-100 text-red-800'
-                                            }`}>
-                                            {student.status === 'Active' ? 'Aktif' : 'Ayrıldı'}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${student.status === 'Active'
+                                                ? 'bg-emerald-100 text-emerald-800'
+                                                : 'bg-red-100 text-red-800'
+                                                }`}>
+                                                {student.status === 'Active' ? 'Aktif' : 'Ayrıldı'}
+                                            </span>
+                                            {student.last_payment_status === 'claimed' && (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 animate-pulse">
+                                                    Bildirim
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 text-right flex justify-end gap-2">
                                         <button
@@ -251,7 +306,7 @@ export function Students() {
                         })}
                         {filteredStudents.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                                <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
                                     Aradığınız kriterlere uygun öğrenci bulunamadı.
                                 </td>
                             </tr>

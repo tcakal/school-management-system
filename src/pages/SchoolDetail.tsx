@@ -13,7 +13,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
     const { id: paramId } = useParams<{ id: string }>();
     const id = propSchoolId || paramId;
     const navigate = useNavigate();
-    const { schools, classGroups, students, assignments, teachers, addClassGroup, addStudent, updateSchool, deleteAssignment, updateStudent, updateClassGroup, updateAssignment } = useStore();
+    const { schools, classGroups, students, assignments, teachers, addClassGroup, addStudent, updateSchool, deleteAssignment, updateStudent, updateClassGroup, updateAssignment, updatePayment } = useStore();
     const [activeTab, setActiveTab] = useState('classes');
 
     // Assignment State
@@ -74,6 +74,59 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
     const school = schools.find(s => s.id === id);
     const [price, setPrice] = useState(school?.defaultPrice?.toString() || '');
     const [paymentTerms, setPaymentTerms] = useState(school?.paymentTerms || '');
+
+    // Payment Modal State
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [paymentAmount, setPaymentAmount] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Transfer' | 'CreditCard'>('Cash');
+    const [selectedStudentForPayment, setSelectedStudentForPayment] = useState<Student | null>(null);
+
+    const handleOpenPaymentModal = (student: Student) => {
+        setSelectedStudentForPayment(student);
+        // Calculate default amount based on student status
+        let defaultAmount = school?.defaultPrice || 0;
+        if (student.paymentStatus === 'discounted' && student.discountPercentage) {
+            defaultAmount = defaultAmount * ((100 - student.discountPercentage) / 100);
+        } else if (student.paymentStatus === 'free') {
+            defaultAmount = 0;
+        }
+        setPaymentAmount(defaultAmount.toString());
+        setIsPaymentModalOpen(true);
+    };
+
+    const handleProcessPayment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedStudentForPayment || !school) return;
+
+        const amount = Number(paymentAmount);
+
+        // 1. Create Payment Record
+        // addPayment is available from useStore now
+        const { addPayment } = useStore.getState();
+        await addPayment({
+            id: crypto.randomUUID(),
+            schoolId: school.id,
+            studentId: selectedStudentForPayment.id,
+            amount: amount,
+            date: new Date().toISOString(),
+            type: 'Tuition',
+            method: paymentMethod,
+            month: new Date().toISOString().slice(0, 7),
+            status: 'paid',
+            paidAt: new Date().toISOString(),
+            notes: `Öğrenci: ${selectedStudentForPayment.name} için manuel tahsilat.`
+        });
+
+        // 2. Update Student Status
+        await updateStudent(selectedStudentForPayment.id, {
+            last_payment_status: 'paid',
+            last_payment_date: new Date().toISOString()
+        } as any);
+
+        setIsPaymentModalOpen(false);
+        setSelectedStudentForPayment(null);
+        // Remove alert or keep it, user prefers feedback. Keeping it minimal.
+    };
 
     const handleAddClass = (e: React.FormEvent) => {
         e.preventDefault();
@@ -626,6 +679,18 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                                                             </button>
                                                         </div>
                                                     )}
+
+                                                    {/* Manual Collection Button (If Active and not Paid) */}
+                                                    {student.status === 'Active' && student.last_payment_status !== 'paid' && student.last_payment_status !== 'claimed' && (
+                                                        <div className="flex justify-end mt-2">
+                                                            <button
+                                                                onClick={() => handleOpenPaymentModal(student)}
+                                                                className="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded-full shadow-sm transition-colors border border-slate-200"
+                                                            >
+                                                                Tahsil Et
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </td>
                                             </tr>
                                         );
@@ -1143,9 +1208,62 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                     </div>
                 </div>
             </Modal>
+
+
+            <Modal
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                title="Ödeme Tahsil Et"
+            >
+                <form onSubmit={handleProcessPayment} className="space-y-4">
+                    <div className="p-3 bg-blue-50 text-blue-800 rounded-lg text-sm mb-4">
+                        <strong>{selectedStudentForPayment?.name}</strong> için ödeme girişi yapıyorsunuz.
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Tutar (TL)</label>
+                        <input
+                            type="number"
+                            required
+                            min="0"
+                            value={paymentAmount}
+                            onChange={e => setPaymentAmount(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Ödeme Yöntemi</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {(['Cash', 'Transfer', 'CreditCard'] as const).map(m => (
+                                <button
+                                    key={m}
+                                    type="button"
+                                    onClick={() => setPaymentMethod(m)}
+                                    className={`py-2 text-sm font-medium rounded-lg border ${paymentMethod === m
+                                        ? 'bg-blue-600 text-white border-blue-600'
+                                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                                        }`}
+                                >
+                                    {m === 'Cash' ? 'Nakit' : m === 'Transfer' ? 'Havale' : 'Kredi Kartı'}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium mt-4"
+                    >
+                        Tahsil Et ve Onayla
+                    </button>
+                </form>
+            </Modal>
         </div >
     );
 }
+
+
 
 function AssignmentItem({ assignment, teacher, updateAssignment, deleteAssignment }: { assignment: any, teacher: any, updateAssignment: any, deleteAssignment: any }) {
     const [localDay, setLocalDay] = useState(assignment.dayOfWeek);

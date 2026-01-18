@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TimeSelect } from './TimeSelect';
 import { useStore } from '../store/useStore';
 import { Modal } from './Modal';
@@ -25,11 +25,44 @@ const DAYS = [
 
 
 export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: AssignmentModalProps) {
-    const { teachers, addAssignment } = useStore();
+    const { teachers, addAssignment, findAvailableTeachers } = useStore();
     const [teacherId, setTeacherId] = useState('');
     const [dayOfWeek, setDayOfWeek] = useState(1);
     const [startTime, setStartTime] = useState('09:00');
     const [endTime, setEndTime] = useState('10:00');
+    const [availableTeachers, setAvailableTeachers] = useState<any[]>([]);
+    const [isChecking, setIsChecking] = useState(false);
+
+    // Check availability when timing changes
+    useState(() => {
+        // Initial check logic if needed, but better in useEffect
+    });
+
+    const getNextDayDate = (dayIndex: number) => {
+        const today = new Date();
+        const currentDay = today.getDay() || 7; // 1-7
+        const diff = dayIndex - currentDay + (dayIndex <= currentDay ? 7 : 0); // Always next occurrence
+        const nextDate = new Date(today);
+        nextDate.setDate(today.getDate() + diff);
+        return nextDate.toISOString().split('T')[0];
+    };
+
+
+
+    useEffect(() => {
+        const check = async () => {
+            setIsChecking(true);
+            const date = getNextDayDate(dayOfWeek);
+            // Verify findAvailableTeachers exists in store, assuming generic store type has it
+            if (findAvailableTeachers) {
+                const available = await findAvailableTeachers(date, startTime, endTime);
+                setAvailableTeachers(available);
+            }
+            setIsChecking(false);
+        };
+        const timer = setTimeout(check, 500); // 500ms debounce
+        return () => clearTimeout(timer);
+    }, [dayOfWeek, startTime, endTime, findAvailableTeachers]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -71,10 +104,19 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                     >
                         <option value="">Seçiniz...</option>
-                        {teachers.filter(t => t.role === 'teacher').map((t) => (
-                            <option key={t.id} value={t.id}>{t.name} ({t.specialties?.join(', ')})</option>
-                        ))}
+                        {teachers.filter(t => t.role === 'teacher').map((t) => {
+                            const isAvailable = availableTeachers.some(at => at.id === t.id);
+                            // If we strictly enforce availability:
+                            // if (!isAvailable) return null; 
+                            // But usually better to show unavailable ones as disabled or marked
+                            return (
+                                <option key={t.id} value={t.id} disabled={!isAvailable && !isChecking} className={!isAvailable ? 'text-slate-400 bg-slate-100' : ''}>
+                                    {t.name} {isChecking ? '(Kontrol ediliyor...)' : !isAvailable ? '(Müsait Değil)' : ''}
+                                </option>
+                            );
+                        })}
                     </select>
+                    {isChecking && <p className="text-xs text-blue-500 mt-1">Müsaitlik durumu kontrol ediliyor...</p>}
                 </div>
 
                 <div>
@@ -134,7 +176,8 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
                     </button>
                     <button
                         type="submit"
-                        className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium text-sm"
+                        disabled={isChecking}
+                        className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium text-sm disabled:opacity-50"
                     >
                         Ata
                     </button>
