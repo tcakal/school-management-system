@@ -12,6 +12,7 @@ export interface School {
     managerPhone?: string;
     managerEmail?: string;
     telegramChatId?: string;
+    payment_cycle_start_date?: string; // ISO Date "2024-01-01"
 }
 
 export interface ClassGroup {
