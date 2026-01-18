@@ -422,8 +422,7 @@ export function Reports() {
                                 onChange={e => setEndDate(e.target.value)}
                             />
                         </div>
-                        )
-                        }
+
                         {
                             user?.role === 'manager' && (
                                 // Hidden input or disabled select for manager
