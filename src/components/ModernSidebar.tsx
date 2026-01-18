@@ -14,7 +14,8 @@ export function ModernSidebar() {
 
     const hasNewLogs = logs.length > 0 && (!lastActivityLogView || new Date(logs[0].timestamp).getTime() > new Date(lastActivityLogView).getTime());
 
-    const navItems = [
+    // Base Navigation Items
+    const allNavItems = [
         { to: '/', icon: LayoutDashboard, label: 'Panel' },
         { to: '/schools', icon: Building2, label: 'Okullar' },
         { to: '/students', icon: GraduationCap, label: 'Öğrenciler' },
@@ -26,6 +27,27 @@ export function ModernSidebar() {
         { to: '/settings', icon: Settings, label: 'Ayarlar' },
         { to: '/rehber', icon: BookOpen, label: 'Yardım / Kılavuz' },
     ];
+
+    // Filter Navigation based on Role - STRICT MODE
+    let navItems = allNavItems;
+
+    if (user?.role === 'manager') {
+        // Manager ONLY sees Panel (Manager Dashboard) and Reports
+        navItems = [
+            { to: '/manager-dashboard', icon: LayoutDashboard, label: 'Panel' },
+            { to: '/reports', icon: FileText, label: 'Raporlar' },
+        ];
+    } else if (user?.role === 'teacher') {
+        // Teacher sees: Dashboard, Schedule, Schools, Students, Reports, Guide
+        const teacherAllowed = ['/', '/schedule', '/schools', '/students', '/reports', '/rehber'];
+        navItems = allNavItems.filter(item => teacherAllowed.includes(item.to));
+    } else if (user?.role === 'admin') {
+        // Admin sees everything
+        navItems = allNavItems;
+    } else {
+        // Fallback (e.g. Student)
+        navItems = [];
+    }
 
     return (
         <div className="h-screen w-64 bg-slate-900 text-white flex flex-col transition-all duration-300">
