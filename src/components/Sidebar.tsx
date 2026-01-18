@@ -35,27 +35,8 @@ export function Sidebar() {
 
         // Manager sees: School, Attendance, Payments, Reports
         if (user.role === 'manager') {
-            // New Manager Workflow
-            // 1. Okulum (Direct Dashboard Link)
-            // 2. Yoklama (NEW)
-            // 3. Ödemeler (NEW)
-            // 4. Raporlar
-            // 5. Profil (Already in footer)
-
-            // We need to inject custom items for Manager or filter existing ones.
-            // Existing: '/', '/schedule', '/schools', '/students', '/finance', '/teachers', '/reports'
-
-            // Dashboard ('/') -> Redirects to SchoolDetail
-            // Reports ('/reports') -> Allowed
-
+            // New Manager Workflow (Visual Dashboard)
             const managerAllowedKeys = ['/', '/reports'];
-
-            // Custom Manager Items will be handled in the render loop or by pushing to a specific list
-            // For this logic, we filter the standard list.
-
-            // Actually, let's redefine the navItems for managers specifically in the render
-            // or just allow standard ones and Add custom ones.
-
             return managerAllowedKeys.includes(item.to);
         }
 
@@ -63,23 +44,24 @@ export function Sidebar() {
     });
 
     // Custom Menu Items for Manager
+    // We replace the default 'Panel' link (which goes to '/', dashboard) 
+    // to point to '/manager-dashboard' effectively, OR we add a specific item.
+    // Actually, let's just make 'Panel' go to /manager-dashboard for managers?
+    // The NavLink 'to' is fixed in navItems. 
+    // Optimization: Add "Panel" manually for managers.
+
     const managerCustomItems = user?.role === 'manager' ? [
-        { to: '/attendance-manager', icon: ClipboardList, label: 'Yoklama Paneli' },
-        { to: '/payment-manager', icon: Banknote, label: 'Ödeme Takip' }
+        { to: '/manager-dashboard', icon: LayoutDashboard, label: 'Panel' }, // New Dashboard
+        { to: `/school/${user.id}`, icon: School, label: 'Okulum' }, // School Detail (Classic)
     ] : [];
 
     // Merge lists for display
     const finalNavItems = user?.role === 'manager'
         ? [
-            ...filteredNavItems, // Dashboard & Reports
-            ...managerCustomItems
-        ].sort((a, b) => {
-            // Optional: Custom sort order if needed. 
-            // Current: Dashboard, Reports, Attendance, Payments. 
-            // Better: Dashboard, Attendance, Payments, Reports.
-            const order = ['/', '/attendance-manager', '/payment-manager', '/reports'];
-            return order.indexOf(a.to) - order.indexOf(b.to);
-        })
+            ...managerCustomItems,
+            // Add other items like Reports if allowed
+            ...filteredNavItems.filter(i => i.to === '/reports')
+        ]
         : filteredNavItems;
 
     return (

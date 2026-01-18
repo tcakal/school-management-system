@@ -15,8 +15,7 @@ import { Settings } from './pages/Settings';
 import { StudentPanel } from './pages/StudentPanel';
 import { Guide } from './pages/Guide';
 import { useAuth } from './store/useAuth';
-import { AttendanceManager } from './pages/AttendanceManager';
-import { PaymentManager } from './pages/PaymentManager';
+import { ManagerSchoolDashboard } from './pages/ManagerSchoolDashboard';
 
 import { ParentDashboard } from './pages/ParentDashboard';
 
@@ -87,14 +86,9 @@ function App() {
             </RequireAuth>
           } />
           <Route path="rehber" element={<Guide />} />
-          <Route path="attendance-manager" element={
+          <Route path="manager-dashboard" element={
             <RequireAuth allowedRoles={['manager', 'admin']}>
-              <AttendanceManager />
-            </RequireAuth>
-          } />
-          <Route path="payment-manager" element={
-            <RequireAuth allowedRoles={['manager', 'admin']}>
-              <PaymentManager />
+              <ManagerSchoolDashboard />
             </RequireAuth>
           } />
           <Route path="*" element={<Navigate to="/" replace />} />
