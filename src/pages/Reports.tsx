@@ -422,19 +422,17 @@ export function Reports() {
                                 onChange={e => setEndDate(e.target.value)}
                             />
                         </div>
+                        )
+                        }
                         {
-                            user?.role !== 'manager' && (
-                                <div className="flex-[2]">
-                                    <label className="block text-xs font-medium text-slate-500 mb-1">Okul</label>
-                                    <select
-                                        className="w-full text-sm border-slate-300 rounded-lg"
-                                        value={selectedSchoolId}
-                                        onChange={e => setSelectedSchoolId(e.target.value)}
-                                    >
-                                        <option value="all">Tüm Okullar</option>
-                                        {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                    </select>
-                                </div>
+                            user?.role === 'manager' && (
+                                // Hidden input or disabled select for manager
+                                // Actually we just don't show the School Select, and the logic uses user.id if role is manager.
+                                // But we should ensure the state 'selectedSchoolId' matches user.id if we want the filter logic to be consistent easily,
+                                // OR we rely on the filter logic we saw earlier: "if (user?.role === 'manager' && l.schoolId !== user.id) return false;"
+                                // That logic is already there in 'filteredLessons'.
+                                // So we just hide the School Select from view.
+                                null
                             )
                         }
                         <div className="flex-[2]">

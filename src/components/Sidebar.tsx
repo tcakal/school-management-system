@@ -48,7 +48,7 @@ export function Sidebar() {
 
     const managerCustomItems = showManagerItems ? [
         { to: '/manager-dashboard', icon: LayoutDashboard, label: user?.role === 'admin' ? 'Müdür Paneli (Test)' : 'Panel' },
-        { to: `/school/${user?.id}`, icon: School, label: 'Okulum' },
+        // { to: `/school/${user?.id}`, icon: School, label: 'Okulum' }, // Removed as per user request to simplify menu
     ] : [];
 
     // Merge lists for display
