@@ -48,10 +48,12 @@ export function Layout() {
             <TelegramOnboardingModal />
             <ModernSidebar />
             <main className="flex-1 overflow-auto relative scroll-smooth">
-                {/* Notification Center Floating Top Right */}
-                <div className="absolute top-6 right-8 z-20">
-                    <NotificationCenter />
-                </div>
+                {/* Notification Center Floating Top Right - Hidden for Managers and Parents */}
+                {!['manager', 'parent'].includes(user?.role || '') && (
+                    <div className="absolute top-6 right-8 z-20">
+                        <NotificationCenter />
+                    </div>
+                )}
 
                 <div className="p-8 max-w-7xl mx-auto pb-20">
                     <Outlet />

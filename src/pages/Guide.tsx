@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Book, Users, School, FileText, CheckSquare, Upload, Shield, LogOut, Star, Play, X, MessageCircle, Send } from 'lucide-react';
+import { Book, Users, School, FileText, CheckSquare, Upload, Shield, LogOut, Star, Play, X, MessageCircle, Send, Banknote } from 'lucide-react';
 
 // Video Imports
 // Note: In Vite/React, we can reference public assets directly by string path in img src
@@ -367,6 +367,37 @@ export function Guide() {
                                 </li>
                             </ul>
 
+                        </section>
+
+                        {/* Manager Color Codes */}
+                        <section className="bg-slate-50 border-t border-slate-200 pt-6 mt-6">
+                            <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <Banknote size={20} className="text-emerald-600" />
+                                Ödeme Durumu Renk Kodları
+                            </h3>
+                            <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm grid gap-4">
+                                <div className="flex items-center gap-3 p-3 rounded-lg border-2 border-emerald-500 bg-emerald-50/10">
+                                    <div className="w-4 h-4 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200"></div>
+                                    <div>
+                                        <h5 className="font-bold text-slate-800 text-sm">Yeşil Çerçeve</h5>
+                                        <p className="text-xs text-slate-500">Bu dönem ödemesini NAKİT veya HAVALE ile yapmış öğrenci.</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 p-3 rounded-lg border-2 border-orange-400 bg-orange-50/10">
+                                    <div className="w-4 h-4 rounded-full bg-orange-400 shadow-sm shadow-orange-200"></div>
+                                    <div>
+                                        <h5 className="font-bold text-slate-800 text-sm">Turuncu Çerçeve</h5>
+                                        <p className="text-xs text-slate-500">Bu dönem ödemesi henüz alınmamış öğrenci.</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 p-3 rounded-lg border-2 border-red-500 bg-red-50/10">
+                                    <div className="w-4 h-4 rounded-full bg-red-500 shadow-sm shadow-red-200 animate-pulse"></div>
+                                    <div>
+                                        <h5 className="font-bold text-slate-800 text-sm">Kırmızı Çerçeve</h5>
+                                        <p className="text-xs text-slate-500">Geçmiş dönemlerden kalan borcu olan öğrenci. (Öncelikli Tahsilat)</p>
+                                    </div>
+                                </div>
+                            </div>
                         </section>
 
                         {/* Telegram Guide for Managers */}

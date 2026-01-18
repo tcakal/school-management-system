@@ -274,18 +274,22 @@ export function ManagerSchoolDashboard() {
                             // Re-calculate some status for UI
                             const currentPending = currentStatus === 'unpaid';
 
-                            // Determine Bottom Border Color logic (User requested "Name field glows")
-                            // We'll use a strong left border or a bottom border on the name cell.
-                            // Let's use a subtle gradient background or border-left.
+                            // Determine Border Color logic (User requested "Border around the row")
+                            let statusColorClass = 'border border-slate-200'; // Default
 
-                            let statusColorClass = '';
-                            if (hasPastDebt) statusColorClass = 'border-l-4 border-l-red-500 bg-red-50/30';
-                            else if (currentStatus === 'paid') statusColorClass = 'border-l-4 border-l-emerald-500 bg-emerald-50/30';
-                            else statusColorClass = 'border-l-4 border-l-orange-400 bg-orange-50/30';
-
+                            if (hasPastDebt) {
+                                // Red Border for Past Debt
+                                statusColorClass = 'border-2 border-red-500 bg-red-50/10 shadow-sm shadow-red-100';
+                            } else if (currentStatus === 'paid') {
+                                // Green Border for Paid
+                                statusColorClass = 'border-2 border-emerald-500 bg-emerald-50/10 shadow-sm shadow-emerald-100';
+                            } else {
+                                // Orange Border for Unpaid (Current Period)
+                                statusColorClass = 'border-2 border-orange-400 bg-orange-50/10 shadow-sm shadow-orange-100';
+                            }
 
                             return (
-                                <tr key={student.id} className={`hover:bg-slate-50 group transition-colors ${statusColorClass}`}>
+                                <tr key={student.id} className={`hover:bg-slate-50 group transition-all rounded-lg block md:table-row mb-2 md:mb-0 ${statusColorClass}`}>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 border border-slate-200">
