@@ -6,6 +6,17 @@ import type { Payment, PaymentMethod, PaymentType } from '../types';
 
 export function Finance() {
     const { schools, students, payments, addPayment } = useStore();
+    const { user } = useAuth(); // Import useAuth
+
+    // Security: Only Admins can see Global Finance
+    if (user?.role !== 'admin') {
+        return (
+            <div className="p-8 text-center bg-white rounded-xl border border-red-200">
+                <h3 className="text-red-600 font-bold">Yetkisiz Erişim</h3>
+                <p className="text-slate-500">Bu sayfayı görüntüleme yetkiniz yok.</p>
+            </div>
+        );
+    }
 
     // Add Payment State
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);

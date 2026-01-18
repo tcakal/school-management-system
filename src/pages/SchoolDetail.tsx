@@ -12,7 +12,15 @@ import type { ClassGroup, Student } from '../types';
 export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) {
     const { id: paramId } = useParams<{ id: string }>();
     const id = propSchoolId || paramId;
+    const { user } = useAuth(); // Needed for security check
     const navigate = useNavigate();
+
+    // Security Check: Specific redirect for Managers trying to access other schools
+    useEffect(() => {
+        if (user?.role === 'manager' && id !== user.id) {
+            navigate('/manager-dashboard'); // Redirect to their safe dashboard
+        }
+    }, [user, id, navigate]);
     const { schools, classGroups, students, assignments, teachers, addClassGroup, addStudent, updateSchool, deleteAssignment, updateStudent, updateClassGroup, updateAssignment } = useStore();
     const [activeTab, setActiveTab] = useState('classes');
 
