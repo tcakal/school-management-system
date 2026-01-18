@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Building2, Users, Banknote, ArrowUpRight, Image as ImageIcon } from 'lucide-react';
 import { Modal } from '../components/Modal';
@@ -10,11 +10,10 @@ import { useAuth } from '../store/useAuth';
 
 export function Dashboard() {
     const { user } = useAuth();
-    const { schools, students, payments } = useStore();
 
-    // If manager, show their school detail directly
+    // Redirect Manager to new Dashboard
     if (user?.role === 'manager') {
-        return <SchoolDetail schoolId={user.id} />;
+        return <Navigate to="/manager-dashboard" replace />;
     }
 
     // Mock data initialization is no longer needed with Supabase
