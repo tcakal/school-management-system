@@ -35,6 +35,7 @@ export function ModernSidebar() {
         // Manager ONLY sees Panel (Manager Dashboard) and Reports
         navItems = [
             { to: '/manager-dashboard', icon: LayoutDashboard, label: 'Panel' },
+            { to: '/schedule', icon: Calendar, label: 'Ders Programı' },
             { to: '/reports', icon: FileText, label: 'Raporlar' },
         ];
     } else if (user?.role === 'teacher') {
