@@ -721,7 +721,7 @@ export const useStore = create<AppState>()(
                     payments: state.payments.map((p) => (p.id === id ? { ...p, ...updated } : p)),
                 }));
 
-                const studentName = 'Öğrenci'; // Ideal would be to fetch student name if linked, but payments are often school-linked in this logic context
+
 
                 let details = `Ödeme güncellendi.`;
                 if (updated.status === 'paid' && oldPayment?.status !== 'paid') {

@@ -326,13 +326,28 @@ function ConflictItem({ lesson, selectedSubId, onSelectSub, findAvailableTeacher
     lesson: Lesson,
     selectedSubId: string | undefined,
     onSelectSub: (id: string) => void,
-    findAvailableTeachers: (date: string, start: string, end: string) => Teacher[],
+    findAvailableTeachers: (date: string, start: string, end: string) => Promise<Teacher[]>,
     teachers: Teacher[]
 }) {
-    const availableTeachers = useMemo(() =>
-        findAvailableTeachers(lesson.date, lesson.startTime, lesson.endTime),
-        [lesson, findAvailableTeachers]
-    );
+    const [availableTeachers, setAvailableTeachers] = useState<Teacher[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        let mounted = true;
+        const fetch = async () => {
+            setIsLoading(true);
+            try {
+                const res = await findAvailableTeachers(lesson.date, lesson.startTime, lesson.endTime);
+                if (mounted) setAvailableTeachers(res);
+            } catch (error) {
+                console.error("Failed to fetch teachers", error);
+            } finally {
+                if (mounted) setIsLoading(false);
+            }
+        };
+        fetch();
+        return () => { mounted = false; };
+    }, [lesson, findAvailableTeachers]);
 
     return (
         <div className="bg-white p-3 rounded border border-slate-200 text-sm">
@@ -354,10 +369,11 @@ function ConflictItem({ lesson, selectedSubId, onSelectSub, findAvailableTeacher
                 <select
                     value={selectedSubId || ""}
                     onChange={(e) => onSelectSub(e.target.value)}
+                    disabled={isLoading}
                     className={`flex-1 px-2 py-1.5 border rounded text-xs font-medium outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 ${selectedSubId && selectedSubId !== 'ignore' ? 'border-green-300 bg-green-50 text-green-700' : 'border-slate-300'
                         }`}
                 >
-                    <option value="">İşlem Seçiniz...</option>
+                    <option value="">{isLoading ? 'Kontrol ediliyor...' : 'İşlem Seçiniz...'}</option>
                     <option value="ignore">Yerine Kimseyi Atama (Boş Geçsin)</option>
                     <optgroup label="Uygun Öğretmenler">
                         {availableTeachers.map(t => (

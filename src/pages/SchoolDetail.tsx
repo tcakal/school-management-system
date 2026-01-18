@@ -13,7 +13,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
     const { id: paramId } = useParams<{ id: string }>();
     const id = propSchoolId || paramId;
     const navigate = useNavigate();
-    const { schools, classGroups, students, assignments, teachers, addClassGroup, addStudent, updateSchool, deleteAssignment, updateStudent, updateClassGroup, updateAssignment, updatePayment } = useStore();
+    const { schools, classGroups, students, assignments, teachers, addClassGroup, addStudent, updateSchool, deleteAssignment, updateStudent, updateClassGroup, updateAssignment } = useStore();
     const [activeTab, setActiveTab] = useState('classes');
 
     // Assignment State
