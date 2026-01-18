@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
+import { useAuth } from '../store/useAuth';
 import { Banknote, TrendingUp, History, AlertCircle, Plus } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import type { Payment, PaymentMethod, PaymentType } from '../types';

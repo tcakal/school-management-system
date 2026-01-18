@@ -293,7 +293,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
         });
     }, [students, school, studentSearchTerm, studentStatusFilter]);
 
-    const { user } = useAuth();
+    // const { user } = useAuth(); // Removed duplicate declaration
     const isTeacher = user?.role === 'teacher';
 
     if (!school) {
