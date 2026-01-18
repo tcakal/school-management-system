@@ -13,7 +13,7 @@ export const NotificationCenter: React.FC = () => {
     const [filterRole, setFilterRole] = useState<'all' | 'student' | 'teacher' | 'manager' | 'admin'>('all');
 
     // Auto-Send Tracking (LocalStorage to prevent reprocessing)
-    const [autoSentIds, setAutoSentIds] = useState<Set<string>>(() => {
+    const [autoSentIds] = useState<Set<string>>(() => {
         const saved = localStorage.getItem('autoSentNotificationIds');
         return saved ? new Set(JSON.parse(saved)) : new Set();
     });
