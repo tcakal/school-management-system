@@ -55,11 +55,25 @@ export function Sidebar() {
     // If Manager: Show Manager Items + Reports
     // If Admin: Show Standard Items + Manager Link (prepended or appended)
 
-    const finalNavItems = user?.role === 'manager'
-        ? [...managerCustomItems, ...filteredNavItems.filter(i => i.to === '/reports')]
-        : user?.role === 'admin'
-            ? [...filteredNavItems, ...managerCustomItems] // Admin sees everything + Manager Link
-            : filteredNavItems;
+    // Explicitly define menu items based on role to avoid any leakage/filtering errors
+    let finalNavItems;
+
+    if (user?.role === 'manager') {
+        // Manager only sees Panel and Reports
+        finalNavItems = [
+            { to: '/manager-dashboard', icon: LayoutDashboard, label: 'Panel' },
+            { to: '/reports', icon: ClipboardList, label: 'Raporlar' },
+        ];
+    } else if (user?.role === 'admin') {
+        // Admin sees everything + Manager Link
+        finalNavItems = [
+            ...filteredNavItems,
+            ...managerCustomItems
+        ];
+    } else {
+        // Teachers, etc.
+        finalNavItems = filteredNavItems;
+    }
 
     return (
         <>
