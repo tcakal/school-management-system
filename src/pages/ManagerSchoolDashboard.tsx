@@ -393,4 +393,4 @@ export function ManagerSchoolDashboard() {
 // Simple Payment Modal removed from view as it is no longer triggered.
 // Keeping component code or removing it? Let's keep the import but remove usages.
 // Actually, we should comment out the unused Modal code if we are not using it.
-function SimplePaymentModal() { return null; }
+// function SimplePaymentModal() { return null; }

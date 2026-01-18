@@ -5,7 +5,7 @@ import { Building2, Users, Banknote, ArrowUpRight, Image as ImageIcon } from 'lu
 import { Modal } from '../components/Modal';
 import type { School } from '../types';
 
-import { SchoolDetail } from './SchoolDetail';
+// import { SchoolDetail } from './SchoolDetail';
 import { useAuth } from '../store/useAuth';
 
 export function Dashboard() {
@@ -18,6 +18,8 @@ export function Dashboard() {
 
     // Mock data initialization is no longer needed with Supabase
 
+    const { schools, students, payments, addSchool } = useStore();
+
     const totalRevenue = payments.reduce((acc, p) => acc + p.amount, 0);
     const activeStudents = students.filter(s => s.status === 'Active').length;
 
@@ -27,7 +29,7 @@ export function Dashboard() {
     const [newSchoolPhone, setNewSchoolPhone] = useState('');
     const [newSchoolColor, setNewSchoolColor] = useState('#2563eb');
     const [newSchoolImage, setNewSchoolImage] = useState('');
-    const { addSchool } = useStore();
+    // const { addSchool } = useStore(); // Duplicate removed
 
     const handleAddSchool = async (e: React.FormEvent) => {
         e.preventDefault();
