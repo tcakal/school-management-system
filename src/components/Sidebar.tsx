@@ -43,26 +43,22 @@ export function Sidebar() {
         return false;
     });
 
-    // Custom Menu Items for Manager
-    // We replace the default 'Panel' link (which goes to '/', dashboard) 
-    // to point to '/manager-dashboard' effectively, OR we add a specific item.
-    // Actually, let's just make 'Panel' go to /manager-dashboard for managers?
-    // The NavLink 'to' is fixed in navItems. 
-    // Optimization: Add "Panel" manually for managers.
+    // Custom Menu Items for Manager OR Admin (for testing)
+    const showManagerItems = user?.role === 'manager' || user?.role === 'admin';
 
-    const managerCustomItems = user?.role === 'manager' ? [
-        { to: '/manager-dashboard', icon: LayoutDashboard, label: 'Panel' }, // New Dashboard
-        { to: `/school/${user.id}`, icon: School, label: 'Okulum' }, // School Detail (Classic)
+    const managerCustomItems = showManagerItems ? [
+        { to: '/manager-dashboard', icon: LayoutDashboard, label: user?.role === 'admin' ? 'Müdür Paneli (Test)' : 'Panel' },
     ] : [];
 
     // Merge lists for display
+    // If Manager: Show Manager Items + Reports
+    // If Admin: Show Standard Items + Manager Link (prepended or appended)
+
     const finalNavItems = user?.role === 'manager'
-        ? [
-            ...managerCustomItems,
-            // Add other items like Reports if allowed
-            ...filteredNavItems.filter(i => i.to === '/reports')
-        ]
-        : filteredNavItems;
+        ? [...managerCustomItems, ...filteredNavItems.filter(i => i.to === '/reports')]
+        : user?.role === 'admin'
+            ? [...filteredNavItems, ...managerCustomItems] // Admin sees everything + Manager Link
+            : filteredNavItems;
 
     return (
         <>
