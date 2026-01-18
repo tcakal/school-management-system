@@ -68,7 +68,7 @@ export function Sidebar() {
                     <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
                         Atölye Vizyon
                     </h1>
-                    <p className="text-xs text-slate-400 mt-1">Okul Yönetim Sistemi</p>
+                    <p className="text-xs text-slate-400 mt-1">Okul Yönetim Sistemi <span className="text-green-500 font-bold">(v2.0 Yeni)</span></p>
                 </div>
 
                 <nav className="flex-1 p-4 space-y-1">
