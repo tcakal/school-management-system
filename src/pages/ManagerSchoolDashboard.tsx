@@ -129,7 +129,7 @@ export function ManagerSchoolDashboard() {
 
         // B. Current Period Status
         const s = students.find(x => x.id === studentId);
-        let currentStatus: 'paid' | 'unpaid' = 'unpaid';
+        let currentStatus: 'paid' | 'unpaid' | 'claimed' = 'unpaid';
 
         if (s?.paymentStatus === 'free') {
             currentStatus = 'paid';
@@ -139,7 +139,14 @@ export function ManagerSchoolDashboard() {
                 const pDate = new Date(p.date);
                 return pDate >= selectedPeriod.start && pDate <= selectedPeriod.end;
             });
-            currentStatus = isPaid ? 'paid' : 'unpaid';
+
+            if (isPaid) {
+                currentStatus = 'paid';
+            } else if (s?.last_payment_status === 'claimed') {
+                currentStatus = 'claimed';
+            } else {
+                currentStatus = 'unpaid';
+            }
         }
 
         return { hasPastDebt, currentStatus };
@@ -158,13 +165,6 @@ export function ManagerSchoolDashboard() {
     // Quick Pay Handler
     const handleQuickPay = async (student: any) => {
         if (!confirm(`${student.name} için bu dönem ödemesi alındı olarak işaretlensin mi?`)) return;
-
-        // Determine amount (use student price or school default, fallback to 0)
-        // Ideally we should have a price field. For now assuming 0 if not set, but status becomes 'paid'.
-        // In a real app, we might need to fetch the school's default price if student's is empty.
-        // For now, let's look for a price or default to 0.
-        // We probably need to ensure 'student' object has 'price'. If not in store, we might need to update store.
-        // The store 'students' usually have 'price'.
 
         const amount = Number(student.price) || 0;
 
@@ -186,8 +186,32 @@ export function ManagerSchoolDashboard() {
             last_payment_status: 'paid',
             last_payment_date: new Date().toISOString()
         });
+    };
 
-        // Optimistic update or wait for store? Store updates trigger re-render.
+    // Quick Approve Handler
+    const handleApproveClaim = async (student: any) => {
+        if (!confirm(`${student.name} tarafından yapılan ödeme bildirimini onaylıyor musunuz?`)) return;
+
+        const amount = Number(school?.defaultPrice) || 0; // Use school default as fallback
+
+        await addPayment({
+            id: crypto.randomUUID(),
+            schoolId,
+            studentId: student.id,
+            amount: amount,
+            date: new Date().toISOString(),
+            type: 'Tuition',
+            method: 'Transfer', // Assume transfer for remote claims
+            month: selectedPeriod.start.toISOString().slice(0, 7),
+            status: 'paid',
+            paidAt: new Date().toISOString(),
+            notes: `${selectedPeriod.index + 1}. Dönem Ödemesi (Veli Bildirimi Onayı)`
+        });
+
+        await updateStudent(student.id, {
+            last_payment_status: 'paid',
+            last_payment_date: new Date().toISOString()
+        });
     };
 
     if (!school) return <div className="p-8 text-center">Okul bilgisi bulunamadı.</div>;
@@ -283,6 +307,9 @@ export function ManagerSchoolDashboard() {
                             } else if (currentStatus === 'paid') {
                                 // Green Border for Paid
                                 statusColorClass = 'border-2 border-emerald-500 bg-emerald-50/10 shadow-sm shadow-emerald-100';
+                            } else if (currentStatus === 'claimed') {
+                                // BLUE Border for Claimed
+                                statusColorClass = 'border-2 border-blue-500 bg-blue-50/10 shadow-sm shadow-blue-100';
                             } else {
                                 // Orange Border for Unpaid (Current Period)
                                 statusColorClass = 'border-2 border-orange-400 bg-orange-50/10 shadow-sm shadow-orange-100';
@@ -349,11 +376,13 @@ export function ManagerSchoolDashboard() {
                                             <div className="flex flex-col items-center gap-1" title="Bu Dönem Ödemesi">
                                                 <div className={`w-4 h-4 rounded-full transition-all ${currentStatus === 'paid'
                                                     ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
-                                                    : currentPending // Explicit usage
-                                                        ? 'bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.5)]'
-                                                        : 'bg-orange-400'
+                                                    : currentStatus === 'claimed'
+                                                        ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)] animate-bounce' // Bouncing Blue Dot for Claimed
+                                                        : 'bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.5)]'
                                                     }`}></div>
-                                                <span className="text-[10px] uppercase font-bold text-slate-400">Dönem</span>
+                                                <span className="text-[10px] uppercase font-bold text-slate-400">
+                                                    {currentStatus === 'claimed' ? 'Bildirim' : 'Dönem'}
+                                                </span>
                                             </div>
                                         </div>
                                     </td>
@@ -364,6 +393,14 @@ export function ManagerSchoolDashboard() {
                                                 className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800 shadow-sm transition-all"
                                             >
                                                 Tahsil Et
+                                            </button>
+                                        )}
+                                        {currentStatus === 'claimed' && (
+                                            <button
+                                                onClick={() => handleApproveClaim(student)}
+                                                className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-sm transition-all animate-pulse"
+                                            >
+                                                Ödemeyi Onayla
                                             </button>
                                         )}
                                         {currentStatus === 'paid' && (
