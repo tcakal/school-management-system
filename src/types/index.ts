@@ -79,6 +79,7 @@ export interface Teacher {
     specialties?: string[];
     color?: string; // For calendar visualization
     role: 'admin' | 'teacher';
+    schoolId?: string; // Optional linkage for managers/filtering
     password?: string; // Optional for now to handle migration, but ideally required
     telegramChatId?: string; // For Telegram notifications
 }

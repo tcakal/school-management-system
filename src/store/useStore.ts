@@ -271,6 +271,7 @@ export const useStore = create<AppState>()(
                         specialties: t.specialties,
                         color: t.color,
                         role: t.role || 'teacher',
+                        schoolId: t.school_id,
                         password: t.password,
                         telegramChatId: t.telegram_chat_id
                     }));
