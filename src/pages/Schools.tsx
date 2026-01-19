@@ -355,13 +355,13 @@ export function Schools() {
                                             const fileExt = file.name.split('.').pop();
                                             const fileName = `school-${Date.now()}.${fileExt}`;
                                             // Use Supabase client directly
-                                            const { data, error } = await useAuth.getState().supabase.storage
+                                            const { data, error } = await supabase.storage
                                                 .from('school-assets')
                                                 .upload(fileName, file);
 
                                             if (error) throw error;
 
-                                            const { data: { publicUrl } } = useAuth.getState().supabase.storage
+                                            const { data: { publicUrl } } = supabase.storage
                                                 .from('school-assets')
                                                 .getPublicUrl(fileName);
 
@@ -500,13 +500,13 @@ export function Schools() {
                                             const fileExt = file.name.split('.').pop();
                                             const fileName = `school-${Date.now()}.${fileExt}`;
                                             // Use Supabase client directly
-                                            const { data, error } = await useAuth.getState().supabase.storage
+                                            const { data, error } = await supabase.storage
                                                 .from('school-assets')
                                                 .upload(fileName, file);
 
                                             if (error) throw error;
 
-                                            const { data: { publicUrl } } = useAuth.getState().supabase.storage
+                                            const { data: { publicUrl } } = supabase.storage
                                                 .from('school-assets')
                                                 .getPublicUrl(fileName);
 
