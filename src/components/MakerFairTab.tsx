@@ -35,6 +35,10 @@ export const MakerFairTab: React.FC<MakerFairTabProps> = ({ school }) => {
     const [selectedProject, setSelectedProject] = useState<MakerProject | null>(null);
     const [activeDetailTab, setActiveDetailTab] = useState<'info' | 'students' | 'updates' | 'documents'>('info');
 
+    // Student Selection State
+    const [isStudentSelectionOpen, setIsStudentSelectionOpen] = useState(false);
+    const [studentSearchTerm, setStudentSearchTerm] = useState('');
+
     // New Project State
     const [newProjectName, setNewProjectName] = useState('');
     const [newProjectDesc, setNewProjectDesc] = useState('');
@@ -387,41 +391,126 @@ export const MakerFairTab: React.FC<MakerFairTabProps> = ({ school }) => {
 
                             {activeDetailTab === 'students' && (
                                 <div>
-                                    <div className="mb-4">
-                                        <h4 className="font-semibold text-slate-900 dark:text-white">Proje Ekibi</h4>
-                                        <p className="text-sm text-slate-500">Bu projede görev alan öğrencileri seçin.</p>
+                                    <div className="flex justify-between items-center mb-4">
+                                        <div>
+                                            <h4 className="font-semibold text-slate-900 dark:text-white">Proje Ekibi</h4>
+                                            <p className="text-sm text-slate-500">Bu projede görev alan öğrenciler.</p>
+                                        </div>
+                                        {canEdit && (
+                                            <button
+                                                onClick={() => setIsStudentSelectionOpen(true)}
+                                                className="flex items-center gap-2 bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 text-sm font-medium transition-colors"
+                                            >
+                                                <Plus size={16} />
+                                                Öğrenci Ekle
+                                            </button>
+                                        )}
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto">
-                                        {schoolStudents.map(student => {
-                                            const isAssigned = assignedStudentIds.has(student.id);
-                                            return (
-                                                <div
-                                                    key={student.id}
-                                                    onClick={canEdit ? () => handleStudentToggle(student.id, isAssigned) : undefined}
-                                                    className={`
-                                                        p-3 rounded-lg border flex items-center justify-between transition-all
-                                                        ${isAssigned
-                                                            ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800'
-                                                            : 'bg-white border-slate-200 dark:bg-slate-800 dark:border-slate-700'
-                                                        }
-                                                        ${canEdit ? 'cursor-pointer hover:border-indigo-300' : 'cursor-default'}
-                                                    `}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isAssigned ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'
-                                                            }`}>
-                                                            {student.name.substring(0, 2).toUpperCase()}
+                                        {assignedStudentIds.size === 0 ? (
+                                            <div className="col-span-full text-center py-8 text-slate-400 border border-dashed border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                                                <Users className="mx-auto h-8 w-8 opacity-50 mb-2" />
+                                                <p className="text-sm">Henüz öğrenci eklenmemiş.</p>
+                                            </div>
+                                        ) : (
+                                            schoolStudents
+                                                .filter(s => assignedStudentIds.has(s.id))
+                                                .map(student => (
+                                                    <div
+                                                        key={student.id}
+                                                        className="p-3 rounded-lg border border-indigo-200 bg-indigo-50 dark:bg-indigo-900/10 dark:border-indigo-800 flex items-center justify-between"
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold">
+                                                                {student.name.substring(0, 2).toUpperCase()}
+                                                            </div>
+                                                            <span className="font-medium text-indigo-900 dark:text-indigo-100">
+                                                                {student.name}
+                                                            </span>
                                                         </div>
-                                                        <span className={`font-medium ${isAssigned ? 'text-indigo-900 dark:text-indigo-100' : 'text-slate-700 dark:text-slate-300'}`}>
-                                                            {student.name}
-                                                        </span>
+                                                        {canEdit && (
+                                                            <button
+                                                                onClick={() => handleStudentToggle(student.id, true)}
+                                                                className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                                                                title="Projeden Çıkar"
+                                                            >
+                                                                <X size={18} />
+                                                            </button>
+                                                        )}
                                                     </div>
-                                                    {isAssigned && <CheckCircle size={18} className="text-indigo-600" />}
-                                                </div>
-                                            );
-                                        })}
+                                                ))
+                                        )}
                                     </div>
+
+                                    {/* Student Selection Modal (Nested) */}
+                                    {isStudentSelectionOpen && (
+                                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
+                                            <div className="bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full flex flex-col max-h-[80vh] shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                                                <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                                                    <h3 className="font-bold text-lg text-slate-900 dark:text-white">Öğrenci Seç</h3>
+                                                    <button onClick={() => setIsStudentSelectionOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                                        <X size={20} />
+                                                    </button>
+                                                </div>
+                                                <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Öğrenci ara..."
+                                                        value={studentSearchTerm}
+                                                        onChange={e => setStudentSearchTerm(e.target.value)}
+                                                        className="w-full px-3 py-2 rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                                                        autoFocus
+                                                    />
+                                                </div>
+                                                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                                                    {schoolStudents
+                                                        .filter(s => s.name.toLowerCase().includes(studentSearchTerm.toLowerCase()))
+                                                        .map(student => {
+                                                            const isAssigned = assignedStudentIds.has(student.id);
+                                                            return (
+                                                                <div
+                                                                    key={student.id}
+                                                                    className={`
+                                                                        flex items-center justify-between p-3 rounded-lg border transition-all
+                                                                        ${isAssigned
+                                                                            ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800'
+                                                                            : 'bg-white hover:bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700'}
+                                                                    `}
+                                                                >
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isAssigned ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>
+                                                                            {student.name.substring(0, 2).toUpperCase()}
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className={`font-medium ${isAssigned ? 'text-indigo-900 dark:text-indigo-100' : 'text-slate-900 dark:text-slate-100'}`}>{student.name}</p>
+                                                                            <p className="text-xs text-slate-500 truncate">{student.studentId || 'No: Yok'}</p>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <button
+                                                                        onClick={() => handleStudentToggle(student.id, isAssigned)}
+                                                                        className={`
+                                                                            px-3 py-1.5 rounded-md text-xs font-medium transition-colors
+                                                                            ${isAssigned
+                                                                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                                                                : 'bg-indigo-600 text-white hover:bg-indigo-700'}
+                                                                        `}
+                                                                    >
+                                                                        {isAssigned ? 'Çıkar' : 'Ekle'}
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    {schoolStudents.filter(s => s.name.toLowerCase().includes(studentSearchTerm.toLowerCase())).length === 0 && (
+                                                        <div className="text-center py-8 text-slate-400">
+                                                            <p>Öğrenci bulunamadı.</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
