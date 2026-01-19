@@ -125,7 +125,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
         }
     };
     // Inventory State
-    const inventory = useStore((state) => state.inventory.filter(i => i.schoolId === id));
+    const inventory = useStore((state) => (state.inventory || []).filter(i => i.schoolId === id));
     const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
     const [editingInventoryId, setEditingInventoryId] = useState<string | null>(null);
     const [newItemName, setNewItemName] = useState('');

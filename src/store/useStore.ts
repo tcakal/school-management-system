@@ -1481,7 +1481,12 @@ export const useStore = create<AppState>()(
                 lastActivityLogView: state.lastActivityLogView,
                 schools: state.schools,
                 classGroups: state.classGroups,
-                // Persist other essential data as needed
+                students: state.students,
+                payments: state.payments,
+                teachers: state.teachers,
+                assignments: state.assignments,
+                lessons: state.lessons,
+                inventory: state.inventory,
             }),
         }
     )
