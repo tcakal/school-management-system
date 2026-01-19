@@ -18,16 +18,36 @@ ALTER TABLE teacher_evaluations ENABLE ROW LEVEL SECURITY;
 -- 2. Drop existing restrictive policies
 DROP POLICY IF EXISTS "Enable access to all users" ON schools;
 DROP POLICY IF EXISTS "Enable all access" ON schools;
+
 DROP POLICY IF EXISTS "Enable access to all users" ON students;
+DROP POLICY IF EXISTS "Enable all access" ON students;
+
 DROP POLICY IF EXISTS "Enable access to all users" ON class_groups;
+DROP POLICY IF EXISTS "Enable all access" ON class_groups;
+
 DROP POLICY IF EXISTS "Enable access to all users" ON teachers;
+DROP POLICY IF EXISTS "Enable all access" ON teachers;
+
 DROP POLICY IF EXISTS "Enable access to all users" ON teacher_assignments;
+DROP POLICY IF EXISTS "Enable all access" ON teacher_assignments;
+
 DROP POLICY IF EXISTS "Enable access to all users" ON lessons;
+DROP POLICY IF EXISTS "Enable all access" ON lessons;
+
 DROP POLICY IF EXISTS "Enable access to all users" ON attendance;
+DROP POLICY IF EXISTS "Enable all access" ON attendance;
+
 DROP POLICY IF EXISTS "Enable access to all users" ON payments;
+DROP POLICY IF EXISTS "Enable all access" ON payments;
+
 DROP POLICY IF EXISTS "Enable access to all users" ON teacher_leaves;
+DROP POLICY IF EXISTS "Enable all access" ON teacher_leaves;
+
 DROP POLICY IF EXISTS "Enable access to all users" ON student_evaluations;
+DROP POLICY IF EXISTS "Enable all access" ON student_evaluations;
+
 DROP POLICY IF EXISTS "Enable access to all users" ON teacher_evaluations;
+DROP POLICY IF EXISTS "Enable all access" ON teacher_evaluations;
 
 -- 3. Create PERMISSIVE policies (Allow everything for everyone - Dev Mode)
 CREATE POLICY "Enable all access" ON schools FOR ALL USING (true) WITH CHECK (true);
