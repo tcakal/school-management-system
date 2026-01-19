@@ -24,12 +24,12 @@ export function Settings() {
     const [selectedSchoolId, setSelectedSchoolId] = useState(schools[0]?.id || '');
     const [editId, setEditId] = useState<string | null>(null);
 
-    // Sync selectedSchoolId when schools load
-    useEffect(() => {
-        if (!selectedSchoolId && schools.length > 0) {
-            setSelectedSchoolId(schools[0].id);
-        }
-    }, [schools, selectedSchoolId]);
+    // Sync selectedSchoolId removed to allow "Global" (empty) selection
+    // useEffect(() => {
+    //     if (!selectedSchoolId && schools.length > 0) {
+    //         setSelectedSchoolId(schools[0].id);
+    //     }
+    // }, [schools, selectedSchoolId]);
 
     if (user?.role !== 'admin') {
         return (
