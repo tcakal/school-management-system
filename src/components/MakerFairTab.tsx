@@ -4,7 +4,7 @@ import { useAuth } from '../store/useAuth';
 import type { School, MakerProject } from '../types';
 import {
     Plus, Users, FileText, Upload, X,
-    Trash2, CheckCircle, AlertCircle
+    Trash2, AlertCircle
 } from 'lucide-react';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -484,7 +484,6 @@ export const MakerFairTab: React.FC<MakerFairTabProps> = ({ school }) => {
                                                                         </div>
                                                                         <div>
                                                                             <p className={`font-medium ${isAssigned ? 'text-indigo-900 dark:text-indigo-100' : 'text-slate-900 dark:text-slate-100'}`}>{student.name}</p>
-                                                                            <p className="text-xs text-slate-500 truncate">{student.studentId || 'No: Yok'}</p>
                                                                         </div>
                                                                     </div>
 
