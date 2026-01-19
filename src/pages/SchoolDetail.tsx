@@ -23,7 +23,31 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
             navigate('/manager-dashboard'); // Redirect to their safe dashboard
         }
     }, [user, id, navigate]);
-    const { schools, classGroups, students, assignments, teachers, addClassGroup, addStudent, updateSchool, deleteAssignment, updateStudent, updateClassGroup, updateAssignment } = useStore();
+    // Granular Selectors to prevent infinite loops (Error #185)
+    // We select only what we need, and use shallow comparison where appropriate if returning objects
+    const schools = useStore((state) => state.schools || []);
+    const classGroups = useStore((state) => state.classGroups || []);
+    const students = useStore((state) => state.students || []);
+    const assignments = useStore((state) => state.assignments || []);
+    const teachers = useStore((state) => state.teachers || []);
+
+    // Actions (stable references)
+    const addClassGroup = useStore((state) => state.addClassGroup);
+    const addStudent = useStore((state) => state.addStudent);
+    const updateSchool = useStore((state) => state.updateSchool);
+    const deleteAssignment = useStore((state) => state.deleteAssignment);
+    const updateStudent = useStore((state) => state.updateStudent);
+    const updateClassGroup = useStore((state) => state.updateClassGroup);
+    const updateAssignment = useStore((state) => state.updateAssignment);
+
+    // Initial Data Fetching Check
+    useEffect(() => {
+        // If we are on this page and schools are empty (e.g. hard refresh), force fetch
+        if (schools.length === 0) {
+            useStore.getState().fetchData();
+        }
+    }, [schools.length]);
+
     const [activeTab, setActiveTab] = useState('classes');
 
     // Assignment State
@@ -125,7 +149,10 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
         }
     };
     // Inventory State
-    const inventory = useStore((state) => (state.inventory || []).filter(i => i.schoolId === id));
+    // Fix: Select raw inventory and filter with useMemo to avoid infinite loop (Error #185) caused by new array reference in useSyncExternalStore
+    const allInventory = useStore((state) => state.inventory || []);
+    const inventory = useMemo(() => activeTab === 'inventory' ? allInventory.filter(i => i.schoolId === id) : [], [allInventory, id, activeTab]);
+
     const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
     const [editingInventoryId, setEditingInventoryId] = useState<string | null>(null);
     const [newItemName, setNewItemName] = useState('');
