@@ -162,31 +162,8 @@ export function ManagerSchoolDashboard() {
         return { total, paid };
     }, [filteredStudents, payments, selectedPeriod]);
 
-    // Quick Pay Handler
-    const handleQuickPay = async (student: any) => {
-        if (!confirm(`${student.name} için bu dönem ödemesi alındı olarak işaretlensin mi?`)) return;
+    // Quick Pay Handler removed
 
-        const amount = Number(student.price) || 0;
-
-        await addPayment({
-            id: crypto.randomUUID(),
-            schoolId,
-            studentId: student.id,
-            amount: amount,
-            date: new Date().toISOString(),
-            type: 'Tuition',
-            method: 'Cash', // Default to Cash for quick action
-            month: selectedPeriod.start.toISOString().slice(0, 7),
-            status: 'paid',
-            paidAt: new Date().toISOString(),
-            notes: `${selectedPeriod.index + 1}. Dönem Tahsilatı (Hızlı İşlem)`
-        });
-
-        await updateStudent(student.id, {
-            last_payment_status: 'paid',
-            last_payment_date: new Date().toISOString()
-        });
-    };
 
     // Quick Approve Handler
     const handleApproveClaim = async (student: any) => {
