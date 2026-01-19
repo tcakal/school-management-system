@@ -1501,7 +1501,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                             value={newItemName}
                             onChange={(e) => setNewItemName(e.target.value)}
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
-                            placeholder="Örn: Arduino Seti"
+                            placeholder="Örn: Pinoo Tam Set"
                         />
                     </div>
 
