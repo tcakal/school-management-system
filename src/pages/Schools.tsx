@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
+import { supabase } from '../supabase';
 import { Building2, ArrowRight, Plus, MapPin, Image as ImageIcon, Trash2, Edit } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import type { School } from '../types';
@@ -332,13 +333,50 @@ export function Schools() {
                                 <span>Kapak Görseli URL (İsteğe bağlı)</span>
                             </div>
                         </label>
-                        <input
-                            type="text"
-                            placeholder="https://..."
-                            value={newSchoolImage}
-                            onChange={e => setNewSchoolImage(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-slate-900"
-                        />
+                        <div className="flex gap-2">
+                            <div className="flex-1">
+                                <input
+                                    type="text"
+                                    placeholder="https://..."
+                                    value={newSchoolImage}
+                                    onChange={e => setNewSchoolImage(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-slate-900"
+                                />
+                            </div>
+                            <div className="relative">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        try {
+                                            const fileExt = file.name.split('.').pop();
+                                            const fileName = `school-${Date.now()}.${fileExt}`;
+                                            // Use Supabase client directly
+                                            const { data, error } = await useAuth.getState().supabase.storage
+                                                .from('school-assets')
+                                                .upload(fileName, file);
+
+                                            if (error) throw error;
+
+                                            const { data: { publicUrl } } = useAuth.getState().supabase.storage
+                                                .from('school-assets')
+                                                .getPublicUrl(fileName);
+
+                                            setNewSchoolImage(publicUrl);
+                                        } catch (err: any) {
+                                            alert('Yükleme Hatası: ' + err.message);
+                                        }
+                                    }}
+                                />
+                                <button type="button" className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-300 flex items-center gap-2 transition-colors">
+                                    <span className="text-sm font-medium">Yükle</span>
+                                </button>
+                            </div>
+                        </div>
+                        {newSchoolImage && <img src={newSchoolImage} alt="Önizleme" className="mt-2 h-20 w-auto rounded border border-slate-200" />}
                     </div>
                     <button
                         type="submit"
@@ -437,16 +475,53 @@ export function Schools() {
                         <label className="block text-sm font-medium text-slate-700 mb-1">
                             <div className="flex items-center gap-2">
                                 <ImageIcon size={16} />
-                                <span>Kapak Görseli URL (İsteğe bağlı)</span>
+                                <span>Kapak Görseli</span>
                             </div>
                         </label>
-                        <input
-                            type="text"
-                            placeholder="https://..."
-                            value={editSchoolImage}
-                            onChange={e => setEditSchoolImage(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-slate-900"
-                        />
+                        <div className="flex gap-2">
+                            <div className="flex-1">
+                                <input
+                                    type="text"
+                                    placeholder="https://..."
+                                    value={editSchoolImage}
+                                    onChange={e => setEditSchoolImage(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-slate-900"
+                                />
+                            </div>
+                            <div className="relative">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        try {
+                                            const fileExt = file.name.split('.').pop();
+                                            const fileName = `school-${Date.now()}.${fileExt}`;
+                                            // Use Supabase client directly
+                                            const { data, error } = await useAuth.getState().supabase.storage
+                                                .from('school-assets')
+                                                .upload(fileName, file);
+
+                                            if (error) throw error;
+
+                                            const { data: { publicUrl } } = useAuth.getState().supabase.storage
+                                                .from('school-assets')
+                                                .getPublicUrl(fileName);
+
+                                            setEditSchoolImage(publicUrl);
+                                        } catch (err: any) {
+                                            alert('Yükleme Hatası: ' + err.message);
+                                        }
+                                    }}
+                                />
+                                <button type="button" className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-300 flex items-center gap-2 transition-colors">
+                                    <span className="text-sm font-medium">Yükle</span>
+                                </button>
+                            </div>
+                        </div>
+                        {editSchoolImage && <img src={editSchoolImage} alt="Önizleme" className="mt-2 h-20 w-auto rounded border border-slate-200" />}
                     </div>
                     <button
                         type="submit"
