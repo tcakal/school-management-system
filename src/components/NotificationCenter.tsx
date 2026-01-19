@@ -231,6 +231,15 @@ export const NotificationCenter: React.FC = () => {
                 if (notif.lessonTeacherId) {
                     const teacher = teachers.find(t => t.id === notif.lessonTeacherId);
                     if (teacher?.telegramChatId) recipientChatIds.add(teacher.telegramChatId.trim());
+                } else {
+                    // Generic Notification: Send to all teachers (filtered by school if applicable)
+                    const teacherRecipients = teachers.filter(t => {
+                        if (!t.telegramChatId) return false;
+                        // If notification is school-specific, filter teachers by school
+                        if (notif.schoolId && t.schoolId && t.schoolId !== notif.schoolId) return false;
+                        return true;
+                    });
+                    teacherRecipients.forEach(t => recipientChatIds.add(t.telegramChatId!.trim()));
                 }
             }
 
