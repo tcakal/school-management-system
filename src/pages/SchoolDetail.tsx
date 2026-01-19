@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
-import { ArrowLeft, MapPin, Phone, Users, Wallet, Plus, Calendar, Clock, User, Search, UserMinus, UserCheck, Settings } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Users, Wallet, Plus, Calendar, Clock, User, Search, UserMinus, UserCheck, Settings, RefreshCw } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import { Tabs } from '../components/Tabs';
 import { Modal } from '../components/Modal';
 import { AssignmentModal } from '../components/AssignmentModal';
@@ -102,7 +103,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
         setIsShifting(true);
         try {
             // Call the RPC function via Supabase
-            const { data, error } = await useStore.getState().supabase!.rpc('shift_school_schedule', {
+            const { data, error } = await supabase.rpc('shift_school_schedule', {
                 p_school_id: id,
                 p_start_date: shiftStartDate,
                 p_days_to_shift: shiftDuration

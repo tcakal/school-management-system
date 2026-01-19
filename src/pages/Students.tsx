@@ -6,14 +6,14 @@ import { useAuth } from '../store/useAuth';
 import { Search, ArrowRight, User, Users, ChevronRight, School } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { EvaluateStudentModal } from '../components/EvaluateStudentModal';
-import { Star, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { AddStudentModal } from '../components/AddStudentModal';
 import { TelegramService } from '../services/TelegramService';
 import { Link, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 
 export function Students() {
-    const { students, schools, classGroups, studentEvaluations, teachers } = useStore();
+    const { students, schools, classGroups } = useStore();
     const navigate = useNavigate();
     const { user } = useAuth();
 
@@ -24,7 +24,7 @@ export function Students() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSchoolId, setSelectedSchoolId] = useState<string>('all');
     const [selectedClassGroupId, setSelectedClassGroupId] = useState<string>('all');
-    const [statusFilter, setStatusFilter] = useState<'Active' | 'Left' | 'All'>('All');
+    const [statusFilter] = useState<'Active' | 'Left' | 'All'>('All');
     const [paymentStatusFilter, setPaymentStatusFilter] = useState<'All' | 'paid' | 'claimed' | 'unpaid'>('All');
 
     // MODAL STATES
