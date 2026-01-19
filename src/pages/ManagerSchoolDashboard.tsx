@@ -388,12 +388,9 @@ export function ManagerSchoolDashboard() {
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         {currentStatus === 'unpaid' && (
-                                            <button
-                                                onClick={() => handleQuickPay(student)}
-                                                className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800 shadow-sm transition-all"
-                                            >
-                                                Tahsil Et
-                                            </button>
+                                            <span className="text-slate-400 text-xs italic">
+                                                Ödenmedi
+                                            </span>
                                         )}
                                         {currentStatus === 'claimed' && (
                                             <button

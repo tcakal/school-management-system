@@ -688,8 +688,8 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                                                         </div>
                                                     )}
 
-                                                    {/* Manual Collection Button (If Active and not Paid) */}
-                                                    {student.status === 'Active' && student.last_payment_status !== 'paid' && student.last_payment_status !== 'claimed' && (
+                                                    {/* Manual Collection Button REMOVED as per request */}
+                                                    {/* {student.status === 'Active' && student.last_payment_status !== 'paid' && student.last_payment_status !== 'claimed' && (
                                                         <div className="flex justify-end mt-2">
                                                             <button
                                                                 onClick={() => handleOpenPaymentModal(student)}
@@ -698,7 +698,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                                                                 Tahsil Et
                                                             </button>
                                                         </div>
-                                                    )}
+                                                    )} */}
                                                 </td>
                                             </tr>
                                         );
