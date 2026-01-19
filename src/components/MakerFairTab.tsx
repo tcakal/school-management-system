@@ -332,8 +332,8 @@ export const MakerFairTab: React.FC<MakerFairTabProps> = ({ school }) => {
                                     key={tab}
                                     onClick={() => setActiveDetailTab(tab)}
                                     className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeDetailTab === tab
-                                            ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                                            : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                                        : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
                                         }`}
                                 >
                                     {tab === 'info' && 'Bilgiler'}
@@ -504,7 +504,7 @@ export const MakerFairTab: React.FC<MakerFairTabProps> = ({ school }) => {
                                     )}
 
                                     <div className="relative border-l-2 border-slate-200 dark:border-slate-700 ml-3 space-y-6 pl-6 pb-2">
-                                        {projectUpdates.map((update, idx) => (
+                                        {projectUpdates.map((update) => (
                                             <div key={update.id} className="relative">
                                                 <div className="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-indigo-500 border-2 border-white dark:border-slate-900 ring-2 ring-indigo-100 dark:ring-indigo-900"></div>
                                                 <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
