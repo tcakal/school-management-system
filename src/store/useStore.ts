@@ -232,6 +232,7 @@ export const useStore = create<AppState>()(
                         discountPercentage: s.discount_percentage || 0,
                         parentName: s.parent_name,
                         parentEmail: s.parent_email,
+                        parentPhone: s.parent_phone,
                         birthDate: s.birth_date,
                         address: s.address,
                         medicalNotes: s.medical_notes,
@@ -617,6 +618,7 @@ export const useStore = create<AppState>()(
                     grade_level: student.gradeLevel,
                     parent_name: student.parentName,
                     parent_email: student.parentEmail,
+                    parent_phone: student.parentPhone,
                     address: student.address,
                     medical_notes: student.medicalNotes,
                     payment_status: student.paymentStatus,
@@ -663,6 +665,7 @@ export const useStore = create<AppState>()(
                 if (updated.gradeLevel) dbUpdate.grade_level = updated.gradeLevel;
                 if (updated.parentName) dbUpdate.parent_name = updated.parentName;
                 if (updated.parentEmail) dbUpdate.parent_email = updated.parentEmail;
+                if (updated.parentPhone) dbUpdate.parent_phone = updated.parentPhone;
                 if (updated.address) dbUpdate.address = updated.address;
                 if (updated.medicalNotes) dbUpdate.medical_notes = updated.medicalNotes;
 
