@@ -355,7 +355,7 @@ export function Schools() {
                                             const fileExt = file.name.split('.').pop();
                                             const fileName = `school-${Date.now()}.${fileExt}`;
                                             // Use Supabase client directly
-                                            const { data, error } = await supabase.storage
+                                            const { error } = await supabase.storage
                                                 .from('school-assets')
                                                 .upload(fileName, file);
 
@@ -500,7 +500,7 @@ export function Schools() {
                                             const fileExt = file.name.split('.').pop();
                                             const fileName = `school-${Date.now()}.${fileExt}`;
                                             // Use Supabase client directly
-                                            const { data, error } = await supabase.storage
+                                            const { error } = await supabase.storage
                                                 .from('school-assets')
                                                 .upload(fileName, file);
 
