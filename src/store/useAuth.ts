@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { useStore } from './useStore';
+// import { useStore } from './useStore'; // Removed as unused
+import { supabase } from '../supabase';
 
 interface User {
     id: string;
@@ -24,6 +25,7 @@ export const useAuth = create<AuthState>()(
             user: null,
             isAuthenticated: false,
 
+
             login: async (phone: string, password: string) => {
                 // 1. Super Admin Check
                 if (phone === '5364606500' && password === 'Atolye8008.') {
@@ -39,69 +41,87 @@ export const useAuth = create<AuthState>()(
                     return true;
                 }
 
-                const store = useStore.getState();
+                try {
+                    // 2. Teacher Check (Direct DB)
+                    const { data: teacher } = await supabase
+                        .from('teachers')
+                        .select('*')
+                        .eq('phone', phone)
+                        .eq('password', password)
+                        .maybeSingle();
 
-                // 2. Teacher Check
-                const teacher = store.teachers.find(t => t.phone === phone && t.password === password);
-                if (teacher) {
-                    set({
-                        user: {
-                            id: teacher.id,
-                            name: teacher.name,
-                            email: teacher.email || '',
-                            role: teacher.role, // 'admin' or 'teacher'
-                            telegramChatId: teacher.telegramChatId
-                        },
-                        isAuthenticated: true
-                    });
-                    return true;
-                }
-
-                // 3. Manager Check (School Manager)
-                const managerSchool = store.schools.find(s => s.managerPhone === phone);
-                if (managerSchool) {
-                    // Password must be the last 4 digits of the phone number
-                    const last4 = phone.slice(-4);
-                    if (password === last4) {
+                    if (teacher) {
                         set({
                             user: {
-                                id: managerSchool.id, // Using School ID as User ID for simplicity? Or create a composite "manager-" + schoolId?
-                                // Let's use "manager-" + schoolId to avoid collision with Student IDs if any
-                                name: managerSchool.managerName || 'Okul Müdürü',
-                                email: managerSchool.managerEmail || '',
-                                role: 'manager',
-                                linkedStudentId: undefined // Not linked to a student
+                                id: teacher.id,
+                                name: teacher.name,
+                                email: teacher.email || '',
+                                role: teacher.role,
+                                telegramChatId: teacher.telegram_chat_id
                             },
                             isAuthenticated: true
                         });
                         return true;
                     }
-                }
 
-                // 4. Parent Check (Student Phone)
-                // Normalize input phone: remove non-numeric chars, take last 10 digits
-                const normalizePhone = (p: string) => p.replace(/\D/g, '').slice(-10);
-                const normalizedInputPhone = normalizePhone(phone);
+                    // 3. Manager Check (School Manager)
+                    const { data: managerSchool } = await supabase
+                        .from('schools')
+                        .select('*')
+                        .eq('manager_phone', phone)
+                        .maybeSingle();
 
-                const student = store.students.find(s => s.phone && normalizePhone(s.phone) === normalizedInputPhone);
-                if (student) {
-                    // Password is last 4 digits of the normalized phone (10 digits)
-                    // If input phone was < 10 digits, this logic might be weak, but assuming valid 10 digit input
-                    const last4 = normalizedInputPhone.slice(-4);
-
-                    if (password === last4) {
-                        set({
-                            user: {
-                                id: student.id,
-                                name: student.parentName || student.name, // Use parent name if available, else student name
-                                email: student.parentEmail || '',
-                                role: 'parent',
-                                linkedStudentId: student.id
-                            },
-                            isAuthenticated: true
-                        });
-                        return true;
+                    if (managerSchool) {
+                        const last4 = phone.slice(-4);
+                        if (password === last4) {
+                            set({
+                                user: {
+                                    id: managerSchool.id,
+                                    name: managerSchool.manager_name || 'Okul Müdürü',
+                                    email: managerSchool.manager_email || '',
+                                    role: 'manager',
+                                    linkedStudentId: undefined
+                                },
+                                isAuthenticated: true
+                            });
+                            return true;
+                        }
                     }
+
+                    // 4. Parent Check (Student Phone)
+                    const normalizePhone = (p: string) => p.replace(/\D/g, '').slice(-10);
+                    const normalizedInputPhone = normalizePhone(phone);
+
+                    // We check for students where the phone ends with the normalized input
+                    // This is a bit looser but effective for phone matching
+                    const { data: students } = await supabase
+                        .from('students')
+                        .select('*')
+                        .ilike('phone', `%${normalizedInputPhone}`);
+
+                    // Find strict match among potential candidates
+                    const student = students?.find(s => s.phone && normalizePhone(s.phone) === normalizedInputPhone);
+
+                    if (student) {
+                        const last4 = normalizedInputPhone.slice(-4);
+                        if (password === last4) {
+                            set({
+                                user: {
+                                    id: student.id,
+                                    name: student.parent_name || student.name,
+                                    email: student.parent_email || '',
+                                    role: 'parent',
+                                    linkedStudentId: student.id
+                                },
+                                isAuthenticated: true
+                            });
+                            return true;
+                        }
+                    }
+
+                } catch (error) {
+                    console.error('Login error:', error);
+                    return false;
                 }
 
                 return false;

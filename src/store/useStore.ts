@@ -1357,7 +1357,7 @@ export const useStore = create<AppState>()(
                     phone: t.phone,
                     role: 'teacher' as const,
                     email: '',
-                    specialties: [],
+                    specialties: t.specialties || [],
                     schoolId: 'system'
                 }));
             },
