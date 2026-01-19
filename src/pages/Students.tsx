@@ -302,7 +302,7 @@ export function Students() {
                                                 </div>
                                                 <div>
                                                     <div className="font-medium text-slate-900">{student.name}</div>
-                                                    <div className="text-xs text-slate-400">ID: {student.studentNumber || '-'}</div>
+                                                    <div className="text-xs text-slate-400">ID: {student.id.slice(0, 8)}</div>
                                                 </div>
                                             </div>
                                         </td>
@@ -320,7 +320,7 @@ export function Students() {
                                                 <span className={`px-2 py-0.5 rounded text-xs font-bold border ${student.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
                                                     {student.status === 'Active' ? 'Aktif' : 'Pasif'}
                                                 </span>
-                                                {student.last_payment_status === 'unpaid' && (
+                                                {student.last_payment_status === ('unpaid' as any) && (
                                                     <span className="px-2 py-0.5 rounded text-xs font-bold bg-orange-50 text-orange-700 border border-orange-100">
                                                         Ödenmedi
                                                     </span>

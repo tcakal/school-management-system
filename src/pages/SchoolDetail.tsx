@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
 import { ArrowLeft, MapPin, Phone, Users, Wallet, Plus, Calendar, Clock, User, Search, UserMinus, UserCheck, Settings, RefreshCw } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../supabase';
 import { Tabs } from '../components/Tabs';
 import { Modal } from '../components/Modal';
 import { AssignmentModal } from '../components/AssignmentModal';
