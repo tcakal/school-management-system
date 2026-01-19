@@ -296,7 +296,7 @@ export function ManagerSchoolDashboard() {
                             const { hasPastDebt, currentStatus } = getPaymentStatus(student.id);
 
                             // Re-calculate some status for UI
-                            const currentPending = currentStatus === 'unpaid';
+                            // const currentPending = currentStatus === 'unpaid'; // Unused now
 
                             // Determine Border Color logic (User requested "Border around the row")
                             let statusColorClass = 'border border-slate-200'; // Default

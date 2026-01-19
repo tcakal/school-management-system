@@ -236,7 +236,10 @@ export const useStore = create<AppState>()(
                         address: s.address,
                         medicalNotes: s.medical_notes,
                         gradeLevel: s.grade_level,
-                        telegramChatId: s.telegram_chat_id
+                        telegramChatId: s.telegram_chat_id,
+                        last_payment_status: s.last_payment_status,
+                        last_payment_date: s.last_payment_date,
+                        last_claim_date: s.last_claim_date
                     }));
 
                     const classGroups: ClassGroup[] = (classGroupsRes.data || []).map(c => ({
@@ -669,6 +672,9 @@ export const useStore = create<AppState>()(
 
                 if (updated.paymentStatus) dbUpdate.payment_status = updated.paymentStatus;
                 if (updated.discountPercentage !== undefined) dbUpdate.discount_percentage = updated.discountPercentage;
+                if (updated.last_payment_status) dbUpdate.last_payment_status = updated.last_payment_status;
+                if (updated.last_payment_date) dbUpdate.last_payment_date = updated.last_payment_date;
+                if (updated.last_claim_date) dbUpdate.last_claim_date = updated.last_claim_date;
 
                 if (Object.keys(dbUpdate).length > 0) {
                     await supabase.from('students').update(dbUpdate).eq('id', id);
