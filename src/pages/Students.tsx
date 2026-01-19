@@ -17,8 +17,8 @@ export function Students() {
 
     const { user } = useAuth(); // Import useAuth
     const [searchTerm, setSearchTerm] = useState('');
-    // Initialize with manager's school ID if manager, else 'all'
-    const [selectedSchoolId, setSelectedSchoolId] = useState<string>(user?.role === 'manager' ? user.id : 'all');
+    // Initialize with 'all' by default, can be refined later based on requirements
+    const [selectedSchoolId, setSelectedSchoolId] = useState<string>('all');
     const [statusFilter, setStatusFilter] = useState<'Active' | 'Left' | 'All'>('All');
     const [paymentStatusFilter, setPaymentStatusFilter] = useState<'All' | 'paid' | 'claimed' | 'unpaid'>('All'); // New Filter
 
