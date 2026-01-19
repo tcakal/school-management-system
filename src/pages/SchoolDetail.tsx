@@ -405,6 +405,15 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                         </div>
                     </div>
                     <div className="flex gap-3">
+                        {(user?.role === 'admin' || user?.role === 'manager') && (
+                            <button
+                                onClick={() => setIsShiftModalOpen(true)}
+                                className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg flex items-center gap-2 hover:bg-purple-200 transition-colors font-medium border border-purple-200"
+                            >
+                                <Calendar size={18} />
+                                <span className="hidden md:inline">Takvim / Tatil</span>
+                            </button>
+                        )}
                         <div
                             className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg flex items-center gap-2"
                             style={{
