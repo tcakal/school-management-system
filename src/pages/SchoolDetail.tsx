@@ -130,18 +130,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
     const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Transfer' | 'CreditCard'>('Cash');
     const [selectedStudentForPayment, setSelectedStudentForPayment] = useState<Student | null>(null);
 
-    const handleOpenPaymentModal = (student: Student) => {
-        setSelectedStudentForPayment(student);
-        // Calculate default amount based on student status
-        let defaultAmount = school?.defaultPrice || 0;
-        if (student.paymentStatus === 'discounted' && student.discountPercentage) {
-            defaultAmount = defaultAmount * ((100 - student.discountPercentage) / 100);
-        } else if (student.paymentStatus === 'free') {
-            defaultAmount = 0;
-        }
-        setPaymentAmount(defaultAmount.toString());
-        setIsPaymentModalOpen(true);
-    };
+    // handleOpenPaymentModal removed (unused)
 
     const handleProcessPayment = async (e: React.FormEvent) => {
         e.preventDefault();
