@@ -402,13 +402,23 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
     if (!school) {
         return (
             <div className="text-center py-20">
-                <h2 className="text-xl font-bold text-slate-800">Okul Bulunamadı</h2>
-                <button
-                    onClick={() => navigate('/')}
-                    className="mt-4 text-blue-600 hover:underline"
-                >
-                    Panele Dön
-                </button>
+                <h2 className="text-xl font-bold text-slate-200">Okul Bulunamadı</h2>
+                <p className="text-slate-400 mt-2">Aradığınız okul sistemde kayıtlı değil veya bilgiler yüklenemedi.</p>
+                <div className="flex justify-center gap-4 mt-6">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="text-blue-400 hover:text-blue-300 hover:underline"
+                    >
+                        Panele Dön
+                    </button>
+                    <button
+                        onClick={() => { useStore.getState().fetchData(); window.location.reload(); }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2"
+                    >
+                        <RefreshCw size={16} />
+                        Verileri Yenile
+                    </button>
+                </div>
             </div>
         );
     }
