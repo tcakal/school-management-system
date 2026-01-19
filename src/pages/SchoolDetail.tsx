@@ -83,6 +83,46 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
     const [price, setPrice] = useState(school?.defaultPrice?.toString() || '');
     const [paymentTerms, setPaymentTerms] = useState(school?.paymentTerms || '');
 
+    // Calendar / Holiday Shift State
+    const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
+    const [shiftStartDate, setShiftStartDate] = useState('');
+    const [shiftDuration, setShiftDuration] = useState(15);
+    const [isShifting, setIsShifting] = useState(false);
+
+    const handleShiftSchedule = async () => {
+        if (!shiftStartDate || shiftDuration <= 0) {
+            alert('Lütfen geçerli bir tarih ve gün sayısı giriniz.');
+            return;
+        }
+
+        if (!confirm(`${shiftStartDate} tarihinden itibaren tüm dersler ${shiftDuration} gün ötelenecek. Bu işlem geri alınamaz. Emin misiniz?`)) {
+            return;
+        }
+
+        setIsShifting(true);
+        try {
+            // Call the RPC function via Supabase
+            const { data, error } = await useStore.getState().supabase!.rpc('shift_school_schedule', {
+                p_school_id: id,
+                p_start_date: shiftStartDate,
+                p_days_to_shift: shiftDuration
+            });
+
+            if (error) throw error;
+
+            alert(`✅ Takvim güncellendi! ${data?.updated_count || 'Birçok'} ders ötelendi.`);
+            setIsShiftModalOpen(false);
+            // Reload data to reflect changes
+            useStore.getState().fetchData();
+
+        } catch (e: any) {
+            console.error(e);
+            alert('Hata: ' + e.message);
+        } finally {
+            setIsShifting(false);
+        }
+    };
+
     // Payment Modal State
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [paymentAmount, setPaymentAmount] = useState('');
@@ -1266,6 +1306,64 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                         Tahsil Et ve Onayla
                     </button>
                 </form>
+            </Modal>
+
+            {/* Shift Schedule Modal */}
+            <Modal
+                isOpen={isShiftModalOpen}
+                onClose={() => setIsShiftModalOpen(false)}
+                title="Takvim Kaydırma / Tatil Tanımlama"
+            >
+                <div className="space-y-4">
+                    <div className="bg-yellow-50 text-yellow-800 p-3 rounded-lg text-sm border border-yellow-100 flex items-start gap-2">
+                        <Calendar className="shrink-0 mt-0.5" size={16} />
+                        <div>
+                            Bu işlem, seçilen tarihten sonraki tüm "Planlanmış" dersleri belirtilen gün sayısı kadar ileri atar.
+                            <br /><br />
+                            <strong>Örnek:</strong> <i>"15 Tatil"</i> için başlangıç tarihini seçip süreye 15 yazın.
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç Tarihi</label>
+                        <input
+                            type="date"
+                            value={shiftStartDate}
+                            onChange={(e) => setShiftStartDate(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                        />
+                        <p className="text-xs text-slate-500 mt-1">Bu tarih ve sonraki tüm dersler ötelenecektir.</p>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Ötelenecek Gün Sayısı (Tatil Süresi)</label>
+                        <input
+                            type="number"
+                            min="1"
+                            max="60"
+                            value={shiftDuration}
+                            onChange={(e) => setShiftDuration(parseInt(e.target.value))}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                        />
+                    </div>
+
+                    <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-slate-100">
+                        <button
+                            onClick={() => setIsShiftModalOpen(false)}
+                            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
+                        >
+                            İptal
+                        </button>
+                        <button
+                            onClick={handleShiftSchedule}
+                            disabled={isShifting}
+                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center gap-2"
+                        >
+                            {isShifting ? <RefreshCw className="animate-spin" size={16} /> : <Calendar size={16} />}
+                            Takvimi Güncelle
+                        </button>
+                    </div>
+                </div>
             </Modal>
         </div >
     );
