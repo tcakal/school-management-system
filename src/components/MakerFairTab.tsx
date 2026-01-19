@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
-import { School, MakerProject, Student, MakerProjectUpdate, MakerProjectDocument } from '../types';
+import type { School, MakerProject } from '../types';
 import {
-    Plus, Calendar, Users, FileText, Upload, Save, X,
-    MoreVertical, Trash2, Edit2, CheckCircle, Clock, AlertCircle,
-    ChevronRight, ChevronDown
+    Plus, Users, FileText, Upload, X,
+    Trash2, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -24,7 +23,6 @@ export const MakerFairTab: React.FC<MakerFairTabProps> = ({ school }) => {
         makerProjectDocuments,
         fetchMakerProjects,
         addMakerProject,
-        updateMakerProject,
         deleteMakerProject,
         assignStudentToProject,
         removeStudentFromProject,
