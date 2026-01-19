@@ -1,8 +1,9 @@
+
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
-import { Search, ArrowRight, User } from 'lucide-react';
+import { Search, ArrowRight, User, Users, ChevronRight, School } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { EvaluateStudentModal } from '../components/EvaluateStudentModal';
 import { Star, Plus } from 'lucide-react';
@@ -14,26 +15,29 @@ import { Link, RefreshCw, CheckCircle2 } from 'lucide-react';
 export function Students() {
     const { students, schools, classGroups, studentEvaluations, teachers } = useStore();
     const navigate = useNavigate();
+    const { user } = useAuth();
 
-    const { user } = useAuth(); // Import useAuth
+    // UI STATES
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+    // FILTERS
     const [searchTerm, setSearchTerm] = useState('');
-    // Initialize with 'all' by default, can be refined later based on requirements
     const [selectedSchoolId, setSelectedSchoolId] = useState<string>('all');
-    const [selectedClassGroupId, setSelectedClassGroupId] = useState<string>('all'); // NEW: Class Filter
+    const [selectedClassGroupId, setSelectedClassGroupId] = useState<string>('all');
     const [statusFilter, setStatusFilter] = useState<'Active' | 'Left' | 'All'>('All');
-    const [paymentStatusFilter, setPaymentStatusFilter] = useState<'All' | 'paid' | 'claimed' | 'unpaid'>('All'); // New Filter
+    const [paymentStatusFilter, setPaymentStatusFilter] = useState<'All' | 'paid' | 'claimed' | 'unpaid'>('All');
 
+    // MODAL STATES
     const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
     const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
 
-
-
-    // Telegram Connect State
+    // TELEGRAM STATES
     const [connectCode, setConnectCode] = useState<string | null>(null);
     const [isVerifying, setIsVerifying] = useState(false);
 
+    // --- TELEGRAM LOGIC ---
     const generateTelegramCode = async (studentId: string) => {
         try {
             const res = await TelegramService.generateCode(studentId, 'student');
@@ -53,14 +57,13 @@ export function Students() {
         try {
             const res = await TelegramService.verifyConnection(studentId, 'student');
             if (res.success) {
-                // Update local state temporarily
                 if (selectedStudent && selectedStudent.id === studentId) {
                     setSelectedStudent({ ...selectedStudent, telegramChatId: res.chat_id.toString() });
                 }
                 setConnectCode(null);
                 alert(`✅ Başarıyla Bağlandı! (@${res.username})`);
             } else {
-                alert('Henüz mesaj bulunamadı. Lütfen kodu bota gönderdiğinizden emin olun ve tekrar deneyin.');
+                alert('Henüz mesaj bulunamadı. Lütfen kodu bota gönderdiğinizden emin olun.');
             }
         } catch (e: any) {
             alert('Hata: ' + e.message);
@@ -69,67 +72,103 @@ export function Students() {
         }
     };
 
-    // Filtered Class Groups based on School
+    // --- DERIVED DATA ---
+
+    // 1. Schools List (Manager sees all)
+    // 2. Class Groups (Filtered by School)
     const filteredClassGroups = useMemo(() => {
-        if (selectedSchoolId === 'all') return [];
+        if (selectedSchoolId === 'all') {
+            return classGroups.filter(c => c.status === 'active');
+        }
         return classGroups.filter(c => c.schoolId === selectedSchoolId && c.status === 'active');
     }, [classGroups, selectedSchoolId]);
 
+    // 3. Students (Filtered by everything)
     const filteredStudents = useMemo(() => {
         return students.filter(student => {
-            // Filter by School
+            // School Filter
             if (selectedSchoolId !== 'all' && student.schoolId !== selectedSchoolId) return false;
 
-            // Filter by Class (NEW)
+            // Class Filter
             if (selectedClassGroupId !== 'all' && student.classGroupId !== selectedClassGroupId) return false;
 
-            // Filter by Status
+            // Status Filter
             if (statusFilter !== 'All' && student.status !== statusFilter) return false;
 
-            // Filter by Payment Status
+            // Payment Filter
             if (paymentStatusFilter !== 'All') {
                 if (paymentStatusFilter === 'paid' && student.last_payment_status !== 'paid') return false;
                 if (paymentStatusFilter === 'claimed' && student.last_payment_status !== 'claimed') return false;
                 if (paymentStatusFilter === 'unpaid' && (student.last_payment_status === 'paid' || student.last_payment_status === 'claimed')) return false;
             }
 
-            // Filter by Search Term
+            // Search Term
             if (searchTerm && !student.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
 
             return true;
         });
     }, [students, selectedSchoolId, selectedClassGroupId, statusFilter, searchTerm, paymentStatusFilter]);
 
+    // --- HANDLERS ---
+    const handleClassCardClick = (classId: string) => {
+        setSelectedClassGroupId(classId);
+        setViewMode('list');
+    };
+
+    const handleBackToClasses = () => {
+        setSelectedClassGroupId('all');
+        setViewMode('grid');
+    };
+
     const handleViewDetail = (student: any) => {
         setSelectedStudent(student);
-        setConnectCode(null); // Reset
+        setConnectCode(null);
         setIsDetailModalOpen(true);
     };
 
+
     return (
         <div className="space-y-6">
+            {/* --- HEADER --- */}
             <div>
-                <h2 className="text-3xl font-bold text-slate-900">Tüm Öğrenciler</h2>
+                <h2 className="text-3xl font-bold text-slate-900">
+                    {viewMode === 'grid' ? (selectedSchoolId === 'all' ? 'Tüm Sınıflar' : 'Sınıflar & Gruplar') : 'Öğrenci Listesi'}
+                </h2>
                 <div className="flex justify-between items-center mt-1">
-                    <p className="text-slate-500">Sistemdeki kayıtlı tüm öğrencileri görüntüleyin ve arayın.</p>
-                    <button
-                        onClick={() => setIsAddStudentModalOpen(true)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium"
-                    >
-                        <Plus size={18} />
-                        Yeni Öğrenci
-                    </button>
+                    <p className="text-slate-500">
+                        {viewMode === 'grid'
+                            ? 'Detaylarını görmek istediğiniz sınıfı seçin.'
+                            : classGroups.find(c => c.id === selectedClassGroupId)?.name || 'Tüm Öğrenciler'}
+                    </p>
+                    <div className="flex gap-2">
+                        {viewMode === 'list' && (
+                            <button
+                                onClick={handleBackToClasses}
+                                className="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2 font-medium"
+                            >
+                                <ArrowRight className="rotate-180" size={18} />
+                                Sınıflara Dön
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setIsAddStudentModalOpen(true)}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium"
+                        >
+                            <Plus size={18} />
+                            Yeni Öğrenci
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Filters */}
+            {/* --- FILTERS BAR --- */}
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
                 <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                     <div className="relative w-full md:w-96">
                         <Search size={18} className="absolute left-3 top-2.5 text-slate-400" />
                         <input
                             type="text"
-                            placeholder="İsim ile ara..."
+                            placeholder={viewMode === 'grid' ? "Sınıf veya grup ara..." : "Öğrenci ara..."}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
@@ -137,217 +176,183 @@ export function Students() {
                     </div>
 
                     <div className="flex flex-wrap gap-3 w-full md:w-auto justify-end">
+                        {/* School Select */}
                         {user?.role !== 'manager' && (
-                            <>
-                                <select
-                                    value={selectedSchoolId}
-                                    onChange={(e) => {
-                                        setSelectedSchoolId(e.target.value);
-                                        setSelectedClassGroupId('all'); // Reset class on school change
-                                    }}
-                                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm text-slate-900"
-                                >
-                                    <option value="all">Tüm Okullar</option>
-                                    {schools.map(school => (
-                                        <option key={school.id} value={school.id}>{school.name}</option>
-                                    ))}
-                                </select>
-
-                                {/* Class Filter - Only show if a school is selected */}
-                                {selectedSchoolId !== 'all' && (
-                                    <select
-                                        value={selectedClassGroupId}
-                                        onChange={(e) => setSelectedClassGroupId(e.target.value)}
-                                        className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm text-slate-900"
-                                    >
-                                        <option value="all">Tüm Sınıflar</option>
-                                        {filteredClassGroups.map(group => (
-                                            <option key={group.id} value={group.id}>{group.name}</option>
-                                        ))}
-                                    </select>
-                                )}
-                            </>
+                            <select
+                                value={selectedSchoolId}
+                                onChange={(e) => {
+                                    setSelectedSchoolId(e.target.value);
+                                    setSelectedClassGroupId('all'); // Reset Class
+                                    // Optionally switch to grid here if you want:
+                                    // setViewMode('grid');
+                                }}
+                                className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm text-slate-900"
+                            >
+                                <option value="all">Tüm Okullar</option>
+                                {schools.map(school => (
+                                    <option key={school.id} value={school.id}>{school.name}</option>
+                                ))}
+                            </select>
                         )}
 
-                        {/* Payment Status Filter */}
+                        {/* Payment Status (Only relevant in List View usually, but kept for consistency) */}
                         <div className="flex rounded-lg border border-slate-300 overflow-hidden shrink-0">
-                            <button
-                                onClick={() => setPaymentStatusFilter('All')}
-                                className={`px-3 py-2 text-sm font-medium transition-colors ${paymentStatusFilter === 'All' ? 'bg-slate-100 text-slate-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-                            >
-                                Tümü
-                            </button>
-                            <div className="w-px bg-slate-300"></div>
-                            <button
-                                onClick={() => setPaymentStatusFilter('paid')}
-                                className={`px-3 py-2 text-sm font-medium transition-colors ${paymentStatusFilter === 'paid' ? 'bg-green-50 text-green-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-                            >
-                                Ödenen
-                            </button>
-                            <div className="w-px bg-slate-300"></div>
-                            <button
-                                onClick={() => setPaymentStatusFilter('claimed')}
-                                className={`px-3 py-2 text-sm font-medium transition-colors ${paymentStatusFilter === 'claimed' ? 'bg-blue-50 text-blue-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-                            >
-                                Bildirilen
-                            </button>
-                            <div className="w-px bg-slate-300"></div>
-                            <button
-                                onClick={() => setPaymentStatusFilter('unpaid')}
-                                className={`px-3 py-2 text-sm font-medium transition-colors ${paymentStatusFilter === 'unpaid' ? 'bg-orange-50 text-orange-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-                            >
-                                Bekleyen
-                            </button>
+                            <button onClick={() => setPaymentStatusFilter('All')} className={`px-3 py-2 text-sm font-medium transition-colors ${paymentStatusFilter === 'All' ? 'bg-slate-100 text-slate-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>Tümü</button>
+                            <div className="w-px bg-slate-100"></div>
+                            <button onClick={() => setPaymentStatusFilter('unpaid')} className={`px-3 py-2 text-sm font-medium transition-colors ${paymentStatusFilter === 'unpaid' ? 'bg-orange-100 text-orange-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>Borçlu</button>
                         </div>
 
+                        {/* View Mode Toggle (Manual) */}
                         <div className="flex rounded-lg border border-slate-300 overflow-hidden shrink-0">
                             <button
-                                onClick={() => setStatusFilter('All')}
-                                className={`px-3 py-2 text-sm font-medium transition-colors ${statusFilter === 'All' ? 'bg-slate-100 text-slate-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                                onClick={() => setViewMode('grid')}
+                                className={`px-3 py-2 text-sm font-medium flex items-center gap-1 ${viewMode === 'grid' ? 'bg-blue-50 text-blue-600' : 'bg-white text-slate-600'}`}
                             >
-                                Tümü
+                                <Users size={16} /> Sınıflar
                             </button>
                             <div className="w-px bg-slate-300"></div>
                             <button
-                                onClick={() => setStatusFilter('Active')}
-                                className={`px-3 py-2 text-sm font-medium transition-colors ${statusFilter === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                                onClick={() => setViewMode('list')}
+                                className={`px-3 py-2 text-sm font-medium flex items-center gap-1 ${viewMode === 'list' ? 'bg-blue-50 text-blue-600' : 'bg-white text-slate-600'}`}
                             >
-                                Aktif
-                            </button>
-                            <div className="w-px bg-slate-300"></div>
-                            <button
-                                onClick={() => setStatusFilter('Left')}
-                                className={`px-3 py-2 text-sm font-medium transition-colors ${statusFilter === 'Left' ? 'bg-red-50 text-red-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-                            >
-                                Ayrılan
+                                <User size={16} /> Liste
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200">
-                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Öğrenci</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Okul</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Sınıf</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Veli E-posta</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Durum</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Detay</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {filteredStudents.map(student => {
-                            const school = schools.find(s => s.id === student.schoolId);
-                            const activeClassInfo = classGroups.find(c => c.id === student.classGroupId);
+            {/* --- CONTENT AREA: GRID or LIST --- */}
+            {viewMode === 'grid' ? (
+                // *** GRID VIEW ***
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredClassGroups
+                        .filter(g => !searchTerm || g.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                        .map(group => {
+                            const groupStudents = students.filter(s => s.classGroupId === group.id && s.status === 'Active');
+                            const studentCount = groupStudents.length;
+                            const schoolName = schools.find(s => s.id === group.schoolId)?.name || 'Okul Yok';
 
                             return (
-                                <tr key={student.id}
-                                    className={`hover:bg-slate-50 transition-colors cursor-pointer border-l-4 ${student.last_payment_status === 'paid'
-                                        ? 'border-green-500' // Green: Paid
-                                        : student.last_payment_status === 'claimed'
-                                            ? 'border-blue-500' // Blue: Claimed
-                                            : 'border-orange-400' // Orange: Pending
-                                        }`}
-                                    onClick={() => handleViewDetail(student)}
+                                <div
+                                    key={group.id}
+                                    onClick={() => handleClassCardClick(group.id)}
+                                    className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 hover:-translate-y-1 transition-all cursor-pointer group"
                                 >
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-                                                <User size={14} />
-                                            </div>
-                                            <div>
-                                                <div className="font-medium text-slate-900">{student.name}</div>
-                                                <div className="text-xs text-slate-500 font-mono">{student.phone}</div>
-                                            </div>
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                            <Users size={24} />
                                         </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-slate-600 text-sm">
-                                        {school?.name || 'Bilinmiyor'}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {activeClassInfo ? (
-                                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                                                {activeClassInfo.name}
-                                            </span>
-                                        ) : (
-                                            <span className="text-slate-400 text-xs">-</span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-slate-600">
-                                        {student.parentEmail || <span className="text-slate-300 italic">-</span>}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${student.status === 'Active'
-                                                ? 'bg-emerald-100 text-emerald-800'
-                                                : 'bg-red-100 text-red-800'
-                                                }`}>
-                                                {student.status === 'Active' ? 'Aktif' : 'Ayrıldı'}
-                                            </span>
-                                            {student.last_payment_status === 'claimed' && (
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 animate-pulse">
-                                                    Bildirim
+                                        <span className={`px-2 py-1 rounded-lg text-xs font-bold ${studentCount > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                            {studentCount} Öğrenci
+                                        </span>
+                                    </div>
+
+                                    <h3 className="text-lg font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">{group.name}</h3>
+
+                                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-4">
+                                        <School size={12} />
+                                        <span className="truncate">{schoolName}</span>
+                                    </div>
+
+                                    <div className="w-full h-px bg-slate-100 mb-4"></div>
+
+                                    <div className="flex items-center text-blue-600 text-sm font-medium group-hover:translate-x-1 transition-transform">
+                                        Listeyi Görüntüle <ChevronRight size={16} />
+                                    </div>
+                                </div>
+                            )
+                        })
+                    }
+                    {filteredClassGroups.length === 0 && (
+                        <div className="col-span-full py-12 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                            <Users size={48} className="mx-auto mb-3 opacity-20" />
+                            <p>Görüntülenecek sınıf bulunamadı.</p>
+                            {selectedSchoolId === 'all' && <p className="text-xs mt-1">Lütfen okul seçimi yapmayı deneyin.</p>}
+                        </div>
+                    )}
+                </div>
+            ) : (
+                // *** LIST VIEW ***
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th className="px-6 py-4 font-semibold text-slate-700">ÖĞRENCİ</th>
+                                <th className="px-6 py-4 font-semibold text-slate-700">OKUL / SINIF</th>
+                                <th className="px-6 py-4 font-semibold text-slate-700">İLETİŞİM</th>
+                                <th className="px-6 py-4 font-semibold text-slate-700">DURUM</th>
+                                <th className="px-6 py-4 font-semibold text-slate-700 text-right">İŞLEMLER</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {filteredStudents.map(student => {
+                                const group = classGroups.find(c => c.id === student.classGroupId);
+                                const school = schools.find(s => s.id === student.schoolId);
+
+                                return (
+                                    <tr key={student.id}
+                                        onClick={() => handleViewDetail(student)}
+                                        className="hover:bg-slate-50 transition-colors cursor-pointer"
+                                    >
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold border border-slate-200">
+                                                    {student.name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <div className="font-medium text-slate-900">{student.name}</div>
+                                                    <div className="text-xs text-slate-400">ID: {student.studentNumber || '-'}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-slate-500">{school?.name}</span>
+                                                <span className="font-medium text-blue-600">{group?.name || '-'}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="text-slate-600">{student.phone}</div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                                                <span className={`px-2 py-0.5 rounded text-xs font-bold border ${student.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
+                                                    {student.status === 'Active' ? 'Aktif' : 'Pasif'}
                                                 </span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedStudent(student);
-                                                setIsEvaluationModalOpen(true);
-                                            }}
-                                            className="text-slate-400 hover:text-yellow-500 transition-colors p-1"
-                                            title="Öğrenciyi Değerlendir"
-                                        >
-                                            <Star size={18} />
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleViewDetail(student);
-                                            }}
-                                            className="text-slate-400 hover:text-blue-600 transition-colors"
-                                            title="Detay Görüntüle"
-                                        >
-                                            <ArrowRight size={18} />
-                                        </button>
-                                        {(user?.role === 'admin' || user?.role === 'manager') && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    navigate(`/student-panel/${student.id}`);
-                                                }}
-                                                className="text-slate-400 hover:text-indigo-600 transition-colors p-1"
-                                                title="Öğrenci Paneline Git"
-                                            >
-                                                <User size={18} />
-                                            </button>
-                                        )}
+                                                {student.last_payment_status === 'unpaid' && (
+                                                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-orange-50 text-orange-700 border border-orange-100">
+                                                        Ödenmedi
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex justify-end items-center gap-2" onClick={e => e.stopPropagation()}>
+                                                <button
+                                                    onClick={() => handleViewDetail(student)}
+                                                    className="flex items-center gap-1 text-slate-500 hover:text-blue-600 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors text-xs font-medium"
+                                                >
+                                                    <User size={14} /> Detay
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
+                            {filteredStudents.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">
+                                        Öğrenci bulunamadı.
                                     </td>
                                 </tr>
-                            );
-                        })}
-                        {filteredStudents.length === 0 && (
-                            <tr>
-                                <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
-                                    Aradığınız kriterlere uygun öğrenci bulunamadı.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
-            <div className="text-right text-xs text-slate-400 mt-2">
-                Toplam {filteredStudents.length} kayıt listeleniyor
-            </div>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
-            {/* Student Detail Modal */}
+            {/* --- MODALS --- */}
             {selectedStudent && (
                 <Modal
                     isOpen={isDetailModalOpen}
@@ -355,60 +360,55 @@ export function Students() {
                     title="Öğrenci Detayı"
                 >
                     <div className="space-y-6">
+                        {/* Summary Header */}
                         <div className="flex items-start gap-4">
                             <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold
-                                ${selectedStudent.status === 'Active' ? 'bg-blue-100 text-blue-600' : 'bg-red-100 text-red-600'}`}>
+                                 ${selectedStudent.status === 'Active' ? 'bg-blue-100 text-blue-600' : 'bg-red-100 text-red-600'}`}>
                                 {selectedStudent.name.charAt(0)}
                             </div>
                             <div>
                                 <h3 className="text-xl font-bold text-slate-900">{selectedStudent.name}</h3>
+                                <div className="flex gap-2 mt-1">
+                                    <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
+                                        {schools.find(s => s.id === selectedStudent.schoolId)?.name}
+                                    </span>
+                                    <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded border border-blue-100">
+                                        {classGroups.find(c => c.id === selectedStudent.classGroupId)?.name}
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
+                        {/* Details Grid */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                <span className="text-xs text-slate-500 block mb-1">Okul</span>
-                                <span className="font-medium text-slate-900">
-                                    {schools.find(s => s.id === selectedStudent.schoolId)?.name}
-                                </span>
-                            </div>
-                            <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                <span className="text-xs text-slate-500 block mb-1">Sınıf</span>
-                                <span className="font-medium text-slate-900">
-                                    {classGroups.find(c => c.id === selectedStudent.classGroupId)?.name || '-'}
-                                </span>
-                            </div>
-                            <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                                 <span className="text-xs text-slate-500 block mb-1">Telefon</span>
-                                <span className="font-medium text-slate-900">
-                                    {selectedStudent.phone || '-'}
-                                </span>
+                                <span className="font-medium text-slate-900">{selectedStudent.phone || '-'}</span>
                             </div>
                             <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                                 <span className="text-xs text-slate-500 block mb-1">Veli E-posta</span>
-                                <span className="font-medium text-slate-900">
-                                    {selectedStudent.parentEmail || '-'}
-                                </span>
+                                <span className="font-medium text-slate-900 truncate" title={selectedStudent.parentEmail}>{selectedStudent.parentEmail || '-'}</span>
                             </div>
 
-                            {/* Telegram Connect Section */}
+                            {/* Telegram Section */}
                             <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 col-span-2">
-                                <span className="text-xs text-slate-500 block mb-1">Telegram Bildirim</span>
+                                <span className="text-xs text-slate-500 block mb-2">İletişim & Bildirim</span>
                                 {selectedStudent.telegramChatId ? (
-                                    <div className="flex items-center gap-2 text-green-600 font-medium text-sm">
-                                        <CheckCircle2 size={16} />
-                                        <span>Bağlı (ID: {selectedStudent.telegramChatId})</span>
+                                    <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 p-2 rounded text-sm text-emerald-700">
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle2 size={16} />
+                                            <span className="font-bold">Telegram Bağlı</span>
+                                        </div>
                                         <button
                                             onClick={() => {
-                                                if (confirm('Bağlantıyı koparmak istediğinize emin misiniz?')) {
-                                                    // Ideally call an API to clear it. For now just UI or assume updateStudent works.
+                                                if (confirm('Telegram bağlantısını koparmak istediğinize emin misiniz?')) {
                                                     useStore.getState().updateStudent(selectedStudent.id, { telegramChatId: null } as any);
                                                     setSelectedStudent({ ...selectedStudent, telegramChatId: null });
                                                 }
                                             }}
-                                            className="text-[10px] text-red-500 hover:underline ml-auto"
+                                            className="text-xs text-red-500 hover:underline"
                                         >
-                                            Kaldır
+                                            Bağlantıyı Kes
                                         </button>
                                     </div>
                                 ) : (
@@ -416,38 +416,22 @@ export function Students() {
                                         {!connectCode ? (
                                             <button
                                                 onClick={() => generateTelegramCode(selectedStudent.id)}
-                                                className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium"
+                                                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors"
                                             >
-                                                <Link size={14} />
-                                                Telegram'ı Bağla (Veli İçin)
+                                                <Link size={14} /> Bağlantı Kodu Oluştur
                                             </button>
                                         ) : (
-                                            <div className="mt-2 bg-white border border-blue-100 rounded-lg p-3 space-y-2">
-                                                <div className="text-xs text-blue-800 font-medium text-center">
-                                                    Veliye iletilecek kod:
-                                                </div>
-                                                <div className="text-xl font-bold font-mono text-center text-blue-900 tracking-wider bg-slate-50 py-1 rounded border border-blue-50 select-all">
-                                                    {connectCode}
-                                                </div>
-                                                <div className="text-[10px] text-slate-500 text-center">
-                                                    Veli bu kodu 5 dakika içinde Telegram botuna göndermelidir.
-                                                </div>
-                                                <div className="flex gap-2 justify-center pt-1">
-                                                    <button
-                                                        onClick={() => verifyTelegramCode(selectedStudent.id)}
-                                                        disabled={isVerifying}
-                                                        className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 text-xs rounded hover:bg-blue-100 flex items-center gap-1"
-                                                    >
-                                                        {isVerifying ? <RefreshCw size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                                                        Kontrol Et
+                                            <div className="bg-white border border-blue-200 rounded p-3 text-center animate-in fade-in zoom-in duration-300">
+                                                <div className="text-xs text-slate-500 mb-1">Veliye iletilecek kod:</div>
+                                                <div className="text-2xl font-bold font-mono text-blue-600 tracking-widest select-all bg-slate-50 py-2 rounded mb-2">{connectCode}</div>
+
+                                                <div className="flex justify-center gap-2">
+                                                    <button onClick={() => verifyTelegramCode(selectedStudent.id)} disabled={isVerifying} className="bg-blue-600 text-white px-3 py-1 text-xs rounded hover:bg-blue-700 flex items-center gap-1">
+                                                        {isVerifying ? <RefreshCw className="animate-spin" size={12} /> : 'Kontrol Et'}
                                                     </button>
-                                                    <button
-                                                        onClick={() => setConnectCode(null)}
-                                                        className="text-xs text-slate-400 hover:text-red-500"
-                                                    >
-                                                        İptal
-                                                    </button>
+                                                    <button onClick={() => setConnectCode(null)} className="text-slate-400 hover:text-slate-600 text-xs px-2">İptal</button>
                                                 </div>
+                                                <div className="text-[10px] text-slate-400 mt-2">Bu kod 5 dakika geçerlidir.</div>
                                             </div>
                                         )}
                                     </div>
@@ -455,99 +439,19 @@ export function Students() {
                             </div>
                         </div>
 
-                        {selectedStudent.status === 'Left' && (
-                            <div className="bg-red-50 p-4 rounded-xl border border-red-100">
-                                <h4 className="font-bold text-red-800 mb-2 flex items-center gap-2">
-                                    ⚠️ Ayrılma Bilgisi
-                                </h4>
-                                <div className="space-y-2">
-                                    <div>
-                                        <span className="text-xs text-red-600 font-bold block">Ayrılma Tarihi</span>
-                                        <span className="text-sm text-red-900">
-                                            {selectedStudent.leftDate ? new Date(selectedStudent.leftDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span className="text-xs text-red-600 font-bold block">Ayrılma Nedeni</span>
-                                        <p className="text-sm text-red-900 bg-white/50 p-2 rounded mt-1 border border-red-100">
-                                            {selectedStudent.leftReason || 'Sebep belirtilmedi.'}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Evaluations List */}
-                        <div className="border-t border-slate-100 pt-4">
-                            <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
-                                <Star size={18} className="text-yellow-500 fill-yellow-500" />
-                                Gelişim Notları
-                            </h4>
-                            <div className="space-y-3 max-h-60 overflow-y-auto">
-                                {studentEvaluations.filter(e => e.studentId === selectedStudent.id).length === 0 ? (
-                                    <p className="text-sm text-slate-500 italic">Henüz değerlendirme yapılmamış.</p>
-                                ) : (
-                                    studentEvaluations
-                                        .filter(e => e.studentId === selectedStudent.id)
-                                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                                        .map(evaluation => {
-                                            const teacherName = teachers.find(t => t.id === evaluation.teacherId)?.name || 'Eski Öğretmen';
-                                            return (
-                                                <div key={evaluation.id} className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                                    <div className="flex justify-between items-start mb-1">
-                                                        <span className="text-xs font-bold text-slate-700">{teacherName}</span>
-                                                        <span className="text-xs text-slate-400">{new Date(evaluation.createdAt).toLocaleDateString('tr-TR')}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <div className="flex bg-white px-2 py-0.5 rounded border border-slate-200">
-                                                            <span className="text-sm font-bold text-blue-600">{evaluation.score / 10}/10</span>
-                                                        </div>
-                                                    </div>
-                                                    <p className="text-sm text-slate-600">{evaluation.note}</p>
-                                                </div>
-                                            );
-                                        })
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                            <button
-                                onClick={() => {
-                                    navigate(`/school/${selectedStudent.schoolId}`);
-                                }}
-                                className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg font-medium text-sm transition-colors"
-                            >
-                                Okul Sayfasına Git
-                            </button>
+                        {/* Action Buttons */}
+                        <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
                             {(user?.role === 'admin' || user?.role === 'manager') && (
                                 <button
-                                    onClick={() => {
-                                        navigate(`/student-panel/${selectedStudent.id}`);
-                                    }}
-                                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg font-medium text-sm transition-all"
+                                    onClick={() => navigate(`/student-panel/${selectedStudent.id}`)}
+                                    className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors"
                                 >
-                                    Öğrenci Paneline Git
-                                </button>
-                            )}
-                            {selectedStudent.status === 'Left' && (
-                                <button
-                                    onClick={() => {
-                                        useStore.getState().updateStudent(selectedStudent.id, {
-                                            status: 'Active',
-                                            leftDate: undefined,
-                                            leftReason: undefined
-                                        } as any);
-                                        setIsDetailModalOpen(false);
-                                    }}
-                                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm transition-colors"
-                                >
-                                    Tekrar Aktif Et
+                                    Öğrenci Paneli
                                 </button>
                             )}
                             <button
                                 onClick={() => setIsDetailModalOpen(false)}
-                                className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium text-sm transition-colors"
+                                className="px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-sm font-medium transition-colors"
                             >
                                 Kapat
                             </button>
@@ -569,3 +473,4 @@ export function Students() {
         </div>
     );
 }
+
