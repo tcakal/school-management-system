@@ -764,7 +764,8 @@ export const useStore = create<AppState>()(
                     specialties: teacher.specialties,
                     color: teacher.color,
                     role: teacher.role || 'teacher',
-                    password: teacher.password || '123456'
+                    password: teacher.password || '123456',
+                    telegram_chat_id: teacher.telegramChatId
                 }]);
             },
 
@@ -780,9 +781,12 @@ export const useStore = create<AppState>()(
                 if (updated.name) dbUpdate.name = updated.name;
                 if (updated.phone) dbUpdate.phone = updated.phone;
                 if (updated.email) dbUpdate.email = updated.email;
+                if (updated.email) dbUpdate.email = updated.email;
                 if (updated.specialties) dbUpdate.specialties = updated.specialties;
                 if (updated.password) dbUpdate.password = updated.password;
                 if (updated.role) dbUpdate.role = updated.role;
+                if (updated.color) dbUpdate.color = updated.color;
+                if (updated.telegramChatId) dbUpdate.telegram_chat_id = updated.telegramChatId;
                 if (Object.keys(dbUpdate).length > 0) {
                     await supabase.from('teachers').update(dbUpdate).eq('id', id);
                 }
@@ -999,6 +1003,14 @@ export const useStore = create<AppState>()(
                     // Delete related data first (Manual Cascade) from DB
                     // 1. Delete Payments
                     await supabase.from('payments').delete().eq('school_id', id);
+
+                    // 1.1 Delete Student Evaluations (Referencing students in this school)
+                    // We need to fetch students first to delete their evaluations
+                    const { data: schoolStudents } = await supabase.from('students').select('id').eq('school_id', id);
+                    if (schoolStudents && schoolStudents.length > 0) {
+                        const studentIds = schoolStudents.map(s => s.id);
+                        await supabase.from('student_evaluations').delete().in('student_id', studentIds);
+                    }
 
                     // 2. Delete Attendance (via Lessons)
                     const { data: schoolLessons } = await supabase.from('lessons').select('id').eq('school_id', id);
