@@ -153,7 +153,7 @@ export interface Lesson {
 
 export interface NotificationTemplate {
     id: string;
-    schoolId: string;
+    schoolId: string | null;
     classGroupId?: string; // Optional: If set, applies only to this class
     triggerType: 'lesson_start' | 'lesson_end' | '15_min_before' | 'fixed_time' | 'last_lesson_end';
     messageTemplate: string;
