@@ -42,8 +42,9 @@ export function Settings() {
 
     const handleSave = async () => {
         console.log('Saving template for School:', selectedSchoolId);
-        if (!selectedSchoolId || !newTemplate.messageTemplate) {
-            alert('Lütfen Okul ve Mesaj şablonunu doldurunuz.');
+        // Check only message template. Global (empty school) is allowed now.
+        if (!newTemplate.messageTemplate) {
+            alert('Lütfen Mesaj şablonunu doldurunuz.');
             return;
         }
 
@@ -51,14 +52,14 @@ export function Settings() {
             // Update
             await updateNotificationTemplate(editId, {
                 ...newTemplate,
-                schoolId: selectedSchoolId, // Allow moving schools? Maybe.
+                schoolId: selectedSchoolId || null, // Convert "" to null
             });
             setEditId(null);
         } else {
             // Create New
             const templateData = {
                 id: crypto.randomUUID(),
-                schoolId: selectedSchoolId,
+                schoolId: selectedSchoolId || null, // Convert "" to null
                 classGroupId: newTemplate.classGroupId,
                 triggerType: newTemplate.triggerType as any,
                 messageTemplate: newTemplate.messageTemplate || '',
