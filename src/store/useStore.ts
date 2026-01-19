@@ -603,6 +603,7 @@ export const useStore = create<AppState>()(
 
 
             addStudent: async (student) => {
+                const previousStudents = get().students;
                 set((state) => ({ students: [...state.students, student] }));
                 get().logAction('OGRENCI_EKLE', `${student.name} kayıt edildi.`, 'student', student.id);
 
@@ -627,6 +628,8 @@ export const useStore = create<AppState>()(
 
                 if (error) {
                     console.error('Error adding student:', error);
+                    alert(`Öğrenci eklenirken hata oluştu: ${error.message}`);
+                    set({ students: previousStudents }); // Revert on error
                 }
             },
 
