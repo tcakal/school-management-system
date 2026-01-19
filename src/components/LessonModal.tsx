@@ -174,17 +174,20 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                     />
                 </div>
 
-                <div className="mb-4">
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Ders Notları (Özel)</label>
-                    <textarea
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        disabled={!canEdit}
-                        placeholder="Öğretmen için özel notlar..."
-                        rows={3}
-                        className="w-full text-sm border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
-                    />
-                </div>
+                {/* Teacher Notes - Hidden for Managers and Parents */}
+                {['admin', 'teacher'].includes(user?.role || '') && (
+                    <div className="mb-4">
+                        <label className="block text-xs font-medium text-slate-700 mb-1">Ders Notları (Özel)</label>
+                        <textarea
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            disabled={!canEdit}
+                            placeholder="Öğretmen için özel notlar..."
+                            rows={3}
+                            className="w-full text-sm border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
+                        />
+                    </div>
+                )}
 
                 {/* Attachments Section */}
                 <div className="mb-6">

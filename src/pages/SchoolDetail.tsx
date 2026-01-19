@@ -9,6 +9,7 @@ import { Tabs } from '../components/Tabs';
 import { Modal } from '../components/Modal';
 import { AssignmentModal } from '../components/AssignmentModal';
 import { TimeSelect } from '../components/TimeSelect';
+import { MakerFairTab } from '../components/MakerFairTab';
 import type { ClassGroup, Student } from '../types';
 
 export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) {
@@ -458,10 +459,18 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
         { id: 'students', label: 'Öğrenciler' },
     ];
 
-    if (!isTeacher) {
+    // Permissions: Financials only for Admin and Manager
+    if (['admin', 'manager'].includes(user?.role || '')) {
         tabs.push({ id: 'financials', label: 'Finansal Ayarlar' });
+    }
+
+    // Permissions: Inventory for Admin, Manager and Teacher
+    if (['admin', 'manager', 'teacher'].includes(user?.role || '')) {
         tabs.push({ id: 'inventory', label: 'Envanter' });
     }
+
+    // Maker Fair Tab (Everyone can see, but content differs)
+    tabs.push({ id: 'maker-fair', label: 'Maker Fair' });
 
     return (
         <div>
@@ -1483,6 +1492,12 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                             </div>
                         )}
                     </div>
+                </div>
+            )}
+
+            {activeTab === 'maker-fair' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <MakerFairTab school={school} />
                 </div>
             )}
 

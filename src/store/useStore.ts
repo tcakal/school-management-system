@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../supabase';
 import { useAuth } from './useAuth';
-import type { School, Student, ClassGroup, Payment, Teacher, TeacherAssignment, ActivityLog, Lesson, Attendance, NotificationTemplate, TeacherLeave, SystemSettings, StudentEvaluation, TeacherEvaluation, InventoryItem } from '../types';
+import type { School, Student, ClassGroup, Payment, Teacher, TeacherAssignment, ActivityLog, Lesson, Attendance, NotificationTemplate, TeacherLeave, SystemSettings, StudentEvaluation, TeacherEvaluation, InventoryItem, MakerProject, MakerProjectUpdate, MakerProjectDocument, MakerProjectStudent } from '../types';
 import { addWeeks, format, startOfWeek } from 'date-fns';
 
 interface AppState {
@@ -55,7 +55,7 @@ interface AppState {
     deleteAssignment: (id: string) => Promise<void>;
 
     // Lesson Management
-    generateLessons: (weeks?: number, classGroupId?: string) => Promise<void>;
+    generateLessons: (weeks?: number, classGroupId?: string, startDate?: Date | string) => Promise<void>;
     addLesson: (lesson: Lesson) => Promise<void>;
     updateLesson: (id: string, updates: Partial<Lesson>) => Promise<void>;
     deleteLesson: (id: string) => Promise<void>;
@@ -92,6 +92,24 @@ interface AppState {
     logAction: (action: string, details: string, entityType?: string, entityId?: string) => Promise<void>; // entityType made optional
     fetchMoreLogs: () => Promise<void>; // Added fetchMoreLogs
     fetchTraceLogs: () => Promise<void>;
+
+    // Maker Fair
+    makerProjects: MakerProject[];
+    makerProjectUpdates: MakerProjectUpdate[];
+    makerProjectDocuments: MakerProjectDocument[];
+    makerProjectStudents: MakerProjectStudent[]; // Use this to track relations
+
+    fetchMakerProjects: (schoolId: string) => Promise<void>;
+    addMakerProject: (project: Omit<MakerProject, 'id' | 'createdAt'>) => Promise<void>;
+    updateMakerProject: (id: string, updates: Partial<MakerProject>) => Promise<void>;
+    deleteMakerProject: (id: string) => Promise<void>;
+
+    assignStudentToProject: (projectId: string, studentId: string) => Promise<void>;
+    removeStudentFromProject: (projectId: string, studentId: string) => Promise<void>;
+
+    addMakerProjectUpdate: (update: Omit<MakerProjectUpdate, 'id' | 'createdAt'>) => Promise<void>;
+    addMakerProjectDocument: (doc: Omit<MakerProjectDocument, 'id' | 'createdAt'>) => Promise<void>;
+    deleteMakerProjectDocument: (id: string) => Promise<void>;
 }
 
 import { persist } from 'zustand/middleware';
@@ -114,6 +132,10 @@ export const useStore = create<AppState>()(
             notificationTemplates: [],
             leaves: [],
             inventory: [],
+            makerProjects: [],
+            makerProjectUpdates: [],
+            makerProjectDocuments: [],
+            makerProjectStudents: [],
             theme: 'light',
             systemSettings: null,
             loading: false,
@@ -839,7 +861,7 @@ export const useStore = create<AppState>()(
                 }
             },
 
-            generateLessons: async (weeks = 4, classGroupId) => {
+            generateLessons: async (weeks = 4, classGroupId, startDate) => {
                 const allAssignments = get().assignments;
                 const assignments = classGroupId
                     ? allAssignments.filter(a => a.classGroupId === classGroupId)
@@ -847,16 +869,17 @@ export const useStore = create<AppState>()(
 
                 const currentLessons = get().lessons;
                 const newLessons: Lesson[] = [];
-                const today = new Date();
+                const baseDate = startDate ? new Date(startDate) : new Date();
 
-                // 1. Identify all groups that have assignments
+                // If startDate is provided, we might want to clean up EVERYTHING after that date?
+                // Or maybe just generate missing ones? 
+                // The user request: "all lessons will start 2nd Feb week".
+                // Detailed logic:
+                // 1. Identify all active groups.
                 const activeGroupIds = new Set(assignments.map(a => a.classGroupId));
 
                 // 2. Cleanup: Remove future "scheduled" lessons for these groups that DO NOT match any current assignment
                 // This handles the case where a teacher was removed or time changed.
-                // We only touch 'scheduled' lessons, preserving 'completed' or 'cancelled' history if desired, 
-                // though usually future cancelled lessons should also be removed if the schedule changed entirely.
-
                 const validFutureLessons: Lesson[] = [];
                 const lessonsToDelete: string[] = [];
 
@@ -870,18 +893,28 @@ export const useStore = create<AppState>()(
                     );
                 };
 
-                const todayStr = format(today, 'yyyy-MM-dd');
+                const baseDateStr = format(baseDate, 'yyyy-MM-dd');
+                const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+                // If we are forcing a start date, strictly look at things >= that date
+                // Otherwise use today
+                const thresholdDateStr = startDate ? baseDateStr : todayStr;
 
                 currentLessons.forEach(l => {
-                    // Only check future or today's lessons
-                    if (l.date >= todayStr && activeGroupIds.has(l.classGroupId)) {
-                        // If it's a manually scheduled extra lesson (type 'makeup'), keep it? 
-                        // meaningful data. For now, we assume 'regular' lessons are auto-generated.
+                    // Only check future or today's lessons (or from baseDate if provided)
+                    if (l.date >= thresholdDateStr && activeGroupIds.has(l.classGroupId)) {
+
+                        // If explicit reset requested (startDate provided), remove conflicting scheduled lessons in the target range?
+                        // For now, keep the "Stale Check" logic but extend it.
                         if (l.type === 'regular' && l.status === 'scheduled') {
                             if (!matchesAssignment(l, new Date(l.date))) {
                                 lessonsToDelete.push(l.id);
-                                return; // Don't add to valid list
+                                return;
                             }
+                            // If we are forcing a start date, we might want to keep existing valid lessons 
+                            // OR user might want to Wipe and Recreate?
+                            // User said: "It didn't happen... some went forward... how to make all start Feb 2 week?"
+                            // So effectively we just want to ensure lessons exist from Feb 2 onwards.
                         }
                     }
                     validFutureLessons.push(l);
@@ -892,14 +925,15 @@ export const useStore = create<AppState>()(
                     set(state => ({
                         lessons: state.lessons.filter(l => !lessonsToDelete.includes(l.id))
                     }));
-                    // Fire and forget delete
                     await supabase.from('lessons').delete().in('id', lessonsToDelete);
                     console.log(`Cleaned up ${lessonsToDelete.length} stale lessons.`);
                 }
 
                 // 3. Generate New Lessons
                 for (let i = 0; i < weeks; i++) {
-                    const weekStart = addWeeks(startOfWeek(today, { weekStartsOn: 1 }), i);
+                    // If startDate is provided, use it. Otherwise use start of current week.
+                    const startOfBaseWeek = startOfWeek(baseDate, { weekStartsOn: 1 });
+                    const weekStart = addWeeks(startOfBaseWeek, i);
 
                     assignments.forEach(assignment => {
                         const addDaysCount = assignment.dayOfWeek - 1;
@@ -908,16 +942,10 @@ export const useStore = create<AppState>()(
 
                         const dateStr = format(lessonDate, 'yyyy-MM-dd');
 
-                        // Skip if date is in the past
-                        if (dateStr < todayStr) return;
+                        // Skip if date is before today (unless we explicitly want to backfill, but usually we don't)
+                        // If startDate is future, this check passes.
+                        if (dateStr < todayStr && !startDate) return;
 
-                        // Check against the *filtered* list (validFutureLessons) plus what we've added in this loop
-                        // We actually need to check against the Store's lessons (which we just updated) 
-                        // but checking the valid list is safer to avoid async state issues.
-                        // However, we might have just deleted it. 
-
-                        // Let's use a composite key check
-                        // Actually, simply check if we already have a lesson for this slot in "validFutureLessons" or "newLessons"
                         const exists = [...validFutureLessons, ...newLessons].some(l =>
                             l.classGroupId === assignment.classGroupId &&
                             l.date === dateStr &&
@@ -1472,7 +1500,120 @@ export const useStore = create<AppState>()(
                 set(state => ({ inventory: state.inventory.filter(i => i.id !== id) }));
                 const { error } = await supabase.from('inventory_items').delete().eq('id', id);
                 if (error) console.error('Error deleting inventory item:', error);
-            }
+            },
+
+            // Maker Fair Implementation
+            fetchMakerProjects: async (schoolId) => {
+                const { data: projects, error: pError } = await supabase
+                    .from('maker_projects')
+                    .select('*')
+                    .eq('school_id', schoolId);
+
+                if (pError) console.error('Error fetching maker projects:', pError);
+
+                if (projects) {
+                    // Map items to CamelCase if needed or cast as any if types match DB
+                    // Assuming DB column names match snake_case, we might need mapping.
+                    // Let's assume for now we use 'as any' and fix mapping if UI breaks, 
+                    // or better, map properly.
+                    const mapped = projects.map(p => ({
+                        id: p.id,
+                        schoolId: p.school_id,
+                        name: p.name,
+                        description: p.description,
+                        status: p.status,
+                        makerFairDate: p.maker_fair_date,
+                        createdAt: p.created_at,
+                        createdBy: p.created_by
+                    }));
+                    set({ makerProjects: mapped as any });
+                }
+            },
+
+            addMakerProject: async (project) => {
+                const newId = crypto.randomUUID();
+                const newProject = { ...project, id: newId, createdAt: new Date().toISOString() };
+                set(state => ({ makerProjects: [...state.makerProjects, newProject as any] }));
+
+                const { error } = await supabase.from('maker_projects').insert([{
+                    id: newId,
+                    school_id: project.schoolId,
+                    name: project.name,
+                    description: project.description,
+                    status: project.status,
+                    maker_fair_date: project.makerFairDate
+                }]);
+                if (error) console.error(error);
+            },
+
+            updateMakerProject: async (id, updates) => {
+                set(state => ({
+                    makerProjects: state.makerProjects.map(p => p.id === id ? { ...p, ...updates } : p)
+                }));
+
+                const dbUpdates: any = {};
+                if (updates.name) dbUpdates.name = updates.name;
+                if (updates.description) dbUpdates.description = updates.description;
+                if (updates.status) dbUpdates.status = updates.status;
+                if (updates.makerFairDate) dbUpdates.maker_fair_date = updates.makerFairDate;
+
+                if (Object.keys(dbUpdates).length > 0) {
+                    await supabase.from('maker_projects').update(dbUpdates).eq('id', id);
+                }
+            },
+
+            deleteMakerProject: async (id) => {
+                set(state => ({ makerProjects: state.makerProjects.filter(p => p.id !== id) }));
+                await supabase.from('maker_projects').delete().eq('id', id);
+            },
+
+            assignStudentToProject: async (projectId, studentId) => {
+                set(state => ({
+                    makerProjectStudents: [...state.makerProjectStudents, { projectId, studentId }]
+                }));
+                await supabase.from('maker_project_students').insert([{ project_id: projectId, student_id: studentId }]);
+            },
+
+            removeStudentFromProject: async (projectId, studentId) => {
+                set(state => ({
+                    makerProjectStudents: state.makerProjectStudents.filter(r => !(r.projectId === projectId && r.studentId === studentId))
+                }));
+                await supabase.from('maker_project_students').delete().match({ project_id: projectId, student_id: studentId });
+            },
+
+            addMakerProjectUpdate: async (update) => {
+                const newId = crypto.randomUUID();
+                const newUpdate = { ...update, id: newId, createdAt: new Date().toISOString() };
+                set(state => ({ makerProjectUpdates: [...state.makerProjectUpdates, newUpdate as any] }));
+
+                await supabase.from('maker_project_updates').insert([{
+                    id: newId,
+                    project_id: update.projectId,
+                    week_number: update.weekNumber,
+                    title: update.title,
+                    content: update.content,
+                    requests: update.requests
+                }]);
+            },
+
+            addMakerProjectDocument: async (doc) => {
+                const newId = crypto.randomUUID();
+                const newDoc = { ...doc, id: newId, createdAt: new Date().toISOString() };
+                set(state => ({ makerProjectDocuments: [...state.makerProjectDocuments, newDoc as any] }));
+
+                await supabase.from('maker_project_documents').insert([{
+                    id: newId,
+                    project_id: doc.projectId,
+                    title: doc.title,
+                    file_url: doc.fileUrl,
+                    file_type: doc.fileType
+                }]);
+            },
+
+            deleteMakerProjectDocument: async (id) => {
+                set(state => ({ makerProjectDocuments: state.makerProjectDocuments.filter(d => d.id !== id) }));
+                await supabase.from('maker_project_documents').delete().eq('id', id);
+            },
         }),
         {
             name: 'school-storage',

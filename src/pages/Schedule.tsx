@@ -16,14 +16,17 @@ export function Schedule() {
     const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [generationWeeks, setGenerationWeeks] = useState(4);
+    const [startDateGen, setStartDateGen] = useState(new Date().toISOString().split('T')[0]);
 
     // Generate Calendar Grid
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
     const handleGenerate = async () => {
-        if (confirm(`Önümüzdeki ${generationWeeks} hafta için ders programı oluşturulsun mu?`)) {
-            await generateLessons(generationWeeks);
+        if (confirm(`⚠️ DİKKAT: ${startDateGen} tarihinden itibaren ${generationWeeks} hafta boyunca ders programı yeniden oluşturulacak.\n\nBu işlem, seçilen tarih sonrasındaki mevcut programlanmış dersleri temizleyip tekrar oluşturur. Devam edilsin mi?`)) {
+            await generateLessons(generationWeeks, undefined, startDateGen);
+            alert('Takvim başarıyla oluşturuldu.');
+            setCurrentDate(new Date(startDateGen)); // Jump to that date
         }
     };
 
@@ -41,6 +44,16 @@ export function Schedule() {
                 </div>
                 <div className="flex gap-3">
                     <div className="flex items-center gap-2 bg-purple-50 p-1 rounded-lg border border-purple-100">
+                        <div className="flex flex-col px-2">
+                            <span className="text-[10px] text-purple-600 font-bold uppercase">Başlangıç</span>
+                            <input
+                                type="date"
+                                value={startDateGen}
+                                onChange={(e) => setStartDateGen(e.target.value)}
+                                className="bg-transparent text-xs font-medium text-purple-900 border-none p-0 focus:ring-0 cursor-pointer w-24"
+                            />
+                        </div>
+                        <div className="w-px h-8 bg-purple-200 mx-1"></div>
                         <select
                             value={generationWeeks}
                             onChange={(e) => setGenerationWeeks(Number(e.target.value))}

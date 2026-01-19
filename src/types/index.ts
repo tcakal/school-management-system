@@ -13,6 +13,7 @@ export interface School {
     managerEmail?: string;
     telegramChatId?: string;
     payment_cycle_start_date?: string; // ISO Date "2024-01-01"
+    makerFairDate?: string; // ISO Date for Maker Fair countdown
 }
 
 export interface ClassGroup {
@@ -207,4 +208,39 @@ export interface InventoryItem {
     category?: string;
     notes?: string;
     createdAt?: string;
+}
+
+export interface MakerProject {
+    id: string;
+    schoolId: string;
+    name: string;
+    description?: string;
+    status: 'active' | 'completed' | 'archived';
+    createdAt: string;
+    createdBy?: string;
+    makerFairDate?: string; // Derived from school or specific override
+}
+
+export interface MakerProjectUpdate {
+    id: string;
+    projectId: string;
+    weekNumber: number;
+    title: string;
+    content: string;
+    requests?: string;
+    createdAt: string;
+}
+
+export interface MakerProjectDocument {
+    id: string;
+    projectId: string;
+    title: string;
+    fileUrl: string;
+    fileType: 'pdf' | 'image' | 'other';
+    createdAt: string;
+}
+
+export interface MakerProjectStudent {
+    projectId: string;
+    studentId: string;
 }
