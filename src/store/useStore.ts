@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../supabase';
 import { useAuth } from './useAuth';
-import type { School, Student, ClassGroup, Payment, Teacher, TeacherAssignment, ActivityLog, Lesson, Attendance, NotificationTemplate, TeacherLeave, SystemSettings, StudentEvaluation, TeacherEvaluation } from '../types';
+import type { School, Student, ClassGroup, Payment, Teacher, TeacherAssignment, ActivityLog, Lesson, Attendance, NotificationTemplate, TeacherLeave, SystemSettings, StudentEvaluation, TeacherEvaluation, InventoryItem } from '../types';
 import { addWeeks, format, startOfWeek } from 'date-fns';
 
 interface AppState {
@@ -17,6 +17,7 @@ interface AppState {
     attendance: Attendance[];
     notificationTemplates: NotificationTemplate[];
     leaves: TeacherLeave[];
+    inventory: InventoryItem[];
 
     // Theme & Settings
     theme: 'light' | 'dark';
@@ -81,6 +82,12 @@ interface AppState {
     deleteLeave: (id: string) => Promise<void>;
     findAvailableTeachers: (date: string, startTime: string, endTime: string) => Promise<Teacher[]>;
 
+    // Inventory
+    fetchInventory: (schoolId: string) => Promise<void>;
+    addInventoryItem: (item: InventoryItem) => Promise<void>;
+    updateInventoryItem: (id: string, updates: Partial<InventoryItem>) => Promise<void>;
+    deleteInventoryItem: (id: string) => Promise<void>;
+
     // Activity Log Helper
     logAction: (action: string, details: string, entityType?: string, entityId?: string) => Promise<void>; // entityType made optional
     fetchMoreLogs: () => Promise<void>; // Added fetchMoreLogs
@@ -106,6 +113,7 @@ export const useStore = create<AppState>()(
             teacherEvaluations: [],
             notificationTemplates: [],
             leaves: [],
+            inventory: [],
             theme: 'light',
             systemSettings: null,
             loading: false,
@@ -1395,6 +1403,75 @@ export const useStore = create<AppState>()(
                         logsOffset: offset + data.length
                     });
                 }
+            },
+
+            // Inventory Actions
+            fetchInventory: async (schoolId) => {
+                const { data, error } = await supabase
+                    .from('inventory_items')
+                    .select('*')
+                    .eq('school_id', schoolId)
+                    .order('name');
+
+                if (error) {
+                    console.error('Error fetching inventory:', error);
+                    return;
+                }
+
+                // Map snake_case to camelCase
+                const mappedData = data.map(item => ({
+                    id: item.id,
+                    schoolId: item.school_id,
+                    name: item.name,
+                    quantity: item.quantity,
+                    category: item.category,
+                    notes: item.notes,
+                    createdAt: item.created_at
+                }));
+
+                set({ inventory: mappedData });
+            },
+
+            addInventoryItem: async (item) => {
+                set(state => ({ inventory: [...state.inventory, item] }));
+
+                const { error } = await supabase.from('inventory_items').insert([{
+                    id: item.id,
+                    school_id: item.schoolId,
+                    name: item.name,
+                    quantity: item.quantity,
+                    category: item.category,
+                    notes: item.notes
+                }]);
+
+                if (error) {
+                    console.error('Error adding inventory item:', error);
+                }
+            },
+
+            updateInventoryItem: async (id, updates) => {
+                set(state => ({
+                    inventory: state.inventory.map(i => i.id === id ? { ...i, ...updates } : i)
+                }));
+
+                const dbUpdates: any = {};
+                if (updates.name !== undefined) dbUpdates.name = updates.name;
+                if (updates.quantity !== undefined) dbUpdates.quantity = updates.quantity;
+                if (updates.category !== undefined) dbUpdates.category = updates.category;
+                if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+
+                const { error } = await supabase
+                    .from('inventory_items')
+                    .update(dbUpdates)
+                    .eq('id', id);
+
+                if (error) console.error('Error updating inventory item:', error);
+            },
+
+            deleteInventoryItem: async (id) => {
+                set(state => ({ inventory: state.inventory.filter(i => i.id !== id) }));
+                const { error } = await supabase.from('inventory_items').delete().eq('id', id);
+                if (error) console.error('Error deleting inventory item:', error);
             }
         }),
         {

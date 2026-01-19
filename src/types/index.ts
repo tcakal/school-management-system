@@ -198,3 +198,13 @@ export interface TeacherEvaluation {
     note: string;
     createdAt: string;
 }
+
+export interface InventoryItem {
+    id: string;
+    schoolId: string;
+    name: string;
+    quantity: number;
+    category?: string;
+    notes?: string;
+    createdAt?: string;
+}

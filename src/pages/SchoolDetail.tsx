@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
-import { ArrowLeft, MapPin, Phone, Users, Wallet, Plus, Calendar, Clock, User, Search, UserMinus, UserCheck, Settings, RefreshCw } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Users, Wallet, Plus, Calendar, Clock, User, Search, UserMinus, UserCheck, Settings, RefreshCw, Package, Trash2, Edit2 } from 'lucide-react';
+
 import { supabase } from '../supabase';
 import { Tabs } from '../components/Tabs';
 import { Modal } from '../components/Modal';
@@ -123,6 +124,78 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
             setIsShifting(false);
         }
     };
+    // Inventory State
+    const inventory = useStore((state) => state.inventory.filter(i => i.schoolId === id));
+    const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+    const [editingInventoryId, setEditingInventoryId] = useState<string | null>(null);
+    const [newItemName, setNewItemName] = useState('');
+    const [newItemQuantity, setNewItemQuantity] = useState('');
+    const [newItemCategory, setNewItemCategory] = useState('');
+    const [newItemNotes, setNewItemNotes] = useState('');
+
+    useEffect(() => {
+        if (activeTab === 'inventory' && id) {
+            useStore.getState().fetchInventory(id);
+        }
+    }, [activeTab, id]);
+
+    const handleAddInventory = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!id) return;
+
+        useStore.getState().addInventoryItem({
+            id: crypto.randomUUID(),
+            schoolId: id,
+            name: newItemName,
+            quantity: Number(newItemQuantity) || 0,
+            category: newItemCategory,
+            notes: newItemNotes,
+            createdAt: new Date().toISOString()
+        });
+
+        setIsInventoryModalOpen(false);
+        resetInventoryForm();
+    };
+
+    const handleUpdateInventory = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingInventoryId) return;
+
+        useStore.getState().updateInventoryItem(editingInventoryId, {
+            name: newItemName,
+            quantity: Number(newItemQuantity) || 0,
+            category: newItemCategory,
+            notes: newItemNotes
+        });
+
+        setIsInventoryModalOpen(false);
+        setEditingInventoryId(null);
+        resetInventoryForm();
+    };
+
+    const handleEditInventoryClick = (item: any) => {
+        setEditingInventoryId(item.id);
+        setNewItemName(item.name);
+        setNewItemQuantity(item.quantity.toString());
+        setNewItemCategory(item.category || '');
+        setNewItemNotes(item.notes || '');
+        setIsInventoryModalOpen(true);
+    };
+
+    const handleDeleteInventory = async (itemId: string) => {
+        if (confirm('Bu malzemeyi silmek istediğinize emin misiniz?')) {
+            await useStore.getState().deleteInventoryItem(itemId);
+        }
+    };
+
+    const resetInventoryForm = () => {
+        setNewItemName('');
+        setNewItemQuantity('');
+        setNewItemCategory('');
+        setNewItemNotes('');
+        setEditingInventoryId(null);
+    };
+
 
     // Payment Modal State
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -350,6 +423,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
 
     if (!isTeacher) {
         tabs.push({ id: 'financials', label: 'Finansal Ayarlar' });
+        tabs.push({ id: 'inventory', label: 'Envanter' });
     }
 
     return (
@@ -1303,6 +1377,137 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                         className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium mt-4"
                     >
                         Tahsil Et ve Onayla
+                    </button>
+                </form>
+            </Modal>
+
+            {/* Inventory Tab Content */}
+            {activeTab === 'inventory' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-bold text-slate-800">Okul Envanteri</h3>
+                        <button
+                            onClick={() => { resetInventoryForm(); setIsInventoryModalOpen(true); }}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
+                        >
+                            <Plus size={16} />
+                            Yeni Malzeme Ekle
+                        </button>
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-slate-100 bg-slate-50/50">
+                                    <th className="p-4 font-semibold text-slate-600 w-1/4">Malzeme Adı</th>
+                                    <th className="p-4 font-semibold text-slate-600 w-24">Adet</th>
+                                    <th className="p-4 font-semibold text-slate-600 w-1/4">Kategori</th>
+                                    <th className="p-4 font-semibold text-slate-600">Notlar</th>
+                                    <th className="p-4 font-semibold text-slate-600 w-24 text-right">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {inventory.map((item) => (
+                                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                                        <td className="p-4">
+                                            <div className="font-medium text-slate-900">{item.name}</div>
+                                        </td>
+                                        <td className="p-4">
+                                            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                {item.quantity}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 text-slate-600">{item.category || '-'}</td>
+                                        <td className="p-4 text-slate-500 text-sm">{item.notes || '-'}</td>
+                                        <td className="p-4">
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => handleEditInventoryClick(item)}
+                                                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                >
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteInventory(item.id)}
+                                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {inventory.length === 0 && (
+                            <div className="p-12 text-center text-slate-400 border-t border-slate-100">
+                                <Package size={48} className="mx-auto mb-4 text-slate-200" />
+                                <p>Henüz envanter kaydı bulunmuyor.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Inventory Modal */}
+            <Modal
+                isOpen={isInventoryModalOpen}
+                onClose={() => setIsInventoryModalOpen(false)}
+                title={editingInventoryId ? "Malzeme Düzenle" : "Yeni Malzeme Ekle"}
+            >
+                <form onSubmit={editingInventoryId ? handleUpdateInventory : handleAddInventory} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Malzeme Adı</label>
+                        <input
+                            required
+                            type="text"
+                            value={newItemName}
+                            onChange={(e) => setNewItemName(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                            placeholder="Örn: Arduino Seti"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Adet</label>
+                            <input
+                                required
+                                type="number"
+                                min="0"
+                                value={newItemQuantity}
+                                onChange={(e) => setNewItemQuantity(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
+                            <input
+                                type="text"
+                                value={newItemCategory}
+                                onChange={(e) => setNewItemCategory(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                                placeholder="Örn: Elektronik"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Notlar</label>
+                        <textarea
+                            value={newItemNotes}
+                            onChange={(e) => setNewItemNotes(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 h-24 resize-none"
+                            placeholder="Durum vs. hakkında notlar..."
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium mt-4 flex items-center justify-center gap-2"
+                    >
+                        <Package size={18} />
+                        {editingInventoryId ? "Güncelle" : "Kaydet"}
                     </button>
                 </form>
             </Modal>
