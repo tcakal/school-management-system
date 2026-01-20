@@ -1023,6 +1023,7 @@ export const useStore = create<AppState>()(
                 if (updates.startTime) dbUpdate.start_time = updates.startTime;
                 if (updates.topic) dbUpdate.topic = updates.topic;
                 if (updates.notes) dbUpdate.notes = updates.notes;
+                if (updates.attachments) dbUpdate.attachments = updates.attachments;
 
                 if (Object.keys(dbUpdate).length > 0) {
                     await supabase.from('lessons').update(dbUpdate).eq('id', id);
