@@ -20,7 +20,67 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
     const { user } = useAuth();
     const [mode, setMode] = useState<'attendance' | 'manage'>('attendance');
 
-    // ... (lines 23-86 omitted)
+    // Topic State
+    const [topic, setTopic] = useState('');
+    const [notes, setNotes] = useState('');
+    const [attachments, setAttachments] = useState<{ name: string; url: string; type: 'pdf' | 'link' }[]>([]);
+
+    // New Attachment Input State
+    const [newAttachmentType, setNewAttachmentType] = useState<'pdf' | 'link'>('pdf');
+    const [newAttachmentName, setNewAttachmentName] = useState('');
+    const [newAttachmentUrl, setNewAttachmentUrl] = useState('');
+    const [isUploading, setIsUploading] = useState(false);
+
+    // Cancellation/Reschedule State
+    const [cancelReason, setCancelReason] = useState('');
+    const [rescheduleDate, setRescheduleDate] = useState('');
+    const [rescheduleTime, setRescheduleTime] = useState('');
+    const [rescheduleEndTime, setRescheduleEndTime] = useState('');
+
+    // Attendance State
+    const [attendanceState, setAttendanceState] = useState<Record<string, 'present' | 'absent' | 'late'>>({});
+
+    // Effect to load data when lesson changes
+    useEffect(() => {
+        if (!lesson) return;
+
+        setTopic(lesson.topic || '');
+        setNotes(lesson.notes || '');
+        setAttachments(lesson.attachments || []);
+        setRescheduleDate(lesson.date);
+        setRescheduleTime(lesson.startTime);
+        setRescheduleEndTime(lesson.endTime);
+        setRescheduleDate(lesson.date);
+        setRescheduleTime(lesson.startTime);
+
+        const groupStudents = students.filter(s => s.classGroupId === lesson.classGroupId);
+        const existing = attendance.filter(a => a.lessonId === lesson.id);
+        const initial: Record<string, any> = {};
+
+        getAllStudents(groupStudents, existing, initial);
+        setAttendanceState(initial);
+    }, [lesson, attendance, students]);
+
+    // Helper to avoid complex dependency logic inside effect if needed, 
+    // but here it's simple enough.
+    const getAllStudents = (groupStudents: any[], existing: any[], initial: any) => {
+        groupStudents.forEach(s => {
+            const found = existing.find(a => a.studentId === s.id);
+            initial[s.id] = found ? found.status : 'present';
+        });
+    };
+
+    // Safe date formatting
+    const formattedDate = useMemo(() => {
+        if (!lesson) return '';
+        try {
+            return format(new Date(lesson.date), 'dd MMMM yyyy', { locale: tr });
+        } catch (e) {
+            return lesson?.date || '';
+        }
+    }, [lesson?.date]);
+
+    if (!lesson) return null;
 
     const group = classGroups.find(g => g.id === lesson.classGroupId);
     const teacher = teachers.find(t => t.id === lesson.teacherId);
