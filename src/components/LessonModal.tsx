@@ -31,6 +31,9 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
     const [newAttachmentUrl, setNewAttachmentUrl] = useState('');
     const [isUploading, setIsUploading] = useState(false);
 
+    // Auto-Save State
+    const [isSaving, setIsSaving] = useState(false);
+
     // Cancellation/Reschedule State
     const [cancelReason, setCancelReason] = useState('');
     const [rescheduleDate, setRescheduleDate] = useState('');
@@ -39,6 +42,16 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
 
     // Attendance State
     const [attendanceState, setAttendanceState] = useState<Record<string, 'present' | 'absent' | 'late'>>({});
+
+    const group = classGroups.find(g => g.id === lesson?.classGroupId);
+    const teacher = teachers.find(t => t.id === lesson?.teacherId);
+
+    // Permission Check
+    // Allow edit if Admin OR (Teacher AND (assigned to lesson OR assigned to class group))
+    const canEdit = !!(user?.role === 'admin' || (user?.role === 'teacher' && lesson && (
+        user.id === lesson.teacherId ||
+        assignments.some(a => a.teacherId === user.id && a.classGroupId === lesson.classGroupId)
+    )));
 
     // Effect to load data when lesson changes
     useEffect(() => {
@@ -50,8 +63,6 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
         setRescheduleDate(lesson.date);
         setRescheduleTime(lesson.startTime);
         setRescheduleEndTime(lesson.endTime);
-        setRescheduleDate(lesson.date);
-        setRescheduleTime(lesson.startTime);
 
         const groupStudents = students.filter(s => s.classGroupId === lesson.classGroupId);
         const existing = attendance.filter(a => a.lessonId === lesson.id);
@@ -70,6 +81,24 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
         });
     };
 
+    // Auto-save helper
+    const saveChanges = async (updates: Partial<Lesson>) => {
+        if (!lesson || !canEdit) return;
+        setIsSaving(true);
+        try {
+            await updateLesson(lesson.id, updates);
+        } finally {
+            setTimeout(() => setIsSaving(false), 500);
+        }
+    };
+
+    const handleAutoSave = () => {
+        if (!lesson) return;
+        if (topic !== lesson.topic || notes !== lesson.notes) {
+            saveChanges({ topic, notes });
+        }
+    };
+
     // Safe date formatting
     const formattedDate = useMemo(() => {
         if (!lesson) return '';
@@ -82,16 +111,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
 
     if (!lesson) return null;
 
-    const group = classGroups.find(g => g.id === lesson.classGroupId);
-    const teacher = teachers.find(t => t.id === lesson.teacherId);
     const groupStudents = students.filter(s => s.classGroupId === lesson.classGroupId);
-
-    // Permission Check
-    // Allow edit if Admin OR (Teacher AND (assigned to lesson OR assigned to class group))
-    const canEdit = user?.role === 'admin' || (user?.role === 'teacher' && (
-        user.id === lesson.teacherId ||
-        assignments.some(a => a.teacherId === user.id && a.classGroupId === lesson.classGroupId)
-    ));
 
     const handleSaveAttendance = async () => {
         if (!canEdit) return; // double check
@@ -102,8 +122,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
         }));
         await saveAttendance(lesson.id, records);
 
-        // Save topic as well if changed
-        // Save topic as well if changed
+        // We also save topic/notes here just in case, but auto-save handles it mostly
         if (topic !== lesson.topic || notes !== lesson.notes || JSON.stringify(attachments) !== JSON.stringify(lesson.attachments)) {
             await updateLesson(lesson.id, { topic, notes, attachments });
         }
@@ -167,11 +186,15 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
 
                 {/* Topic Input */}
                 <div className="mb-4">
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Ders Konusu / İçeriği</label>
+                    <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs font-medium text-slate-700">Ders Konusu / İçeriği</label>
+                        {isSaving && <span className="text-[10px] text-green-600 font-medium animate-pulse">Kaydediliyor...</span>}
+                    </div>
                     <input
                         type="text"
                         value={topic}
                         onChange={(e) => setTopic(e.target.value)}
+                        onBlur={handleAutoSave}
                         disabled={!canEdit}
                         placeholder="Örn: Robotik Giriş, Sensörler..."
                         className="w-full text-sm border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
@@ -185,6 +208,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                         <textarea
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
+                            onBlur={handleAutoSave}
                             disabled={!canEdit}
                             placeholder="Öğretmen için özel notlar..."
                             rows={3}
@@ -210,12 +234,16 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                         onClick={async () => {
                                             if (!window.confirm('Bu dosyayı silmek istediğinize emin misiniz?')) return;
 
+                                            // Determine new list first
+                                            const newAttachments = attachments.filter((_, i) => i !== index);
+                                            setAttachments(newAttachments);
+
+                                            // Save to DB immediately
+                                            await saveChanges({ attachments: newAttachments });
+
                                             // If it's a PDF and likely a Supabase URL, try to delete from storage
                                             if (att.type === 'pdf') {
                                                 try {
-                                                    // Extract filename from URL
-                                                    // Supabase URLs usually end with /object/public/bucket/filename
-                                                    // We just need the last part, but we should be careful if it's a full URL
                                                     const urlParts = att.url.split('/');
                                                     const fileName = urlParts[urlParts.length - 1];
 
@@ -226,16 +254,12 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
 
                                                         if (error) {
                                                             console.error('Error deleting file:', error);
-                                                            // We still remove from UI but warn user? 
-                                                            // For now just log it, as we want to clean up the UI regardless
                                                         }
                                                     }
                                                 } catch (err) {
                                                     console.error('Delete operation failed:', err);
                                                 }
                                             }
-
-                                            setAttachments(prev => prev.filter((_, i) => i !== index));
                                         }}
                                         className="text-slate-400 hover:text-red-500 transition-colors p-1"
                                     >
@@ -309,8 +333,12 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
 
                                                         setNewAttachmentUrl(data.publicUrl);
 
-                                                        // Auto-add to list
-                                                        setAttachments(prev => [...prev, { name: file.name, url: data.publicUrl, type: 'pdf' }]);
+                                                        const newAtt = { name: file.name, url: data.publicUrl, type: 'pdf' as const };
+                                                        const newAttachments = [...attachments, newAtt];
+                                                        setAttachments(newAttachments);
+
+                                                        // Save to DB immediately
+                                                        await saveChanges({ attachments: newAttachments });
 
                                                         // Reset
                                                         setNewAttachmentName('');
@@ -347,9 +375,13 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                 )}
                             </div>
                             <button
-                                onClick={() => {
+                                onClick={async () => {
                                     if (newAttachmentName && newAttachmentUrl) {
-                                        setAttachments([...attachments, { name: newAttachmentName, url: newAttachmentUrl, type: newAttachmentType }]);
+                                        const newAtt = { name: newAttachmentName, url: newAttachmentUrl, type: newAttachmentType };
+                                        const newAttachments = [...attachments, newAtt];
+                                        setAttachments(newAttachments);
+                                        await saveChanges({ attachments: newAttachments });
+
                                         setNewAttachmentName('');
                                         setNewAttachmentUrl('');
                                     }

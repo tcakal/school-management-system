@@ -20,11 +20,12 @@ USING (
         AND ta.class_group_id = lessons.class_group_id
     )
     OR
-    -- 3. Admin/Manager check (optional but safest if policies exist for schools)
+
+    -- 3. Admin check
     EXISTS (
-        SELECT 1 FROM schools s 
-        WHERE s.id = lessons.school_id 
-        AND s.created_by = auth.uid()
+        SELECT 1 FROM teachers t
+        WHERE t.id = auth.uid()
+        AND t.role = 'admin'
     )
 );
 
