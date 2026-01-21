@@ -10,7 +10,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import type { Lesson } from '../types';
 
 export function Schedule() {
-    const { lessons, classGroups, teachers, generateLessons } = useStore();
+    const { lessons, classGroups, teachers, schools, generateLessons } = useStore();
     const { user } = useAuth();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
@@ -131,6 +131,7 @@ export function Schedule() {
                                             {dayLessons.map(lesson => {
                                                 const group = classGroups.find(g => g.id === lesson.classGroupId);
                                                 const teacher = teachers.find(t => t.id === lesson.teacherId);
+                                                const school = schools.find(s => s.id === group?.schoolId);
 
                                                 return (
                                                     <button
@@ -150,6 +151,7 @@ export function Schedule() {
                                                             <span>{lesson.endTime}</span>
                                                         </div>
 
+                                                        {school && <div className="text-[9px] text-slate-500 truncate font-semibold uppercase tracking-wider mb-0.5">{school.name}</div>}
                                                         <div className="font-bold truncate">{group?.name}</div>
                                                         <div className="truncate opacity-80">{teacher?.name}</div>
 
