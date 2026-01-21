@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
 import { ChevronRight, ChevronLeft, Calendar } from 'lucide-react';
-import { format, addDays, differenceInDays, startOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
+
+import { Modal } from '../components/Modal';
 
 export function ManagerSchoolDashboard() {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const { schools, classGroups, students, attendance, lessons, payments, addPayment, updateStudent, seasons, fetchSeasons, fetchSchoolPeriods, checkAndGeneratePeriods, fetchSchoolSeasonStats, closeSchoolSeason } = useStore();
+    const { schools, classGroups, students, attendance, lessons, payments, addPayment, updateStudent, seasons, fetchSeasons, fetchSchoolPeriods, fetchSchoolSeasonStats, closeSchoolSeason } = useStore();
 
     // Tab State
     const [activeTab, setActiveTab] = useState<'students' | 'financial'>('students');
@@ -28,8 +30,7 @@ export function ManagerSchoolDashboard() {
     const [selectedClassGroupId, setSelectedClassGroupId] = useState<string>('all');
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Period Logic
-    const [periodOffset, setPeriodOffset] = useState(0);
+
 
     // Initial Load
     useEffect(() => {
@@ -64,19 +65,7 @@ export function ManagerSchoolDashboard() {
         loadPeriods();
     }, [schoolId, selectedSeasonId]);
 
-    const handleGeneratePeriods = async () => {
-        if (!schoolId || !selectedSeasonId) return;
-        if (seasonStats?.is_closed) {
-            alert('Bu sezon kapatılmıştır. İşlem yapılamaz.');
-            return;
-        }
-        if (confirm('Bu işlem eksik olan 4 haftalık dönemleri otomatik oluşturacaktır. Devam edilsin mi?')) {
-            await checkAndGeneratePeriods(schoolId, selectedSeasonId);
-            // Reload
-            const data = await fetchSchoolPeriods(schoolId, selectedSeasonId);
-            setSchoolPeriods(data);
-        }
-    };
+
 
     if (!school) return <div className="p-8 text-center">Okul bilgisi bulunamadı.</div>;
 
@@ -128,26 +117,41 @@ export function ManagerSchoolDashboard() {
         }
     };
 
-    // 1. Cycle Logic
-    const cycleStartDate = useMemo(() => {
-        if (school?.payment_cycle_start_date) {
-            return new Date(school.payment_cycle_start_date);
+    // Period Logic (Database Driven)
+    const sortedPeriods = useMemo(() => {
+        return [...schoolPeriods].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    }, [schoolPeriods]);
+
+    const [selectedPeriodIndex, setSelectedPeriodIndex] = useState(0);
+
+    // Auto-select current or last period on load
+    useEffect(() => {
+        if (sortedPeriods.length > 0) {
+            const today = new Date();
+            const current = sortedPeriods.findIndex(p => {
+                const start = new Date(p.startDate);
+                const end = new Date(p.endDate);
+                return today >= start && today <= end;
+            });
+
+            if (current !== -1) {
+                setSelectedPeriodIndex(current);
+            } else {
+                // If not in any period, show the one closest to future or last one
+                // Simple default: Show the last one if all are past, or first if all future
+                if (new Date(sortedPeriods[sortedPeriods.length - 1].endDate) < today) {
+                    setSelectedPeriodIndex(sortedPeriods.length - 1);
+                } else {
+                    setSelectedPeriodIndex(0);
+                }
+            }
         }
-        return new Date(new Date().getFullYear(), 0, 1);
-    }, [school]);
+    }, [sortedPeriods.length]); // Only run when periods are loaded/changed count
 
-    const currentPhaseIndex = useMemo(() => {
-        const today = startOfDay(new Date());
-        const diff = differenceInDays(today, cycleStartDate);
-        return Math.floor(diff / 28);
-    }, [cycleStartDate]);
+    const selectedPeriod = sortedPeriods[selectedPeriodIndex];
 
-    const selectedPeriod = useMemo(() => {
-        const targetIndex = currentPhaseIndex + periodOffset;
-        const start = addDays(cycleStartDate, targetIndex * 28);
-        const end = addDays(start, 27);
-        return { start, end, index: targetIndex };
-    }, [cycleStartDate, currentPhaseIndex, periodOffset]);
+    const [isManagePeriodsModalOpen, setIsManagePeriodsModalOpen] = useState(false);
+
 
     // 2. Filter Students
     const filteredStudents = useMemo(() => {
@@ -162,7 +166,7 @@ export function ManagerSchoolDashboard() {
         });
     }, [students, schoolId, selectedClassGroupId, searchTerm]);
 
-    // 3. Attendance Data
+    // 3. Attendance Data (Unchanged)
     const getAttendanceHistory = (studentId: string, classGroupId: string | undefined) => {
         if (!classGroupId) return Array(4).fill('gray');
 
@@ -186,25 +190,28 @@ export function ManagerSchoolDashboard() {
         });
     };
 
-    // 4. Payment Status Logic
+    // 4. Payment Status Logic (Updated for DB Periods)
     const getPaymentStatus = (studentId: string) => {
+        if (!selectedPeriod) return { hasPastDebt: false, currentStatus: 'unpaid' };
+
         let hasPastDebt = false;
-        const checkLimit = 6;
-        for (let i = 1; i <= checkLimit; i++) {
-            const pIndex = selectedPeriod.index - i;
-            if (pIndex < 0) break;
 
-            const pStart = addDays(cycleStartDate, pIndex * 28);
-            const pEnd = addDays(pStart, 27);
+        // Check ONLY previous DB periods for this season
+        const previousPeriods = sortedPeriods.filter(p => new Date(p.endDate) < new Date(selectedPeriod.startDate));
 
+        for (const p of previousPeriods) {
             const s = students.find(x => x.id === studentId);
-            if (s && new Date(s.joinedDate) > pEnd) continue;
+            if (s && new Date(s.joinedDate) > new Date(p.endDate)) continue; // Joined after period end
             if (s?.paymentStatus === 'free') continue;
 
-            const paid = payments.some(p => {
-                if (p.studentId !== studentId) return false;
-                const pDate = new Date(p.date);
-                return pDate >= pStart && pDate <= pEnd;
+            const paid = payments.some(pay => {
+                if (pay.studentId !== studentId) return false;
+                // Match by Period ID if available, otherwise fallback to date range
+                if (pay.schoolPeriodId === p.id) return true;
+
+                const pDate = new Date(pay.date);
+                // Strict check: payment must be within period dates if manual
+                return pDate >= new Date(p.startDate) && pDate <= new Date(p.endDate);
             });
 
             if (!paid) {
@@ -221,13 +228,17 @@ export function ManagerSchoolDashboard() {
         } else {
             const isPaid = payments.some(p => {
                 if (p.studentId !== studentId) return false;
+                // Match by Period ID
+                if (p.schoolPeriodId === selectedPeriod.id) return true;
+
+                // Fallback Date Check
                 const pDate = new Date(p.date);
-                return pDate >= selectedPeriod.start && pDate <= selectedPeriod.end;
+                return pDate >= new Date(selectedPeriod.startDate) && pDate <= new Date(selectedPeriod.endDate);
             });
 
             if (isPaid) {
                 currentStatus = 'paid';
-            } else if (s?.last_payment_status === 'claimed') {
+            } else if (s?.last_payment_status === 'claimed') { // This logic might need refinement to be period-specific but for now keep as is
                 currentStatus = 'claimed';
             } else {
                 currentStatus = 'unpaid';
@@ -239,17 +250,19 @@ export function ManagerSchoolDashboard() {
 
     // 5. Stats Calculation
     const stats = useMemo(() => {
+        if (!selectedPeriod) return { total: 0, paid: 0 };
         const total = filteredStudents.length;
         const paid = filteredStudents.filter(s => {
             const { currentStatus } = getPaymentStatus(s.id);
             return currentStatus === 'paid';
         }).length;
         return { total, paid };
-    }, [filteredStudents, payments, selectedPeriod]);
+    }, [filteredStudents, payments, selectedPeriod, sortedPeriods]); // Added dependencies
 
 
     // Manual Payment Handler
     const handleManualPayment = async (student: any) => {
+        if (!selectedPeriod) return;
         if (!confirm(`${student.name} için manuel ödeme girişi yapılacak. Onaylıyor musunuz?`)) return;
 
         const amount = Number(school?.defaultPrice) || 0;
@@ -262,11 +275,12 @@ export function ManagerSchoolDashboard() {
             date: new Date().toISOString(),
             type: 'Tuition',
             method: 'Cash',
-            month: selectedPeriod.start.toISOString().slice(0, 7),
+            month: new Date(selectedPeriod.startDate).toISOString().slice(0, 7),
             seasonId: selectedSeasonId || seasons.find(s => s.isActive)?.id,
+            schoolPeriodId: selectedPeriod.id, // Direct Link to Period
             status: 'paid',
             paidAt: new Date().toISOString(),
-            notes: `${selectedPeriod.index + 1}. Dönem Manuel Ödeme`
+            notes: `${selectedPeriod.periodNumber}. Dönem Manuel Ödeme`
         });
 
         await updateStudent(student.id, {
@@ -277,6 +291,7 @@ export function ManagerSchoolDashboard() {
 
     // Quick Approve Handler
     const handleApproveClaim = async (student: any) => {
+        if (!selectedPeriod) return;
         if (!confirm(`${student.name} tarafından yapılan ödeme bildirimini onaylıyor musunuz?`)) return;
 
         const amount = Number(school?.defaultPrice) || 0;
@@ -289,11 +304,12 @@ export function ManagerSchoolDashboard() {
             date: new Date().toISOString(),
             type: 'Tuition',
             method: 'Transfer',
-            month: selectedPeriod.start.toISOString().slice(0, 7),
+            month: new Date(selectedPeriod.startDate).toISOString().slice(0, 7),
             seasonId: selectedSeasonId || seasons.find(s => s.isActive)?.id,
+            schoolPeriodId: selectedPeriod.id, // Direct Link
             status: 'paid',
             paidAt: new Date().toISOString(),
-            notes: `${selectedPeriod.index + 1}. Dönem Ödemesi (Veli Bildirimi Onayı)`
+            notes: `${selectedPeriod.periodNumber}. Dönem Ödemesi (Veli Bildirimi Onayı)`
         });
 
         await updateStudent(student.id, {
@@ -304,6 +320,18 @@ export function ManagerSchoolDashboard() {
 
     return (
         <div className="min-h-screen bg-slate-50/50 p-6 space-y-6">
+            <ManagePeriodsModal
+                isOpen={isManagePeriodsModalOpen}
+                onClose={() => setIsManagePeriodsModalOpen(false)}
+                periods={sortedPeriods}
+                schoolId={schoolId}
+                seasonId={selectedSeasonId}
+                onUpdate={async () => {
+                    const data = await fetchSchoolPeriods(schoolId, selectedSeasonId);
+                    setSchoolPeriods(data);
+                }}
+            />
+
             {/* Header / Top Bar */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                 <div>
@@ -361,6 +389,12 @@ export function ManagerSchoolDashboard() {
                                 </div>
                                 <div className="flex gap-2">
                                     <button
+                                        onClick={() => setIsManagePeriodsModalOpen(true)}
+                                        className="text-slate-600 bg-white border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors"
+                                    >
+                                        Dönem Yönetimi
+                                    </button>
+                                    <button
                                         onClick={() => navigate('/financial-reports')}
                                         className="text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors"
                                     >
@@ -368,12 +402,7 @@ export function ManagerSchoolDashboard() {
                                     </button>
                                     {!seasonStats?.is_closed && (
                                         <>
-                                            <button
-                                                onClick={handleGeneratePeriods}
-                                                className="text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors"
-                                            >
-                                                + Dönem Kontrol
-                                            </button>
+                                            {/* Removed Auto Generate Button used to be here */}
                                             <button
                                                 onClick={handleCloseSeason}
                                                 className="text-red-600 bg-red-50 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors border border-red-100"
@@ -411,7 +440,7 @@ export function ManagerSchoolDashboard() {
 
                             {/* Periods Grid */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {schoolPeriods.map((period) => {
+                                {sortedPeriods.map((period) => {
                                     const pStart = new Date(period.startDate);
                                     const pEnd = new Date(period.endDate);
                                     const pPayments = payments.filter(p => {
@@ -461,12 +490,12 @@ export function ManagerSchoolDashboard() {
                                         </div>
                                     );
                                 })}
-                                {schoolPeriods.length === 0 && (
+                                {sortedPeriods.length === 0 && (
                                     <div className="col-span-full p-8 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
                                         Bu sezona ait oluşturulmuş bir dönem bulunmamaktadır.
                                         <br />
-                                        <button onClick={handleGeneratePeriods} className="text-blue-600 font-bold hover:underline mt-2">
-                                            Otomatik Oluşturmaya Başla
+                                        <button onClick={() => setIsManagePeriodsModalOpen(true)} className="text-blue-600 font-bold hover:underline mt-2">
+                                            Yeni Dönem Ekle
                                         </button>
                                     </div>
                                 )}
@@ -488,26 +517,37 @@ export function ManagerSchoolDashboard() {
                         </div>
 
                         {/* Period Selector */}
-                        <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-200">
-                            <button
-                                onClick={() => setPeriodOffset(prev => prev - 1)}
-                                className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600"
-                            >
-                                <ChevronLeft size={20} />
-                            </button>
-                            <div className="px-4 text-center">
-                                <div className="text-[10px] uppercase font-bold text-slate-400">YOKLAMA DÖNEMİ</div>
-                                <div className="font-bold text-slate-800 text-sm whitespace-nowrap">
-                                    {format(selectedPeriod.start, 'd MMM', { locale: tr })} - {format(selectedPeriod.end, 'd MMM', { locale: tr })}
+                        {sortedPeriods.length > 0 ? (
+                            <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-200">
+                                <button
+                                    onClick={() => setSelectedPeriodIndex(prev => Math.max(0, prev - 1))}
+                                    disabled={selectedPeriodIndex === 0}
+                                    className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600 disabled:opacity-30 disabled:hover:bg-transparent"
+                                >
+                                    <ChevronLeft size={20} />
+                                </button>
+                                <div className="px-4 text-center">
+                                    <div className="text-[10px] uppercase font-bold text-slate-400">YOKLAMA DÖNEMİ</div>
+                                    <div className="font-bold text-slate-800 text-sm whitespace-nowrap">
+                                        {format(new Date(selectedPeriod.startDate), 'd MMM', { locale: tr })} - {format(new Date(selectedPeriod.endDate), 'd MMM', { locale: tr })}
+                                    </div>
+                                    <div className="text-[10px] text-slate-500">
+                                        {selectedPeriod.periodNumber}. Dönem
+                                    </div>
                                 </div>
+                                <button
+                                    onClick={() => setSelectedPeriodIndex(prev => Math.min(sortedPeriods.length - 1, prev + 1))}
+                                    disabled={selectedPeriodIndex === sortedPeriods.length - 1}
+                                    className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600 disabled:opacity-30 disabled:hover:bg-transparent"
+                                >
+                                    <ChevronRight size={20} />
+                                </button>
                             </div>
-                            <button
-                                onClick={() => setPeriodOffset(prev => prev + 1)}
-                                className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600"
-                            >
-                                <ChevronRight size={20} />
-                            </button>
-                        </div>
+                        ) : (
+                            <div className="text-slate-400 text-sm font-medium bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+                                Dönem Bulunamadı
+                            </div>
+                        )}
 
                         {/* Filters */}
                         <div className="flex gap-2">
@@ -530,6 +570,7 @@ export function ManagerSchoolDashboard() {
                             </select>
                         </div>
                     </div>
+
 
                     {/* Main Table */}
                     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
@@ -669,5 +710,103 @@ export function ManagerSchoolDashboard() {
                 </div>
             )}
         </div>
+    );
+}
+
+// Manage Periods Modal Component
+function ManagePeriodsModal({ isOpen, onClose, periods, schoolId, seasonId, onUpdate }: {
+    isOpen: boolean;
+    onClose: () => void;
+    periods: any[];
+    schoolId: string;
+    seasonId: string;
+    onUpdate: () => void;
+}) {
+    const { addSchoolPeriod, deleteSchoolPeriod } = useStore();
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!startDate || !endDate) return;
+
+        await addSchoolPeriod(schoolId, seasonId, startDate, endDate);
+        setStartDate('');
+        setEndDate('');
+        onUpdate();
+    };
+
+    const handleDelete = async (periodId: string) => {
+        if (confirm('Bu dönemi silmek istediğinize emin misiniz?')) {
+            await deleteSchoolPeriod(periodId);
+            onUpdate();
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Dönem Yönetimi"
+        >
+            <div className="space-y-6">
+                {/* List Existing */}
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                    {periods.map(p => (
+                        <div key={p.id} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                            <div className="text-sm">
+                                <span className="font-bold text-slate-700">{p.periodNumber}. Dönem:</span>{' '}
+                                <span className="text-slate-600">
+                                    {format(new Date(p.startDate), 'd MMM', { locale: tr })} - {format(new Date(p.endDate), 'd MMM', { locale: tr })}
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => handleDelete(p.id)}
+                                className="text-red-600 hover:text-red-700 p-1 text-xs font-medium"
+                            >
+                                Sil
+                            </button>
+                        </div>
+                    ))}
+                    {periods.length === 0 && (
+                        <div className="text-center text-slate-400 text-sm py-4">Henüz oluşturulmuş dönem yok.</div>
+                    )}
+                </div>
+
+                <div className="border-t border-slate-100 pt-4">
+                    <h4 className="text-sm font-bold text-slate-900 mb-3">Yeni Dönem Ekle</h4>
+                    <form onSubmit={handleSubmit} className="flex gap-4 items-end">
+                        <div className="flex-1">
+                            <label className="block text-xs font-medium text-slate-500 mb-1">Başlangıç</label>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={e => setStartDate(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                                required
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <label className="block text-xs font-medium text-slate-500 mb-1">Bitiş</label>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={e => setEndDate(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                                required
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700"
+                        >
+                            Ekle
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </Modal>
     );
 }

@@ -129,6 +129,8 @@ interface AppState {
     }) => Promise<void>;
     fetchSchoolSeasonStats: (schoolId: string, seasonId: string) => Promise<any>;
     closeSchoolSeason: (schoolId: string, seasonId: string, notes?: string) => Promise<void>;
+    addSchoolPeriod: (schoolId: string, seasonId: string, startDate: string, endDate: string) => Promise<void>;
+    deleteSchoolPeriod: (periodId: string) => Promise<void>;
 }
 
 import { persist } from 'zustand/middleware';
@@ -987,6 +989,58 @@ export const useStore = create<AppState>()(
                 } catch (error) {
                     console.error('Error closing season:', error);
                     alert('Sezon kapatılırken hata oluştu.');
+                }
+            },
+
+            addSchoolPeriod: async (schoolId, seasonId, startDate, endDate) => {
+                try {
+                    // Get max period number
+                    const { data: existing } = await supabase
+                        .from('school_periods')
+                        .select('period_number')
+                        .eq('school_id', schoolId)
+                        .eq('season_id', seasonId)
+                        .order('period_number', { ascending: false })
+                        .limit(1);
+
+                    const nextNumber = (existing && existing.length > 0) ? existing[0].period_number + 1 : 1;
+
+                    // Calculate Snapshot (Active students at start date)
+                    // Note: This is an approximation. Ideally we check student active status history.
+                    // For now, simple total count of active students
+                    const activeStudents = get().students.filter(s => s.schoolId === schoolId && s.status === 'Active').length;
+                    const school = get().schools.find(s => s.id === schoolId);
+                    const price = school?.defaultPrice || 0;
+                    const expected = activeStudents * price; // Rough estimate, refined in UI
+
+                    const { error } = await supabase.from('school_periods').insert({
+                        id: crypto.randomUUID(),
+                        school_id: schoolId,
+                        season_id: seasonId,
+                        period_number: nextNumber,
+                        start_date: startDate,
+                        end_date: endDate,
+                        status: 'active',
+                        student_count_snapshot: activeStudents,
+                        price_per_student_snapshot: price,
+                        expected_amount: expected
+                    });
+
+                    if (error) throw error;
+                } catch (err) {
+                    console.error('Error adding period:', err);
+                    alert('Dönem eklenirken bir hata oluştu.');
+                }
+            },
+
+            deleteSchoolPeriod: async (periodId) => {
+                try {
+                    const { error } = await supabase.from('school_periods').delete().eq('id', periodId);
+                    if (error) throw error;
+                } catch (err) {
+                    console.error('Error deleting period:', err);
+                    // Alert is handled in UI usually, but good to have safety
+                    alert('Dönem silinirken hata. Silmeye çalıştığınız döneme ait ödemeler olabilir.');
                 }
             },
 
