@@ -248,6 +248,33 @@ export function ManagerSchoolDashboard() {
     }, [filteredStudents, payments, selectedPeriod]);
 
 
+    // Manual Payment Handler
+    const handleManualPayment = async (student: any) => {
+        if (!confirm(`${student.name} için manuel ödeme girişi yapılacak. Onaylıyor musunuz?`)) return;
+
+        const amount = Number(school?.defaultPrice) || 0;
+
+        await addPayment({
+            id: crypto.randomUUID(),
+            schoolId,
+            studentId: student.id,
+            amount: amount,
+            date: new Date().toISOString(),
+            type: 'Tuition',
+            method: 'Cash',
+            month: selectedPeriod.start.toISOString().slice(0, 7),
+            seasonId: selectedSeasonId || seasons.find(s => s.isActive)?.id,
+            status: 'paid',
+            paidAt: new Date().toISOString(),
+            notes: `${selectedPeriod.index + 1}. Dönem Manuel Ödeme`
+        });
+
+        await updateStudent(student.id, {
+            last_payment_status: 'paid',
+            last_payment_date: new Date().toISOString()
+        });
+    };
+
     // Quick Approve Handler
     const handleApproveClaim = async (student: any) => {
         if (!confirm(`${student.name} tarafından yapılan ödeme bildirimini onaylıyor musunuz?`)) return;
@@ -601,9 +628,12 @@ export function ManagerSchoolDashboard() {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 {currentStatus === 'unpaid' && (
-                                                    <span className="text-slate-400 text-xs italic">
-                                                        Ödenmedi
-                                                    </span>
+                                                    <button
+                                                        onClick={() => handleManualPayment(student)}
+                                                        className="text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-orange-100 transition-colors border border-orange-100"
+                                                    >
+                                                        Ödeme Al
+                                                    </button>
                                                 )}
                                                 {currentStatus === 'claimed' && (
                                                     <button
