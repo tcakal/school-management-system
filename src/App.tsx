@@ -16,6 +16,7 @@ import { StudentPanel } from './pages/StudentPanel';
 import { Guide } from './pages/Guide';
 import { useAuth } from './store/useAuth';
 import { ManagerSchoolDashboard } from './pages/ManagerSchoolDashboard';
+import { FinancialReports } from './pages/FinancialReports';
 
 import { ParentDashboard } from './pages/ParentDashboard';
 
@@ -89,6 +90,11 @@ function App() {
           <Route path="manager-dashboard" element={
             <RequireAuth allowedRoles={['manager', 'admin']}>
               <ManagerSchoolDashboard />
+            </RequireAuth>
+          } />
+          <Route path="financial-reports" element={
+            <RequireAuth allowedRoles={['manager', 'admin']}>
+              <FinancialReports />
             </RequireAuth>
           } />
           <Route path="*" element={<Navigate to="/" replace />} />

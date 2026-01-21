@@ -70,6 +70,41 @@ export interface Payment {
     month?: string; // For tuition tracking "2023-10"
     status?: 'paid' | 'pending';
     paidAt?: string;
+    // New Financial Fields
+    seasonId?: string;
+    schoolPeriodId?: string;
+    transactionType?: 'payment' | 'write_off' | 'refund';
+}
+
+export interface Season {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+}
+
+export interface SchoolPeriod {
+    id: string;
+    schoolId: string;
+    seasonId: string;
+    periodNumber: number;
+    startDate: string;
+    endDate: string;
+    studentCountSnapshot: number;
+    pricePerStudentSnapshot: number;
+    expectedAmount: number;
+    status: 'pending' | 'partial' | 'paid' | 'overdue' | 'void';
+}
+
+export interface SchoolSeasonStats {
+    id: string;
+    schoolId: string;
+    seasonId: string;
+    isClosed: boolean;
+    closedAt?: string;
+    closingNote?: string;
+    totalDebtForgiven: number;
 }
 
 export interface Teacher {

@@ -110,6 +110,25 @@ interface AppState {
     addMakerProjectUpdate: (update: Omit<MakerProjectUpdate, 'id' | 'createdAt'>) => Promise<void>;
     addMakerProjectDocument: (doc: Omit<MakerProjectDocument, 'id' | 'createdAt'>) => Promise<void>;
     deleteMakerProjectDocument: (id: string) => Promise<void>;
+
+    // Financial System
+    seasons: { id: string; name: string; startDate: string; endDate: string; isActive: boolean }[];
+    fetchSeasons: () => Promise<void>;
+    fetchSchoolPeriods: (schoolId: string, seasonId: string) => Promise<any[]>; // Returns local data
+    generateSchoolPeriods: (schoolId: string, seasonId: string) => Promise<void>;
+    checkAndGeneratePeriods: (schoolId: string, seasonId: string) => Promise<void>;
+    addFinancialTransaction: (data: {
+        schoolId: string,
+        amount: number,
+        type: 'payment' | 'write_off',
+        seasonId: string,
+        periodId?: string,
+        date: string,
+        method?: string,
+        notes?: string
+    }) => Promise<void>;
+    fetchSchoolSeasonStats: (schoolId: string, seasonId: string) => Promise<any>;
+    closeSchoolSeason: (schoolId: string, seasonId: string, notes?: string) => Promise<void>;
 }
 
 import { persist } from 'zustand/middleware';
@@ -136,6 +155,7 @@ export const useStore = create<AppState>()(
             makerProjectUpdates: [],
             makerProjectDocuments: [],
             makerProjectStudents: [],
+            seasons: [],
             theme: 'light',
             systemSettings: null,
             loading: false,
@@ -754,8 +774,220 @@ export const useStore = create<AppState>()(
                     method: payment.method,
                     month: payment.month,
                     status: payment.status || 'paid',
-                    paid_at: payment.paidAt
+                    paid_at: payment.paidAt,
+                    season_id: payment.seasonId,
+                    school_period_id: payment.schoolPeriodId,
+                    transaction_type: payment.transactionType || 'payment'
                 }]);
+            },
+
+            // Financial System Actions
+            fetchSeasons: async () => {
+                const { data, error } = await supabase.from('seasons').select('*').order('start_date', { ascending: false });
+                if (error) console.error('Error fetching seasons:', error);
+                set({
+                    seasons: data?.map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        startDate: s.start_date,
+                        endDate: s.end_date,
+                        isActive: s.is_active
+                    })) || []
+                });
+            },
+
+            fetchSchoolPeriods: async (schoolId, seasonId) => {
+                const { data, error } = await supabase
+                    .from('school_periods')
+                    .select('*')
+                    .eq('school_id', schoolId)
+                    .eq('season_id', seasonId)
+                    .order('period_number', { ascending: true });
+
+                if (error) console.error('Error fetching periods:', error);
+
+                // Return data for local consumption if needed, but also update store/local cache if we had one
+                return data?.map(p => ({
+                    id: p.id,
+                    schoolId: p.school_id,
+                    seasonId: p.season_id,
+                    periodNumber: p.period_number,
+                    startDate: p.start_date,
+                    endDate: p.end_date,
+                    studentCountSnapshot: p.student_count_snapshot,
+                    pricePerStudentSnapshot: p.price_per_student_snapshot,
+                    expectedAmount: p.expected_amount,
+                    status: p.status
+                })) || [];
+            },
+
+            generateSchoolPeriods: async (schoolId, seasonId) => {
+                const school = get().schools.find(s => s.id === schoolId);
+                const season = get().seasons.find(s => s.id === seasonId);
+
+                if (!school || !season) return;
+
+                // 1. Get existing periods to find where to start
+                const existingPeriods = await get().fetchSchoolPeriods(schoolId, seasonId);
+                // const lastPeriod = existingPeriods[existingPeriods.length - 1];
+
+                // let startDate = ... (Unused)
+
+                // If school joined AFTER season start, use school join date (or specific start date)
+                // For now, let's assume season start or today if empty
+
+                // const today = new Date();
+                // const seasonEnd = new Date(season.endDate);
+
+                // Determine effective start date for this calculation run
+                // If no periods exist, start from Season Start. 
+                // BUT if we want to be smart, maybe start from "School Start Date" if we add that field later.
+
+                // We will generate periods up to TODAY + 4 weeks buffer? Or just up to end of season?
+                // For "Accrual", we usually generate up to TODAY.
+
+                if (existingPeriods.length === 0) {
+                    // Initial generation: All the way from start to today
+                }
+
+                // ... Logic simplified for Admin Dashboard Tool:
+                // We will create a helper in the UI to "Generate Periods" for a school if missing.
+                // For now, let's just expose a function to create a SINGLE period if needed or auto-fill.
+
+            },
+
+            // New Action: Generate Periods up to a target date (e.g. Today)
+            checkAndGeneratePeriods: async (schoolId, seasonId) => {
+                const school = get().schools.find(s => s.id === schoolId);
+                if (!school) return;
+
+                // Fetch current periods
+                const { data: periods } = await supabase.from('school_periods').select('*').eq('school_id', schoolId).eq('season_id', seasonId).order('period_number');
+
+                const season = get().seasons.find(s => s.id === seasonId);
+                if (!season) return;
+
+                // Start Date
+                let nextStart = new Date(season.startDate);
+                let nextPeriodNum = 1;
+
+                if (periods && periods.length > 0) {
+                    const last = periods[periods.length - 1];
+                    nextPeriodNum = last.period_number + 1;
+                    // Start 1 day after last period
+                    const lastEnd = new Date(last.end_date);
+                    nextStart = new Date(lastEnd);
+                    nextStart.setDate(lastEnd.getDate() + 1);
+                }
+
+                const today = new Date();
+                const seasonEnd = new Date(season.endDate);
+
+                // Loop and create periods until we cover TODAY
+                const newPeriods = [];
+
+                while (nextStart <= today && nextStart < seasonEnd) {
+                    // 4 Weeks Duration (28 Days)
+                    const periodEnd = new Date(nextStart);
+                    periodEnd.setDate(nextStart.getDate() + 27); // +27 days = 28th day inclusive
+
+                    // Cap at Season End
+                    const effectiveEnd = periodEnd > seasonEnd ? seasonEnd : periodEnd;
+
+                    // Snapshot Data
+                    const currentStudents = get().students.filter(s => s.schoolId === schoolId && s.status === 'Active').length;
+                    const price = school.defaultPrice || 0; // "4 Weekly Price"
+                    const expected = currentStudents * price;
+
+                    newPeriods.push({
+                        school_id: schoolId,
+                        season_id: seasonId,
+                        period_number: nextPeriodNum,
+                        start_date: nextStart.toISOString(),
+                        end_date: effectiveEnd.toISOString(),
+                        student_count_snapshot: currentStudents,
+                        price_per_student_snapshot: price,
+                        expected_amount: expected,
+                        status: 'pending'
+                    });
+
+                    // Advance
+                    nextStart = new Date(effectiveEnd);
+                    nextStart.setDate(effectiveEnd.getDate() + 1);
+                    nextPeriodNum++;
+                }
+
+                if (newPeriods.length > 0) {
+                    const { error } = await supabase.from('school_periods').insert(newPeriods);
+                    if (error) console.error('Error generating periods:', error);
+                }
+            },
+
+            addFinancialTransaction: async (data: {
+                schoolId: string,
+                amount: number,
+                type: 'payment' | 'write_off',
+                seasonId: string,
+                periodId?: string,
+                date: string,
+                method?: string,
+                notes?: string
+            }) => {
+                const { schoolId, amount, type, seasonId, periodId, date, method, notes } = data;
+
+                const newPayment: Payment = {
+                    id: crypto.randomUUID(),
+                    schoolId,
+                    amount,
+                    date,
+                    type: type === 'payment' ? 'Tuition' : 'Other', // 'Other' for writeoff/refund technically, or we map it
+                    method: (method as any) || 'Cash',
+                    seasonId,
+                    schoolPeriodId: periodId,
+                    transactionType: type,
+                    notes,
+                    status: 'paid',
+                    paidAt: new Date().toISOString()
+                };
+
+                await get().addPayment(newPayment);
+            },
+
+            fetchSchoolSeasonStats: async (schoolId, seasonId) => {
+                try {
+                    const { data, error } = await supabase
+                        .from('school_season_stats')
+                        .select('*')
+                        .eq('school_id', schoolId)
+                        .eq('season_id', seasonId)
+                        .single();
+
+                    if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "Row not found"
+                    return data;
+                } catch (error) {
+                    console.error('Error fetching season stats:', error);
+                    return null;
+                }
+            },
+
+            closeSchoolSeason: async (schoolId, seasonId, notes) => {
+                try {
+                    // Upsert stats with is_closed = true
+                    const { error } = await supabase
+                        .from('school_season_stats')
+                        .upsert({
+                            school_id: schoolId,
+                            season_id: seasonId,
+                            is_closed: true,
+                            closed_at: new Date().toISOString(),
+                            notes: notes
+                        }, { onConflict: 'school_id, season_id' }); // Use unique constraint
+
+                    if (error) throw error;
+                } catch (error) {
+                    console.error('Error closing season:', error);
+                    alert('Sezon kapatılırken hata oluştu.');
+                }
             },
 
             updatePayment: async (id, updated) => {
