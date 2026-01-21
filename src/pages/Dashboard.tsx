@@ -243,13 +243,13 @@ function SchoolCard({ school }: { school: any }) {
         else borderColorClass = 'border-red-500 border-2 shadow-red-50'; // Red (<25%)
     }
 
+    const { user } = useAuth();
+
     return (
-        <div
-            onClick={() => navigate(`/school/${school.id}`)}
-            className={`bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow group cursor-pointer ${borderColorClass}`}
-        >
+        <div className={`bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow group ${borderColorClass}`}>
             <div
-                className="h-32 flex items-center justify-center bg-cover bg-center"
+                onClick={() => navigate(`/school/${school.id}`)}
+                className="h-32 flex items-center justify-center bg-cover bg-center cursor-pointer"
                 style={{
                     backgroundColor: school.color || '#f1f5f9',
                     backgroundImage: school.imageUrl ? `url(${school.imageUrl})` : undefined
@@ -264,20 +264,33 @@ function SchoolCard({ school }: { school: any }) {
                 )}
             </div>
             <div className="p-5">
-                <h4
-                    className="font-bold text-lg text-slate-900 mb-1"
-                    style={{ color: school.color }}
-                >
-                    {school.name}
-                </h4>
-                <p className="text-sm text-slate-500 mb-4 truncate">{school.address}</p>
+                <div onClick={() => navigate(`/school/${school.id}`)} className="cursor-pointer">
+                    <h4
+                        className="font-bold text-lg text-slate-900 mb-1"
+                        style={{ color: school.color }}
+                    >
+                        {school.name}
+                    </h4>
+                    <p className="text-sm text-slate-500 mb-4 truncate">{school.address}</p>
+                </div>
 
                 <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                     <div className="flex items-center gap-2">
                         <Users size={16} className="text-blue-500" />
                         <span className="text-sm font-medium text-slate-700">{studentCount} Öğrenci</span>
                     </div>
-                    <ArrowUpRight size={18} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
+                    {user?.role === 'admin' && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                navigate('/manager-dashboard');
+                            }}
+                            className="bg-slate-100 p-2 rounded-lg hover:bg-slate-200 transition-colors text-slate-600"
+                            title="Yönetici Paneli (Finans)"
+                        >
+                            <Banknote size={18} />
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
