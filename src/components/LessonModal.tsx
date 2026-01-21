@@ -479,7 +479,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                         <Clock size={18} />
                                         Tarih ve Saat Düzenle
                                     </h4>
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-3">
                                         <div>
                                             <label className="block text-xs font-medium text-slate-700 mb-1">Tarih</label>
                                             <input
@@ -489,7 +489,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                                 onChange={e => setRescheduleDate(e.target.value)}
                                             />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2">
+                                        <div className="grid grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-700 mb-1">Başlangıç</label>
                                                 <TimeSelect
@@ -556,7 +556,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                         <Calendar size={18} />
                                         Telafi Dersi Planla (Opsiyonel)
                                     </h4>
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-3">
                                         <div>
                                             <label className="block text-xs font-medium text-blue-700 mb-1">Tarih</label>
                                             <input
@@ -577,11 +577,11 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                                     </div>
                                 </div>
 
-                                <div className="pt-2 flex justify-end">
+                                <div className="pt-2">
                                     <button
                                         onClick={handleCancelLesson}
                                         disabled={!cancelReason}
-                                        className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-full bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         İptal Et & Planla
                                     </button>
