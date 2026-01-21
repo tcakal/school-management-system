@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { Building2, Users, Banknote, ArrowUpRight, Image as ImageIcon } from 'lucide-react';
+import { Building2, Users, Banknote, Image as ImageIcon } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import type { School } from '../types';
 
