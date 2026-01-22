@@ -250,14 +250,42 @@ export function ManagerSchoolDashboard() {
 
     // 5. Stats Calculation
     const stats = useMemo(() => {
-        if (!selectedPeriod) return { total: 0, paid: 0 };
+        if (!selectedPeriod) return { total: 0, paid: 0, totalDebt: 0, paidAmount: 0, remainingDebt: 0 };
+
         const total = filteredStudents.length;
-        const paid = filteredStudents.filter(s => {
+        let paidCount = 0;
+        let totalDebt = 0;
+        let paidAmount = 0;
+
+        filteredStudents.forEach(s => {
             const { currentStatus } = getPaymentStatus(s.id);
-            return currentStatus === 'paid';
-        }).length;
-        return { total, paid };
-    }, [filteredStudents, payments, selectedPeriod, sortedPeriods]); // Added dependencies
+            if (currentStatus === 'paid') paidCount++;
+
+            // Calculate Expected Debt for this Student for this Period
+            let debt = 0;
+            if (s.paymentStatus === 'free') {
+                debt = 0;
+            } else if (s.paymentStatus === 'discounted' && s.discountPercentage) {
+                const multiplier = (100 - s.discountPercentage) / 100;
+                debt = (school?.defaultPrice || 0) * multiplier;
+            } else {
+                debt = school?.defaultPrice || 0;
+            }
+            totalDebt += debt;
+
+            // Calculate Paid Amount for this Student for this Period
+            // We sum payments linked to this period ID
+            const sPaid = payments
+                .filter(p => p.studentId === s.id && p.schoolPeriodId === selectedPeriod.id)
+                .reduce((acc, curr) => acc + curr.amount, 0);
+
+            paidAmount += sPaid;
+        });
+
+        const remainingDebt = Math.max(0, totalDebt - paidAmount);
+
+        return { total, paid: paidCount, totalDebt, paidAmount, remainingDebt };
+    }, [filteredStudents, payments, selectedPeriod, sortedPeriods, school]);
 
 
     // Manual Payment Handler
@@ -388,12 +416,14 @@ export function ManagerSchoolDashboard() {
                                     )}
                                 </div>
                                 <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setIsManagePeriodsModalOpen(true)}
-                                        className="text-slate-600 bg-white border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors"
-                                    >
-                                        Dönem Yönetimi
-                                    </button>
+                                    {user?.role === 'admin' && (
+                                        <button
+                                            onClick={() => setIsManagePeriodsModalOpen(true)}
+                                            className="text-slate-600 bg-white border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors"
+                                        >
+                                            Dönem Yönetimi
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => navigate('/financial-reports')}
                                         className="text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors"
@@ -507,14 +537,32 @@ export function ManagerSchoolDashboard() {
 
             {activeTab === 'students' && (
                 <div className="space-y-6">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                        <div>
-                            <div className="text-slate-500 text-sm flex items-center gap-2 mt-1">
-                                <span className="font-bold text-slate-700">
-                                    Tahsilat: <span className="text-green-600">{stats.paid}</span> / {stats.total}
+                    {/* Financial Summary for Students Tab */}
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="flex gap-4">
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-slate-400 uppercase">Toplam Borç</span>
+                                <span className="text-lg font-bold text-slate-900">{stats.totalDebt.toLocaleString('tr-TR')} ₺</span>
+                            </div>
+                            <div className="w-px h-10 bg-slate-200"></div>
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-slate-400 uppercase">Ödenen</span>
+                                <span className="text-lg font-bold text-emerald-600">{stats.paidAmount.toLocaleString('tr-TR')} ₺</span>
+                            </div>
+                            <div className="w-px h-10 bg-slate-200"></div>
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-slate-400 uppercase">Kalan</span>
+                                <span className={`text-lg font-bold ${stats.remainingDebt > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                    {stats.remainingDebt.toLocaleString('tr-TR')} ₺
                                 </span>
                             </div>
                         </div>
+                        <div className="text-sm font-medium text-slate-500">
+                            Tahsilat Oranı: <span className="text-slate-900 font-bold">%{Math.round((stats.paidAmount / (stats.totalDebt || 1)) * 100)}</span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
 
                         {/* Period Selector */}
                         {sortedPeriods.length > 0 ? (
