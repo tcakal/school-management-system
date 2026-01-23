@@ -1661,8 +1661,19 @@ export const useStore = create<AppState>()(
             },
 
             deleteNotificationTemplate: async (id) => {
+                const previousTemplates = get().notificationTemplates;
                 set(state => ({ notificationTemplates: state.notificationTemplates.filter(t => t.id !== id) }));
-                await supabase.from('notification_templates').delete().eq('id', id);
+
+                try {
+                    const { error } = await supabase.from('notification_templates').delete().eq('id', id);
+                    if (error) {
+                        throw error;
+                    }
+                } catch (err: any) {
+                    console.error('Error deleting template:', err);
+                    set({ notificationTemplates: previousTemplates });
+                    alert('Şablon silinirken bir hata oluştu: ' + (err.message || 'Bilinmeyen hata'));
+                }
             },
 
 

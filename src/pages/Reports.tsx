@@ -20,7 +20,7 @@ export function Reports() {
     const [selectedTeacherId, setSelectedTeacherId] = useState('all');
 
     // Contacts Filter State
-    const [contactSchoolId, setContactSchoolId] = useState('all');
+    const [contactSchoolId, setContactSchoolId] = useState(user?.role === 'manager' ? user.id : 'all');
     const [contactClassId, setContactClassId] = useState('all');
     const [contactGrade, setContactGrade] = useState('all');
     const [copiedEmails, setCopiedEmails] = useState(false);
@@ -299,22 +299,22 @@ export function Reports() {
                     Yoklama & Dersler
                 </button>
                 {user?.role === 'admin' && (
-                    <>
-                        <button
-                            onClick={() => setActiveTab('teachers')}
-                            className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'teachers' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                        >
-                            <User size={18} />
-                            Öğretmen Performansı
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('financial')}
-                            className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'financial' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                        >
-                            <School size={18} />
-                            Finansal Rapor
-                        </button>
-                    </>
+                    <button
+                        onClick={() => setActiveTab('teachers')}
+                        className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'teachers' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <User size={18} />
+                        Öğretmen Performansı
+                    </button>
+                )}
+                {(user?.role === 'admin' || user?.role === 'manager') && (
+                    <button
+                        onClick={() => setActiveTab('financial')}
+                        className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'financial' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <School size={18} />
+                        Finansal Rapor
+                    </button>
                 )}
                 {/* New Tab for Teachers: Class Overview */}
                 {user?.role === 'teacher' && (
@@ -332,30 +332,34 @@ export function Reports() {
                 >
                     Öğrenci İletişim
                 </button>
-                <button
-                    onClick={() => setActiveTab('evaluations')}
-                    className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'evaluations' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                >
-                    <Star size={18} />
-                    Öğrenci Değerlendirmeleri
-                </button>
+                {user?.role !== 'manager' && (
+                    <button
+                        onClick={() => setActiveTab('evaluations')}
+                        className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'evaluations' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <Star size={18} />
+                        Öğrenci Değerlendirmeleri
+                    </button>
+                )}
             </div>
 
             {/* SHARED FILTERS (Contacts & Evaluations) */}
             {(activeTab === 'contacts' || activeTab === 'evaluations') && (
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-4 items-end lg:items-center justify-between">
                     <div className="flex flex-col md:flex-row gap-4 w-full">
-                        <div className="flex-[2]">
-                            <label className="block text-xs font-medium text-slate-500 mb-1">Okul</label>
-                            <select
-                                className="w-full text-sm border-slate-300 rounded-lg"
-                                value={contactSchoolId}
-                                onChange={e => setContactSchoolId(e.target.value)}
-                            >
-                                <option value="all">Tüm Okullar</option>
-                                {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                        </div>
+                        {user?.role !== 'manager' && (
+                            <div className="flex-[2]">
+                                <label className="block text-xs font-medium text-slate-500 mb-1">Okul</label>
+                                <select
+                                    className="w-full text-sm border-slate-300 rounded-lg"
+                                    value={contactSchoolId}
+                                    onChange={e => setContactSchoolId(e.target.value)}
+                                >
+                                    <option value="all">Tüm Okullar</option>
+                                    {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                            </div>
+                        )}
                         <div className="flex-[2]">
                             <label className="block text-xs font-medium text-slate-500 mb-1">Sınıf Grubu</label>
                             <select
@@ -763,74 +767,76 @@ export function Reports() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {schools.map(school => {
-                                            const schoolStudents = students.filter(s => s.schoolId === school.id && s.status === 'Active');
+                                        {schools
+                                            .filter(s => user?.role === 'manager' ? s.id === user.id : true) // Manager sees only their school
+                                            .map(school => {
+                                                const schoolStudents = students.filter(s => s.schoolId === school.id && s.status === 'Active');
 
-                                            // Calculate Monthly Expected
-                                            const monthlyExpected = schoolStudents.reduce((total, student) => {
-                                                if (student.paymentStatus === 'free') return total;
-                                                if (student.paymentStatus === 'discounted' && student.discountPercentage) {
-                                                    return total + ((school.defaultPrice || 0) * (100 - student.discountPercentage) / 100);
-                                                }
-                                                return total + (school.defaultPrice || 0);
-                                            }, 0);
+                                                // Calculate Monthly Expected
+                                                const monthlyExpected = schoolStudents.reduce((total, student) => {
+                                                    if (student.paymentStatus === 'free') return total;
+                                                    if (student.paymentStatus === 'discounted' && student.discountPercentage) {
+                                                        return total + ((school.defaultPrice || 0) * (100 - student.discountPercentage) / 100);
+                                                    }
+                                                    return total + (school.defaultPrice || 0);
+                                                }, 0);
 
-                                            // Current Month Collected
-                                            const currentMonthKey = format(new Date(), 'yyyy-MM');
-                                            const collectedThisMonth = payments
-                                                .filter((p: any) => p.schoolId === school.id && p.month === currentMonthKey)
-                                                .reduce((acc: number, p: any) => acc + p.amount, 0);
+                                                // Current Month Collected
+                                                const currentMonthKey = format(new Date(), 'yyyy-MM');
+                                                const collectedThisMonth = payments
+                                                    .filter((p: any) => p.schoolId === school.id && p.month === currentMonthKey)
+                                                    .reduce((acc: number, p: any) => acc + p.amount, 0);
 
-                                            // Previous Month Collected
-                                            const prevMonthKey = format(startOfMonth(new Date(new Date().setMonth(new Date().getMonth() - 1))), 'yyyy-MM');
-                                            const collectedLastMonth = payments
-                                                .filter((p: any) => p.schoolId === school.id && p.month === prevMonthKey)
-                                                .reduce((acc: number, p: any) => acc + p.amount, 0);
+                                                // Previous Month Collected
+                                                const prevMonthKey = format(startOfMonth(new Date(new Date().setMonth(new Date().getMonth() - 1))), 'yyyy-MM');
+                                                const collectedLastMonth = payments
+                                                    .filter((p: any) => p.schoolId === school.id && p.month === prevMonthKey)
+                                                    .reduce((acc: number, p: any) => acc + p.amount, 0);
 
-                                            // Total Collected (All Time)
-                                            const totalCollected = payments
-                                                .filter((p: any) => p.schoolId === school.id)
-                                                .reduce((acc: number, p: any) => acc + p.amount, 0);
+                                                // Total Collected (All Time)
+                                                const totalCollected = payments
+                                                    .filter((p: any) => p.schoolId === school.id)
+                                                    .reduce((acc: number, p: any) => acc + p.amount, 0);
 
-                                            // Estimated Total Balance (Assumption: Expected * Months since start could be complex. 
-                                            // Simplified: Just show Monthly Gap for now, or Total Collected. 
-                                            // User asked "Kalan Ödemeler". Without a "Debt" ledger, this is MonthlyExpected - CollectedThisMonth.
-                                            // If they want "Total Debt", we need a "Start Date" for the school to calculate "Months * Monthly".
-                                            // For now, let's show "This Month Balance".
-                                            const balanceThisMonth = monthlyExpected - collectedThisMonth;
+                                                // Estimated Total Balance (Assumption: Expected * Months since start could be complex. 
+                                                // Simplified: Just show Monthly Gap for now, or Total Collected. 
+                                                // User asked "Kalan Ödemeler". Without a "Debt" ledger, this is MonthlyExpected - CollectedThisMonth.
+                                                // If they want "Total Debt", we need a "Start Date" for the school to calculate "Months * Monthly".
+                                                // For now, let's show "This Month Balance".
+                                                const balanceThisMonth = monthlyExpected - collectedThisMonth;
 
-                                            return (
-                                                <tr key={school.id} className="hover:bg-slate-50">
-                                                    <td className="px-6 py-4 font-medium text-slate-900">{school.name}</td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs font-bold">
-                                                            {schoolStudents.length}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right font-medium text-slate-600">
-                                                        {monthlyExpected.toLocaleString('tr-TR')} ₺
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="font-bold text-slate-900">{collectedThisMonth.toLocaleString('tr-TR')} ₺</div>
-                                                        <div className="text-xs text-slate-400">
-                                                            %{monthlyExpected > 0 ? Math.round((collectedThisMonth / monthlyExpected) * 100) : 0}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right text-slate-600">
-                                                        {collectedLastMonth.toLocaleString('tr-TR')} ₺
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right font-medium text-slate-900">
-                                                        {totalCollected.toLocaleString('tr-TR')} ₺
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <span className={`font-bold ${balanceThisMonth > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                                            {balanceThisMonth > 0 ? '-' : '+'}{Math.abs(balanceThisMonth).toLocaleString('tr-TR')} ₺
-                                                        </span>
-                                                        <div className="text-xs text-slate-400">Bu Ay Kalan</div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
+                                                return (
+                                                    <tr key={school.id} className="hover:bg-slate-50">
+                                                        <td className="px-6 py-4 font-medium text-slate-900">{school.name}</td>
+                                                        <td className="px-6 py-4 text-center">
+                                                            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs font-bold">
+                                                                {schoolStudents.length}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right font-medium text-slate-600">
+                                                            {monthlyExpected.toLocaleString('tr-TR')} ₺
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className="font-bold text-slate-900">{collectedThisMonth.toLocaleString('tr-TR')} ₺</div>
+                                                            <div className="text-xs text-slate-400">
+                                                                %{monthlyExpected > 0 ? Math.round((collectedThisMonth / monthlyExpected) * 100) : 0}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right text-slate-600">
+                                                            {collectedLastMonth.toLocaleString('tr-TR')} ₺
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right font-medium text-slate-900">
+                                                            {totalCollected.toLocaleString('tr-TR')} ₺
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <span className={`font-bold ${balanceThisMonth > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                                                {balanceThisMonth > 0 ? '-' : '+'}{Math.abs(balanceThisMonth).toLocaleString('tr-TR')} ₺
+                                                            </span>
+                                                            <div className="text-xs text-slate-400">Bu Ay Kalan</div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
                                         {schools.length === 0 && (
                                             <tr>
                                                 <td colSpan={7} className="text-center py-8 text-slate-400">

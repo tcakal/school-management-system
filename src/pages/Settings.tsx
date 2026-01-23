@@ -21,7 +21,7 @@ export function Settings() {
         targetRoles: ['teacher'], // Default
         isActive: true
     });
-    const [selectedSchoolId, setSelectedSchoolId] = useState(schools[0]?.id || '');
+    const [selectedSchoolId, setSelectedSchoolId] = useState('');
     const [editId, setEditId] = useState<string | null>(null);
 
     // Sync selectedSchoolId removed to allow "Global" (empty) selection
