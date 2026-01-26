@@ -6,7 +6,10 @@ import { ArrowLeft, MapPin, Phone, Users, Wallet, Plus, Calendar, Clock, User, S
 
 import { Tabs } from '../components/Tabs';
 import { Modal } from '../components/Modal';
+import { AddLessonModal } from '../components/AddLessonModal';
 import { ShiftScheduleModal } from '../components/ShiftScheduleModal';
+
+
 import { AssignmentModal } from '../components/AssignmentModal';
 import { TimeSelect } from '../components/TimeSelect';
 import { MakerFairTab } from '../components/MakerFairTab';
@@ -112,6 +115,8 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
 
     // Calendar / Holiday Shift State
     const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
+    const [isAddLessonModalOpen, setIsAddLessonModalOpen] = useState(false);
+
     // Inventory State
     // Fix: Select raw inventory and filter with useMemo to avoid infinite loop (Error #185) caused by new array reference in useSyncExternalStore
     const allInventory = useStore((state) => state.inventory || []);
@@ -488,13 +493,22 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                     </div>
                     <div className="flex gap-3">
                         {(user?.role === 'admin' || user?.role === 'manager') && (
-                            <button
-                                onClick={() => setIsShiftModalOpen(true)}
-                                className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg flex items-center gap-2 hover:bg-purple-200 transition-colors font-medium border border-purple-200"
-                            >
-                                <Calendar size={18} />
-                                <span className="hidden md:inline">Takvim / Tatil</span>
-                            </button>
+                            <>
+                                <button
+                                    onClick={() => setIsShiftModalOpen(true)}
+                                    className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg flex items-center gap-2 hover:bg-purple-200 transition-colors font-medium border border-purple-200"
+                                >
+                                    <Calendar size={18} />
+                                    <span className="hidden md:inline">Takvim / Tatil</span>
+                                </button>
+                                <button
+                                    onClick={() => setIsAddLessonModalOpen(true)}
+                                    className="px-4 py-2 bg-purple-600 text-white rounded-lg flex items-center gap-2 hover:bg-purple-700 transition-colors font-medium shadow-sm ml-2"
+                                >
+                                    <Plus size={18} />
+                                    <span className="hidden md:inline">Ek Ders Ekle</span>
+                                </button>
+                            </>
                         )}
                         <div
                             className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg flex items-center gap-2"
@@ -1532,6 +1546,12 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                 onClose={() => setIsShiftModalOpen(false)}
                 schoolId={school.id}
             />
+            {/* Add Lesson Modal */}
+            <AddLessonModal
+                isOpen={isAddLessonModalOpen}
+                onClose={() => setIsAddLessonModalOpen(false)}
+                initialSchoolId={id}
+            />
         </div >
     );
 }
@@ -1626,6 +1646,7 @@ function AssignmentItem({ assignment, teacher, updateAssignment, deleteAssignmen
                     Kaldır
                 </button>
             </div>
+
         </div>
     );
 }

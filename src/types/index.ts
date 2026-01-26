@@ -167,7 +167,7 @@ export interface ActivityLog {
 }
 
 export type LessonStatus = 'scheduled' | 'completed' | 'cancelled';
-export type LessonType = 'regular' | 'makeup';
+export type LessonType = 'regular' | 'makeup' | 'extra';
 
 export interface Lesson {
     id: string;
