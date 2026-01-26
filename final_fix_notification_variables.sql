@@ -41,9 +41,15 @@ BEGIN
     -- ==========================================
     FOR v_template IN SELECT * FROM notification_templates WHERE is_active = true AND trigger_type IN ('lesson_start', 'lesson_end') LOOP
         
-        -- Day Filter
-        IF v_template.days_filter IS NOT NULL AND NOT (v_template.days_filter::jsonb @> to_jsonb(v_day_of_week)) THEN
-            CONTINUE;
+        -- Day Filter (Robust)
+        IF v_template.days_filter IS NOT NULL AND jsonb_typeof(v_template.days_filter) = 'array' AND jsonb_array_length(v_template.days_filter) > 0 THEN
+             IF NOT EXISTS (
+                 SELECT 1 
+                 FROM jsonb_array_elements_text(v_template.days_filter) as day_elem
+                 WHERE day_elem::int = v_day_of_week
+             ) THEN
+                 CONTINUE;
+             END IF;
         END IF;
 
         -- Find lessons
@@ -139,8 +145,17 @@ BEGIN
     -- ==========================================
     FOR v_template IN SELECT * FROM notification_templates WHERE is_active = true AND trigger_type = 'fixed_time' LOOP
          -- Day Filter
-        IF v_template.days_filter IS NOT NULL AND NOT (v_template.days_filter::jsonb @> to_jsonb(v_day_of_week)) THEN
-             CONTINUE;
+        -- Day Filter (Robust)
+        IF v_template.days_filter IS NOT NULL AND jsonb_typeof(v_template.days_filter) = 'array' AND jsonb_array_length(v_template.days_filter) > 0 THEN
+             IF NOT EXISTS (
+                 SELECT 1 
+                 FROM jsonb_array_elements_text(v_template.days_filter) as day_elem
+                 WHERE day_elem::int = v_day_of_week
+             ) THEN
+                 -- Log skip for debugging
+                 -- INSERT INTO debug_notification_logs (message, details) VALUES ('Skipped Day', jsonb_build_object('day', v_day_of_week, 'filter', v_template.days_filter));
+                 CONTINUE;
+             END IF;
         END IF;
 
         IF v_template.trigger_time IS NOT NULL THEN
