@@ -277,6 +277,31 @@ export function Settings() {
                                     </div>
 
                                     <div className="flex gap-1 flex-wrap">
+                                        {(() => {
+                                            const getDaysDisplay = (daysFilter?: number[]) => {
+                                                if (!daysFilter || daysFilter.length === 0 || daysFilter.length === 7) {
+                                                    return { label: 'Her Gün', className: 'bg-orange-50 text-orange-700 border-orange-200' };
+                                                }
+                                                const sorted = [...daysFilter].sort();
+                                                const isWeekdays = sorted.length === 5 && sorted.every((d, i) => d === i + 1); // 1,2,3,4,5
+
+                                                if (isWeekdays) {
+                                                    return { label: 'Hafta İçi', className: 'bg-purple-50 text-purple-700 border-purple-200' };
+                                                }
+
+                                                const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+                                                const label = sorted.map(d => dayNames[d]).join(', ');
+                                                return { label, className: 'bg-blue-50 text-blue-700 border-blue-200' };
+                                            };
+
+                                            const dayInfo = getDaysDisplay(t.daysFilter);
+                                            return (
+                                                <span className={`text-[10px] px-1 rounded border ${dayInfo.className}`}>
+                                                    📅 {dayInfo.label}
+                                                </span>
+                                            );
+                                        })()}
+
                                         {t.targetRoles && t.targetRoles.map(role => (
                                             <span key={role} className={`text-[10px] px-1 rounded border ${role === 'student' ? 'bg-green-50 text-green-700 border-green-200' :
                                                 role === 'teacher' ? 'bg-purple-50 text-purple-700 border-purple-200' :
