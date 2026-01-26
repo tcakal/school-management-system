@@ -387,7 +387,8 @@ function ConflictItem({ lesson, selectedSubId, onSelectSub, findAvailableTeacher
 }
 
 // Helper to avoid heavy store dependency just for name lookup if possible
-function getGroupName(id: string) {
+function getGroupName(id?: string) {
+    if (!id) return 'Genel / Grup Yok';
     const { classGroups } = useStore.getState();
     return classGroups.find(c => c.id === id)?.name || 'Bilinmeyen Grup';
 }

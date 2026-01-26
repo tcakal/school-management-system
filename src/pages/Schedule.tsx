@@ -3,9 +3,10 @@ import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
 import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Wand2, Phone } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Wand2, Phone, Plus } from 'lucide-react';
 import { LessonModal } from '../components/LessonModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { AddLessonModal } from '../components/AddLessonModal';
 
 import type { Lesson } from '../types';
 
@@ -17,6 +18,7 @@ export function Schedule() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [generationWeeks, setGenerationWeeks] = useState(4);
     const [startDateGen, setStartDateGen] = useState(new Date().toISOString().split('T')[0]);
+    const [isAddLessonModalOpen, setIsAddLessonModalOpen] = useState(false);
 
     // Generate Calendar Grid
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -73,6 +75,15 @@ export function Schedule() {
                             Oluştur
                         </button>
                     </div>
+
+                    <button
+                        onClick={() => setIsAddLessonModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm transition-colors shadow-sm ml-2"
+                    >
+                        <Plus size={16} />
+                        Ek Ders / Etkinlik Ekle
+                    </button>
+
 
 
 
@@ -207,6 +218,11 @@ export function Schedule() {
                     lesson={selectedLesson}
                 />
             </ErrorBoundary>
+
+            <AddLessonModal
+                isOpen={isAddLessonModalOpen}
+                onClose={() => setIsAddLessonModalOpen(false)}
+            />
         </div>
     );
 }

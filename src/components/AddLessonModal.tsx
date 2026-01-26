@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, User, School as SchoolIcon } from 'lucide-react';
+import { X, Calendar, User, School as SchoolIcon, MapPin } from 'lucide-react';
 import { supabase } from '../supabase';
 import { useStore } from '../store/useStore';
 import type { School, Teacher, ClassGroup } from '../types';
@@ -18,7 +18,9 @@ export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, 
     const { schools, teachers, classGroups, fetchData } = useStore();
 
     // Form State
+    const [mode, setMode] = useState<'existing' | 'custom'>('existing'); // 'existing' (School) or 'custom' (Other)
     const [schoolId, setSchoolId] = useState('');
+    const [customLocation, setCustomLocation] = useState('');
     const [date, setDate] = useState('');
     const [startTime, setStartTime] = useState('09:00');
     const [endTime, setEndTime] = useState('10:00');
@@ -29,7 +31,14 @@ export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, 
 
     useEffect(() => {
         if (isOpen) {
-            setSchoolId(initialSchoolId || '');
+            if (initialSchoolId) {
+                setMode('existing');
+                setSchoolId(initialSchoolId);
+            } else {
+                setMode('existing');
+                setSchoolId('');
+            }
+            setCustomLocation('');
             setDate(initialDate || new Date().toISOString().split('T')[0]);
             setStartTime('09:00');
             setEndTime('10:00');
@@ -47,69 +56,62 @@ export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!schoolId || !date || !startTime || !endTime || !teacherId) {
+
+        if (mode === 'existing' && !schoolId) {
+            alert('Lütfen bir okul seçin.');
+            return;
+        }
+        if (mode === 'custom' && !customLocation) {
+            alert('Lütfen etkinlik yeri/müşteri adı girin.');
+            return;
+        }
+
+        if (!date || !startTime || !endTime || !teacherId) {
             alert('Lütfen gerekli alanları doldurun.');
             return;
         }
 
         setLoading(true);
         try {
-            // If "All School" is selected, do we create one lesson without class_group?
-            // The schema likely requires class_group_id? Or is it nullable?
-            // Let's check schema... usually lessons link to class_group.
-            // If "All School", maybe we need a dummy class or we pick the first one?
-            // Or maybe we iterate all classes?
-            // User said "Maker fair ... tüm sınıflardan öğrencilerin tamamı yada bir kısmı".
-            // If we select "All", maybe we assume a special "School Event" class group exists? 
-            // Or just pick ANY class. 
-
-            // Wait, if I look at `lessons` table, `class_group_id` is uuid. Is it nullable?
-            // Step 620 output says `class_group_id` exists. It's likely FK not null.
-            // Let's assume for now we must pick a class.
-            // If user selects "All", we might need to create it for ALL classes? 
-            // Or is this a single event?
-            // Let's just enforce picking a class for now, or if 'all', picking the first one as placeholder?
-            // Better: Let's create a lesson for EACH class if 'all' is selected? 
-            // No, that floods the calendar.
-
-            // Let's make "Class" mandatory for now to keep it simple and correct.
-            let targetClasses: string[] = [];
-            if (classGroupId === 'all') {
-                if (availableClasses.length === 0) {
-                    alert('Bu okulda hiç sınıf yok.');
-                    setLoading(false);
-                    return;
-                }
-                // Option A: Assign to first class (Simple)
-                // Option B: Create for all (Complex)
-                // Let's go with Option A but add a note in topic? 
-                // Or better, let's just ask user to select a class.
-                // But user wanted "All school".
-
-                // Let's try to pass `null` if DB allows. If not, fail.
-                // Actually, let's just use the first available classID as a fallback for "School Event"
-                // and put "TÜM OKUL" in title/topic.
-                targetClasses = [availableClasses[0].id];
-            } else {
-                targetClasses = [classGroupId];
-            }
-
-            const payload = {
-                school_id: schoolId,
-                class_group_id: targetClasses[0],
+            let payload: any = {
                 teacher_id: teacherId,
                 date,
                 start_time: startTime,
                 end_time: endTime,
                 status: 'scheduled',
                 type: 'extra',
-                topic: topic || 'Ekstra Ders / Etkinlik'
+                topic: topic || (mode === 'custom' ? customLocation : 'Ekstra Ders / Etkinlik')
             };
+
+            if (mode === 'existing') {
+                payload.school_id = schoolId;
+
+                // Handle Class Group Logic
+                let targetClasses: string[] = [];
+                if (classGroupId === 'all') {
+                    if (availableClasses.length > 0) {
+                        targetClasses = [availableClasses[0].id];
+                    } else {
+                        // Fallback: If no classes exist, maybe just insert without class_group_id if DB allows?
+                        // DB is now updated to allow NULL class_group_id. 
+                        // So we can send null if no classes found.
+                        targetClasses = [null as any];
+                    }
+                } else {
+                    targetClasses = [classGroupId];
+                }
+                payload.class_group_id = targetClasses[0];
+            } else {
+                // Custom Mode
+                payload.custom_location = customLocation;
+                payload.school_id = null;
+                payload.class_group_id = null;
+            }
 
             const { error } = await supabase.from('lessons').insert(payload);
             if (error) throw error;
 
-            alert('Ekstra ders başarıyla eklendi.');
+            alert('Ekstra ders/etkinlik başarıyla eklendi.');
             onClose();
             if (onSuccess) onSuccess();
             fetchData(); // Refresh store
@@ -138,29 +140,69 @@ export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, 
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    {/* Security Check: If initialSchoolId is fixed, disable school select? Or keep flexible? */}
+
+                    {/* Mode Selection */}
+                    <div className="flex gap-4 mb-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="radio"
+                                name="mode"
+                                value="existing"
+                                checked={mode === 'existing'}
+                                onChange={() => setMode('existing')}
+                                className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                            />
+                            <span className="text-sm font-medium text-slate-700">Kayıtlı Okul</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="radio"
+                                name="mode"
+                                value="custom"
+                                checked={mode === 'custom'}
+                                onChange={() => setMode('custom')}
+                                className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                            />
+                            <span className="text-sm font-medium text-slate-700">Diğer / Özel Etkinlik</span>
+                        </label>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
                             <label className="block text-sm font-medium text-slate-700 mb-1">
-                                Okul
+                                {mode === 'existing' ? 'Okul' : 'Etkinlik Yeri / Müşteri'}
                             </label>
-                            <div className="relative">
-                                <SchoolIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                                <select
-                                    value={schoolId}
-                                    onChange={(e) => {
-                                        setSchoolId(e.target.value);
-                                        setClassGroupId('all'); // Reset class when school changes
-                                    }}
-                                    disabled={!!initialSchoolId}
-                                    className="w-full pl-10 border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-                                >
-                                    <option value="">Okul Seçin</option>
-                                    {schools.map((s: School) => (
-                                        <option key={s.id} value={s.id}>{s.name}</option>
-                                    ))}
-                                </select>
-                            </div>
+
+                            {mode === 'existing' ? (
+                                <div className="relative">
+                                    <SchoolIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                    <select
+                                        value={schoolId}
+                                        onChange={(e) => {
+                                            setSchoolId(e.target.value);
+                                            setClassGroupId('all'); // Reset class when school changes
+                                        }}
+                                        disabled={!!initialSchoolId}
+                                        className="w-full pl-10 border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                                    >
+                                        <option value="">Okul Seçin</option>
+                                        {schools.map((s: School) => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ) : (
+                                <div className="relative">
+                                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                    <input
+                                        type="text"
+                                        value={customLocation}
+                                        onChange={(e) => setCustomLocation(e.target.value)}
+                                        placeholder="Örn: Turkcell Plaza, Bilim Merkezi..."
+                                        className="w-full pl-10 border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         <div className="col-span-2">
@@ -188,22 +230,24 @@ export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, 
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                                Sınıf / Grup
-                            </label>
-                            <select
-                                value={classGroupId}
-                                onChange={(e) => setClassGroupId(e.target.value)}
-                                className="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500"
-                                disabled={!schoolId}
-                            >
-                                <option value="all">Tüm Okul / İlk Grup</option>
-                                {availableClasses.map((c: ClassGroup) => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
-                        </div>
+                        {mode === 'existing' && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    Sınıf / Grup
+                                </label>
+                                <select
+                                    value={classGroupId}
+                                    onChange={(e) => setClassGroupId(e.target.value)}
+                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500"
+                                    disabled={!schoolId}
+                                >
+                                    <option value="all">Tüm Okul / İlk Grup</option>
+                                    {availableClasses.map((c: ClassGroup) => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">

@@ -171,14 +171,15 @@ export type LessonType = 'regular' | 'makeup' | 'extra';
 
 export interface Lesson {
     id: string;
-    schoolId: string;
-    classGroupId: string;
+    schoolId?: string; // Made optional for custom events
+    classGroupId?: string; // Made optional
     teacherId: string;
     date: string; // ISO Date "2024-02-14"
     startTime: string; // "10:00"
     endTime: string; // "11:00"
     status: LessonStatus;
     type: LessonType;
+    customLocation?: string; // New field for custom events
     cancelReason?: string;
     topic?: string;
     notes?: string;
