@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../supabase';
-import { Plus, Trash2, RefreshCw, Database, Palette, Phone, Edit2, Copy, ToggleLeft, ToggleRight, PlayCircle, Send, Upload, Loader2 } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Database, Palette, Phone, Edit2, Copy, ToggleLeft, ToggleRight, PlayCircle, Send, Upload, Loader2, Calendar } from 'lucide-react';
 import { TelegramService } from '../services/TelegramService';
 import { useAuth } from '../store/useAuth';
 import type { NotificationTemplate } from '../types';
@@ -277,6 +277,15 @@ export function Settings() {
                                     </div>
 
                                     <div className="flex gap-1 flex-wrap">
+                                        {t.targetRoles && t.targetRoles.map(role => (
+                                            <span key={role} className={`text-[10px] px-1 rounded border ${role === 'student' ? 'bg-green-50 text-green-700 border-green-200' :
+                                                role === 'teacher' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                                    'bg-orange-50 text-orange-700 border-orange-200'
+                                                }`}>
+                                                {role === 'student' ? 'Veli/Öğrenci' : role === 'teacher' ? 'Öğretmen' : role === 'manager' ? 'Okul Müdürü' : 'Admin'}
+                                            </span>
+                                        ))}
+
                                         {(() => {
                                             const getDaysDisplay = (daysFilter?: number[]) => {
                                                 if (!daysFilter || daysFilter.length === 0 || daysFilter.length === 7) {
@@ -296,20 +305,11 @@ export function Settings() {
 
                                             const dayInfo = getDaysDisplay(t.daysFilter);
                                             return (
-                                                <span className={`text-[10px] px-1 rounded border ${dayInfo.className}`}>
-                                                    📅 {dayInfo.label}
+                                                <span className={`text-[10px] px-1 rounded border flex items-center gap-1 ${dayInfo.className}`}>
+                                                    <Calendar size={10} /> {dayInfo.label}
                                                 </span>
                                             );
                                         })()}
-
-                                        {t.targetRoles && t.targetRoles.map(role => (
-                                            <span key={role} className={`text-[10px] px-1 rounded border ${role === 'student' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                role === 'teacher' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                                                    'bg-orange-50 text-orange-700 border-orange-200'
-                                                }`}>
-                                                {role === 'student' ? 'Veli/Öğrenci' : role === 'teacher' ? 'Öğretmen' : role === 'manager' ? 'Okul Müdürü' : 'Admin'}
-                                            </span>
-                                        ))}
                                     </div>
                                     <p className="text-sm text-slate-700 line-clamp-2">{t.messageTemplate}</p>
                                 </div>
