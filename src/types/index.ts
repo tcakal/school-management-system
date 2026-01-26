@@ -14,6 +14,9 @@ export interface School {
     telegramChatId?: string;
     payment_cycle_start_date?: string; // ISO Date "2024-01-01"
     makerFairDate?: string; // ISO Date for Maker Fair countdown
+    type: 'school' | 'event';
+    eventDate?: string; // ISO Date
+    notes?: string;
 }
 
 export interface ClassGroup {
@@ -115,6 +118,7 @@ export interface Teacher {
     specialties?: string[];
     color?: string; // For calendar visualization
     role: 'admin' | 'teacher';
+    type?: 'regular' | 'guest'; // New field for Event system
     schoolId?: string; // Optional linkage for managers/filtering
     password?: string; // Optional for now to handle migration, but ideally required
     telegramChatId?: string; // For Telegram notifications

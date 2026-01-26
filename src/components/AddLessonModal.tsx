@@ -11,10 +11,12 @@ interface AddLessonModalProps {
     // Optional pre-selected context
     initialSchoolId?: string;
     initialDate?: string;
+    initialStartTime?: string;
+    initialClassGroupId?: string;
     onSuccess?: () => void;
 }
 
-export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, onSuccess }: AddLessonModalProps) {
+export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, initialStartTime, initialClassGroupId, onSuccess }: AddLessonModalProps) {
     const { schools, teachers, classGroups, fetchData } = useStore();
 
     // Form State
@@ -27,6 +29,7 @@ export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, 
     const [teacherId, setTeacherId] = useState('');
     const [classGroupId, setClassGroupId] = useState('all'); // 'all' or specific ID
     const [topic, setTopic] = useState('');
+    const [notes, setNotes] = useState('');
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -40,13 +43,14 @@ export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, 
             }
             setCustomLocation('');
             setDate(initialDate || new Date().toISOString().split('T')[0]);
-            setStartTime('09:00');
+            setStartTime(initialStartTime || '09:00');
             setEndTime('10:00');
             setTeacherId('');
-            setClassGroupId('all');
+            setClassGroupId(initialClassGroupId || 'all');
             setTopic('');
+            setNotes('');
         }
-    }, [isOpen, initialSchoolId, initialDate]);
+    }, [isOpen, initialSchoolId, initialDate, initialStartTime, initialClassGroupId]);
 
     // Use Memo for filtering
     const availableClasses = React.useMemo(() =>
@@ -78,9 +82,9 @@ export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, 
                 date,
                 start_time: startTime,
                 end_time: endTime,
-                status: 'scheduled',
                 type: 'extra',
-                topic: topic || (mode === 'custom' ? customLocation : 'Ekstra Ders / Etkinlik')
+                topic: topic || (mode === 'custom' ? customLocation : 'Ekstra Ders / Etkinlik'),
+                notes: notes
             };
 
             if (mode === 'existing') {

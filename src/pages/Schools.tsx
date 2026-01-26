@@ -43,7 +43,8 @@ export function Schools() {
             imageUrl: newSchoolImage,
             managerName: managerName,
             managerPhone: managerPhone,
-            managerEmail: managerEmail
+            managerEmail: managerEmail,
+            type: 'school'
         };
 
         await addSchool(newSchool);
@@ -107,7 +108,8 @@ export function Schools() {
             imageUrl: editSchoolImage,
             managerName: editManagerName,
             managerPhone: editManagerPhone,
-            managerEmail: editManagerEmail
+            managerEmail: editManagerEmail,
+            type: 'school'
         });
 
         setIsEditModalOpen(false);

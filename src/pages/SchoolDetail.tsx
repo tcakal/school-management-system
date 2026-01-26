@@ -13,6 +13,7 @@ import { ShiftScheduleModal } from '../components/ShiftScheduleModal';
 import { AssignmentModal } from '../components/AssignmentModal';
 import { TimeSelect } from '../components/TimeSelect';
 import { MakerFairTab } from '../components/MakerFairTab';
+import { EventMatrixPlanner } from '../components/EventMatrixPlanner';
 import type { ClassGroup, Student } from '../types';
 
 export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) {
@@ -437,7 +438,15 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
     }
 
     // Maker Fair Tab (Everyone can see, but content differs)
-    tabs.push({ id: 'maker-fair', label: 'Maker Fair' });
+    if (school.type !== 'event') {
+        tabs.push({ id: 'maker-fair', label: 'Maker Fair' });
+    }
+
+    if (school.type === 'event') {
+        const matrixTab = { id: 'matrix', label: 'Planlama Tablosu' };
+        // Insert matrix as second tab
+        tabs.splice(1, 0, matrixTab);
+    }
 
     return (
         <div>
@@ -532,6 +541,14 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
             />
 
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {activeTab === 'matrix' && school.type === 'event' && (
+                    <EventMatrixPlanner
+                        schoolId={school.id}
+                        classGroups={schoolClasses}
+                        eventDate={school.eventDate}
+                    />
+                )}
+
                 {activeTab === 'classes' && (
                     <div className="space-y-6">
                         <div className="flex justify-between items-center">

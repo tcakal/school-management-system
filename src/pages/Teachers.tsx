@@ -27,6 +27,7 @@ export function Teachers() {
     const [email, setEmail] = useState('');
     const [specialties, setSpecialties] = useState('');
     const [role, setRole] = useState<'teacher' | 'admin'>('teacher');
+    const [type, setType] = useState<'regular' | 'guest'>('regular');
     const [password, setPassword] = useState('');
     const [telegramChatId, setTelegramChatId] = useState('');
 
@@ -42,6 +43,7 @@ export function Teachers() {
             setEmail(teacher.email || '');
             setSpecialties(teacher.specialties?.join(', ') || '');
             setRole(teacher.role);
+            setType(teacher.type || 'regular');
             setPassword(teacher.password || '');
             setTelegramChatId(teacher.telegramChatId || '');
         } else {
@@ -51,6 +53,7 @@ export function Teachers() {
             setEmail('');
             setSpecialties('');
             setRole('teacher');
+            setType('regular');
             setPassword('');
             setPassword('');
             setTelegramChatId('');
@@ -106,6 +109,7 @@ export function Teachers() {
             email,
             specialties: specialties.split(',').map(s => s.trim()).filter(Boolean),
             role,
+            type,
             password: password || '123456',
             telegramChatId: telegramChatId || undefined
         };
@@ -126,7 +130,7 @@ export function Teachers() {
     };
 
     // Filter and Sort Logic
-    const { admins, teachingStaff } = useMemo(() => {
+    const { admins, teachingStaff, guestStaff } = useMemo(() => {
         // 1. Filter by School if selected
         let filtered = teachers;
         if (selectedSchoolId !== 'all') {
@@ -156,10 +160,11 @@ export function Teachers() {
             a.name.localeCompare(b.name, 'tr')
         );
 
-        // 3. Split by Role
+        // 3. Split by Role and Type
         return {
             admins: sorted.filter(t => t.role === 'admin'),
-            teachingStaff: sorted.filter(t => t.role !== 'admin')
+            teachingStaff: sorted.filter(t => t.role !== 'admin' && (t.type === 'regular' || !t.type)),
+            guestStaff: sorted.filter(t => t.role !== 'admin' && t.type === 'guest')
         };
     }, [teachers, assignments, selectedSchoolId]);
 
@@ -282,6 +287,45 @@ export function Teachers() {
                         </div>
                     )}
                 </section>
+
+                {/* Divider */}
+                <div className="border-t border-slate-200"></div>
+
+                {/* Guest Teachers Section */}
+                <section>
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="bg-orange-100 p-2 rounded-lg text-orange-600">
+                            <BookOpen size={24} />
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-800">Misafir / Yardımcı Eğitmenler</h3>
+                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs font-medium">
+                            {guestStaff.length}
+                        </span>
+                    </div>
+
+                    {guestStaff.length === 0 ? (
+                        <div className="text-center py-8 text-slate-400 italic bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                            Kayıtlı misafir eğitmen yok.
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {guestStaff.map(teacher => (
+                                <TeacherCard
+                                    key={teacher.id}
+                                    teacher={teacher}
+                                    status={getTeacherStatus(teacher.id)}
+                                    onEdit={() => openModal(teacher)}
+                                    onDelete={() => {
+                                        if (window.confirm('Bu eğitmeni silmek istediğinize emin misiniz?')) {
+                                            deleteTeacher(teacher.id);
+                                        }
+                                    }}
+                                    onManageLeaves={() => setLeaveModalTeacherId(teacher.id)}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </section>
             </div>
 
             <Modal
@@ -379,14 +423,43 @@ export function Teachers() {
 
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Rol</label>
-                            <select
-                                value={role}
-                                onChange={(e) => setRole(e.target.value as 'admin' | 'teacher')}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
-                            >
-                                <option value="teacher">Öğretmen</option>
-                                <option value="admin">Yönetici</option>
-                            </select>
+                            <div className="space-y-4">
+                                <select
+                                    value={role}
+                                    onChange={(e) => setRole(e.target.value as 'admin' | 'teacher')}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
+                                >
+                                    <option value="teacher">Eğitmen</option>
+                                    <option value="admin">Yönetici</option>
+                                </select>
+
+                                {role === 'teacher' && (
+                                    <div className="flex gap-4">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="type"
+                                                value="regular"
+                                                checked={type === 'regular'}
+                                                onChange={() => setType('regular')}
+                                                className="text-purple-600 focus:ring-purple-500"
+                                            />
+                                            <span className="text-sm text-slate-700">Kadrolu</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="type"
+                                                value="guest"
+                                                checked={type === 'guest'}
+                                                onChange={() => setType('guest')}
+                                                className="text-purple-600 focus:ring-purple-500"
+                                            />
+                                            <span className="text-sm text-slate-700">Misafir / Yardımcı</span>
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div>

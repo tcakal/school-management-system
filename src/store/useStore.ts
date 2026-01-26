@@ -269,7 +269,11 @@ export const useStore = create<AppState>()(
                         managerName: s.manager_name,
                         managerPhone: s.manager_phone,
                         managerEmail: s.manager_email,
-                        telegramChatId: s.telegram_chat_id
+                        telegramChatId: s.telegram_chat_id,
+                        payment_cycle_start_date: s.payment_cycle_start_date,
+                        type: s.type || 'school',
+                        eventDate: s.event_date,
+                        notes: s.notes
                     }));
 
                     const students: Student[] = (studentsRes.data || []).map(s => ({
@@ -288,8 +292,12 @@ export const useStore = create<AppState>()(
                         birthDate: s.birth_date,
                         address: s.address,
                         medicalNotes: s.medical_notes,
-                        gradeLevel: s.grade_level,
+                        managerEmail: s.manager_email,
                         telegramChatId: s.telegram_chat_id,
+                        payment_cycle_start_date: s.payment_cycle_start_date,
+                        type: s.type || 'school',
+                        eventDate: s.event_date,
+                        notes: s.notes,
                         last_payment_status: s.last_payment_status,
                         last_payment_date: s.last_payment_date,
                         last_claim_date: s.last_claim_date
@@ -1318,6 +1326,8 @@ export const useStore = create<AppState>()(
 
             deleteLesson: async (id) => {
                 set(state => ({ lessons: state.lessons.filter(l => l.id !== id) }));
+                // Delete dependencies first
+                await supabase.from('attendance').delete().eq('lesson_id', id);
                 await supabase.from('lessons').delete().eq('id', id);
             },
 
@@ -1356,6 +1366,21 @@ export const useStore = create<AppState>()(
                     // 6. Delete Notification Templates
                     await supabase.from('notification_templates').delete().eq('school_id', id);
 
+                    await supabase.from('notification_templates').delete().eq('school_id', id);
+
+                    // 7. Delete Inventory
+                    await supabase.from('inventory').delete().eq('school_id', id);
+
+                    // 8. Delete Maker Projects & Docs
+                    const { data: schoolProjects } = await supabase.from('maker_projects').select('id').eq('school_id', id);
+                    if (schoolProjects && schoolProjects.length > 0) {
+                        const projectIds = schoolProjects.map(p => p.id);
+                        await supabase.from('maker_project_documents').delete().in('project_id', projectIds);
+                        await supabase.from('maker_project_updates').delete().in('project_id', projectIds);
+                        await supabase.from('maker_project_students').delete().in('project_id', projectIds);
+                        await supabase.from('maker_projects').delete().in('id', projectIds);
+                    }
+
                     // Finally delete school
                     const { error } = await supabase.from('schools').delete().eq('id', id);
                     if (error) throw error;
@@ -1372,7 +1397,7 @@ export const useStore = create<AppState>()(
 
                 } catch (error) {
                     console.error('Error deleting school:', error);
-                    alert('Okul silinirken bir hata oluştu. Lütfen önce ilişkili verileri (öğrenci, ders vb.) kontrol edin.');
+                    alert('Okul silinirken bir hata oluştu. Lütfen önce ilişkili verileri (öğrenci, ders vb.) kontrol edin. Hata Detayı: ' + ((error as any).message || error));
                     set({ schools: previousSchools }); // Revert
                 }
             },
