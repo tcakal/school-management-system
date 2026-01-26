@@ -1809,11 +1809,7 @@ export const useStore = create<AppState>()(
 
                 if (pError) console.error('Error fetching maker projects:', pError);
 
-                if (projects) {
-                    // Map items to CamelCase if needed or cast as any if types match DB
-                    // Assuming DB column names match snake_case, we might need mapping.
-                    // Let's assume for now we use 'as any' and fix mapping if UI breaks, 
-                    // or better, map properly.
+                if (projects && projects.length > 0) {
                     const mapped = projects.map(p => ({
                         id: p.id,
                         schoolId: p.school_id,
@@ -1825,6 +1821,60 @@ export const useStore = create<AppState>()(
                         createdBy: p.created_by
                     }));
                     set({ makerProjects: mapped as any });
+
+                    // Fetch related data for these projects
+                    const projectIds = mapped.map(p => p.id);
+
+                    // 1. Students
+                    const { data: students } = await supabase
+                        .from('maker_project_students')
+                        .select('*')
+                        .in('project_id', projectIds);
+
+                    if (students) {
+                        set({ makerProjectStudents: students.map(s => ({ projectId: s.project_id, studentId: s.student_id })) });
+                    }
+
+                    // 2. Updates
+                    const { data: updates } = await supabase
+                        .from('maker_project_updates')
+                        .select('*')
+                        .in('project_id', projectIds);
+
+                    if (updates) {
+                        set({
+                            makerProjectUpdates: updates.map(u => ({
+                                id: u.id,
+                                projectId: u.project_id,
+                                weekNumber: u.week_number,
+                                title: u.title,
+                                content: u.content,
+                                requests: u.requests,
+                                createdAt: u.created_at
+                            }))
+                        });
+                    }
+
+                    // 3. Documents
+                    const { data: docs } = await supabase
+                        .from('maker_project_documents')
+                        .select('*')
+                        .in('project_id', projectIds);
+
+                    if (docs) {
+                        set({
+                            makerProjectDocuments: docs.map(d => ({
+                                id: d.id,
+                                projectId: d.project_id,
+                                title: d.title,
+                                fileUrl: d.file_url,
+                                fileType: d.file_type,
+                                createdAt: d.created_at
+                            }))
+                        });
+                    }
+                } else {
+                    set({ makerProjects: [], makerProjectStudents: [], makerProjectUpdates: [], makerProjectDocuments: [] });
                 }
             },
 
