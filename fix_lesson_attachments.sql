@@ -20,6 +20,7 @@ USING (true)
 WITH CHECK (true);
 
 -- Also ensure Insert is allowed if not already
+DROP POLICY IF EXISTS "Lessons insertable by everyone" ON lessons;
 CREATE POLICY "Lessons insertable by everyone" ON lessons
 FOR INSERT
 WITH CHECK (true);
