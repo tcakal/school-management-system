@@ -1883,20 +1883,17 @@ export const useStore = create<AppState>()(
                 const newProject = { ...project, id: newId, createdAt: new Date().toISOString() };
                 set(state => ({ makerProjects: [...state.makerProjects, newProject as any] }));
 
-                const { data, error } = await supabase.from('maker_projects').insert([{
+                const { error } = await supabase.from('maker_projects').insert([{
                     id: newId,
                     school_id: project.schoolId,
                     name: project.name,
                     description: project.description,
                     status: project.status,
                     maker_fair_date: project.makerFairDate
-                }]).select();
+                }]);
 
                 if (error) {
                     console.error('Maker Project Add Error:', error);
-                    alert('Kayıt Hatası: ' + error.message);
-                } else {
-                    console.log('Maker Project Added Success:', data);
                 }
             },
 

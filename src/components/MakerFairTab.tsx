@@ -195,16 +195,6 @@ export const MakerFairTab: React.FC<MakerFairTabProps> = ({ school }) => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <button
-                        onClick={async () => {
-                            const { data, error } = await import('../supabase').then(m => m.supabase.from('maker_projects').select('*').eq('school_id', school.id));
-                            alert(`DEBUG KONTROL:\nOkul ID: ${school.id}\nVeritabanındaki Proje Sayısı: ${data?.length || 0}\nHata: ${error?.message || 'Yok'}`);
-                            console.log('DEBUG PROJECT FETCH:', data, error);
-                        }}
-                        className="px-3 py-1 bg-red-100 text-red-700 rounded text-xs font-bold border border-red-200"
-                    >
-                        🔍 DB Kontrol
-                    </button>
                     {daysLeft !== null && (
                         <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 text-center">
                             <span className="block text-xs text-slate-400 uppercase font-bold tracking-wider">Kalan Süre</span>
