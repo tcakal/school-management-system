@@ -10,6 +10,7 @@ interface AssignmentModalProps {
     onClose: () => void;
     schoolId: string;
     classGroupId: string;
+    eventDate?: string; // Specific event date for this class group
 }
 
 const DAYS = [
@@ -24,10 +25,12 @@ const DAYS = [
 
 
 
-export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: AssignmentModalProps) {
+export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId, eventDate }: AssignmentModalProps) {
     const { teachers, schools, addAssignment, findAvailableTeachers } = useStore();
     const school = schools.find(s => s.id === schoolId);
     const isEvent = school?.type === 'event';
+    // Use provided eventDate prop first, fall back to school.eventDate
+    const effectiveEventDate = eventDate || school?.eventDate;
 
     const [teacherId, setTeacherId] = useState('');
     const [dayOfWeek, setDayOfWeek] = useState(1);
@@ -51,9 +54,8 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
     });
 
     const getNextDayDate = (dayIndex: number) => {
-        // If event, check specifically for that date? 
-        // For now, keep existing logic or use eventDate if isEvent
-        if (isEvent && school?.eventDate) return school.eventDate;
+        // If event, use the specific event date for this class group
+        if (isEvent && effectiveEventDate) return effectiveEventDate;
 
         const today = new Date();
         const currentDay = today.getDay() || 7; // 1-7

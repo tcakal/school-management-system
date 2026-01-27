@@ -1377,6 +1377,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                 onClose={() => setIsAssignmentModalOpen(false)}
                 schoolId={school.id}
                 classGroupId={selectedClassIdForAssignment}
+                eventDate={school.type === 'event' ? schoolClasses.find(c => c.id === selectedClassIdForAssignment)?.schedule : undefined}
             />
 
             {/* Edit Class Modal */}
