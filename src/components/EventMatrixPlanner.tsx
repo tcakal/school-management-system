@@ -1,7 +1,7 @@
 
 import { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
-import { Plus, User, Calendar, Trash2 } from 'lucide-react';
+import { Plus, User, Calendar, Trash2, Clock } from 'lucide-react';
 import { AddLessonModal } from './AddLessonModal';
 import type { ClassGroup } from '../types';
 
@@ -67,8 +67,8 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                     key={d}
                                     onClick={() => setSelectedDate(d)}
                                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedDate === d
-                                            ? 'bg-purple-600 text-white shadow-sm'
-                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        ? 'bg-purple-600 text-white shadow-sm'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                         }`}
                                 >
                                     {new Date(d).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
@@ -140,6 +140,10 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                     let continuesDown = false;
                                     let isStartBlock = true;
 
+                                    // Break Time variables
+                                    let gapBefore = 0;
+                                    let gapAfter = 0;
+
                                     if (cellLesson) {
                                         const lStartMin = parseInt(cellLesson.startTime.split(':')[0]) * 60 + parseInt(cellLesson.startTime.split(':')[1]);
                                         const lEndMin = parseInt(cellLesson.endTime.split(':')[0]) * 60 + parseInt(cellLesson.endTime.split(':')[1]);
@@ -147,6 +151,30 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                         continuesUp = lStartMin < slotStartMin;
                                         continuesDown = lEndMin > slotEndMin;
                                         isStartBlock = !continuesUp; // Only show details on the first block
+
+                                        if (isStartBlock && cellLesson.teacherId) {
+                                            // Filter lessons for this teacher on this day
+                                            const teacherLessons = dayLessons.filter(l => l.teacherId === cellLesson.teacherId)
+                                                .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+                                            const currentIndex = teacherLessons.findIndex(l => l.id === cellLesson.id);
+
+                                            // Check Previous Lesson Gap
+                                            if (currentIndex > 0) {
+                                                const prev = teacherLessons[currentIndex - 1];
+                                                const prevEnd = parseInt(prev.endTime.split(':')[0]) * 60 + parseInt(prev.endTime.split(':')[1]);
+                                                const currStart = parseInt(cellLesson.startTime.split(':')[0]) * 60 + parseInt(cellLesson.startTime.split(':')[1]);
+                                                gapBefore = currStart - prevEnd;
+                                            }
+
+                                            // Check Next Lesson Gap
+                                            if (currentIndex < teacherLessons.length - 1) {
+                                                const next = teacherLessons[currentIndex + 1];
+                                                const nextStart = parseInt(next.startTime.split(':')[0]) * 60 + parseInt(next.startTime.split(':')[1]);
+                                                const currEnd = parseInt(cellLesson.endTime.split(':')[0]) * 60 + parseInt(cellLesson.endTime.split(':')[1]);
+                                                gapAfter = nextStart - currEnd;
+                                            }
+                                        }
                                     }
 
                                     return (
@@ -164,6 +192,14 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                                     `}>
                                                         {isStartBlock ? (
                                                             <>
+                                                                {/* Break Before Indicator */}
+                                                                {gapBefore > 0 && (
+                                                                    <div className="flex items-center gap-1 text-[10px] text-orange-600 font-bold bg-orange-100 px-1.5 py-0.5 rounded w-fit mb-1" title="Önceki dersten sonraki boşluk">
+                                                                        <Clock size={10} />
+                                                                        <span>{gapBefore} dk ara</span>
+                                                                    </div>
+                                                                )}
+
                                                                 <div className="font-bold text-purple-900 text-sm line-clamp-1">
                                                                     {cellLesson.topic || 'Etkinlik'}
                                                                 </div>
@@ -174,6 +210,16 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                                                 {cellLesson.notes && (
                                                                     <div className="text-[10px] text-purple-600 italic line-clamp-2 mt-1 border-t border-purple-200/50 pt-1">
                                                                         {cellLesson.notes}
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Break After Indicator */}
+                                                                {gapAfter > 0 && (
+                                                                    <div className="mt-auto pt-1">
+                                                                        <div className="flex items-center gap-1 text-[10px] text-blue-600 font-bold bg-blue-100 px-1.5 py-0.5 rounded w-fit" title="Sonraki derse kadar olan boşluk">
+                                                                            <Clock size={10} />
+                                                                            <span>{gapAfter} dk ara</span>
+                                                                        </div>
                                                                     </div>
                                                                 )}
 
