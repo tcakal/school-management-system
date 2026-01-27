@@ -15,7 +15,8 @@ export interface School {
     payment_cycle_start_date?: string; // ISO Date "2024-01-01"
     makerFairDate?: string; // ISO Date for Maker Fair countdown
     type: 'school' | 'event';
-    eventDate?: string; // ISO Date
+    eventDate?: string; // ISO Date (Primary/Start)
+    eventDates?: string[]; // Multiple dates for multi-day events
     notes?: string;
 }
 

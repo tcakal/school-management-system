@@ -273,6 +273,7 @@ export const useStore = create<AppState>()(
                         payment_cycle_start_date: s.payment_cycle_start_date,
                         type: s.type || 'school',
                         eventDate: s.event_date,
+                        eventDates: s.event_dates,
                         notes: s.notes
                     }));
 
@@ -634,6 +635,7 @@ export const useStore = create<AppState>()(
                     manager_email: school.managerEmail,
                     type: school.type || 'school',
                     event_date: school.eventDate,
+                    event_dates: school.eventDates,
                     notes: school.notes
                 }]);
 
@@ -662,6 +664,7 @@ export const useStore = create<AppState>()(
                 if (updated.managerEmail) dbUpdate.manager_email = updated.managerEmail;
                 if (updated.type) dbUpdate.type = updated.type;
                 if (updated.eventDate) dbUpdate.event_date = updated.eventDate;
+                if (updated.eventDates) dbUpdate.event_dates = updated.eventDates;
                 if (updated.notes) dbUpdate.notes = updated.notes;
                 if (Object.keys(dbUpdate).length > 0) {
                     await supabase.from('schools').update(dbUpdate).eq('id', id);

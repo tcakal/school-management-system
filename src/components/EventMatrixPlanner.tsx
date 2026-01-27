@@ -9,16 +9,15 @@ interface EventMatrixPlannerProps {
     schoolId: string;
     classGroups: ClassGroup[];
     eventDate?: string;
+    eventDates?: string[];
 }
 
-export function EventMatrixPlanner({ schoolId, classGroups, eventDate }: EventMatrixPlannerProps) {
+export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDates }: EventMatrixPlannerProps) {
     const { lessons, teachers, deleteLesson } = useStore();
 
-    // Matrix Configuration
-    // If eventDate is set, use it. Otherwise use today or let user pick? 
-    // Plan assumes single-day event for now based on user description ("o tarihe ders ataması").
-    // If multiple days, we need a date picker.
-    const [selectedDate, setSelectedDate] = useState(eventDate || new Date().toISOString().split('T')[0]);
+    // Determine initial date: try eventDates[0], then eventDate, then today
+    const initialDate = (eventDates && eventDates.length > 0) ? eventDates[0] : (eventDate || new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState(initialDate);
 
     // Time Slots (can be dynamic, but fixed for now)
     const timeSlots = Array.from({ length: 12 }, (_, i) => {
@@ -61,12 +60,29 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate }: EventMa
                         <Calendar size={20} className="text-purple-600" />
                         <span>Planlama Tarihi:</span>
                     </div>
-                    <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-slate-900 font-medium"
-                    />
+                    {eventDates && eventDates.length > 0 ? (
+                        <div className="flex gap-2">
+                            {eventDates.map(d => (
+                                <button
+                                    key={d}
+                                    onClick={() => setSelectedDate(d)}
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedDate === d
+                                            ? 'bg-purple-600 text-white shadow-sm'
+                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        }`}
+                                >
+                                    {new Date(d).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <input
+                            type="date"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            className="px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-slate-900 font-medium"
+                        />
+                    )}
                 </div>
 
                 <div className="flex items-center gap-2">

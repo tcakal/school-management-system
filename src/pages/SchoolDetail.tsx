@@ -423,8 +423,8 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
     const activeStudentCount = students.filter(s => s.schoolId === school.id && s.status === 'Active').length;
 
     const tabs = [
-        { id: 'classes', label: 'Sınıflar / Gruplar' },
-        { id: 'students', label: 'Öğrenciler' },
+        { id: 'classes', label: school.type === 'event' ? 'Gruplar / Atölyeler' : 'Sınıflar / Gruplar' },
+        { id: 'students', label: school.type === 'event' ? 'Katılımcılar' : 'Öğrenciler' },
     ];
 
     // Permissions: Financials only for Admin and Manager
@@ -462,8 +462,8 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
             <div
                 className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8 relative overflow-hidden"
                 style={{
-                    backgroundColor: school.color ? `${school.color}20` : undefined, // Increased from 10 to 20
-                    borderColor: school.color ? `${school.color}50` : undefined // Increased from 30 to 50
+                    backgroundColor: school.color ? `${school.color}20` : undefined,
+                    borderColor: school.color ? `${school.color}50` : undefined
                 }}
             >
                 {/* Background Pattern or Image */}
@@ -473,7 +473,6 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                         style={{ backgroundImage: `url(${school.imageUrl})` }}
                     />
                 )}
-                {/* Fallback decorative gradient if no image but color exists */}
                 {!school.imageUrl && school.color && (
                     <div
                         className="absolute top-0 right-0 w-64 h-64 rounded-full filter blur-3xl opacity-20 -mr-16 -mt-16 pointer-events-none"
@@ -483,6 +482,13 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
 
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 relative z-10">
                     <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                            {school.type === 'event' && (
+                                <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-bold uppercase border border-purple-200">
+                                    Etkinlik
+                                </span>
+                            )}
+                        </div>
                         <h1
                             className="text-3xl font-bold text-slate-900"
                             style={{ color: school.color }}
@@ -492,24 +498,40 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                         <div className="flex flex-wrap items-center gap-6 mt-4 text-slate-500">
                             <div className="flex items-center gap-2">
                                 <MapPin size={18} style={{ color: school.color }} />
-                                <span>{school.address}</span>
+                                <span>{school.address || (school.type === 'event' ? 'Konum belirtilmedi' : 'Adres belirtilmedi')}</span>
                             </div>
-                            <div className="flex items-center gap-2 whitespace-nowrap">
-                                <Phone size={18} style={{ color: school.color }} />
-                                <span>{school.phone}</span>
-                            </div>
+
+                            {school.type !== 'event' && (
+                                <div className="flex items-center gap-2 whitespace-nowrap">
+                                    <Phone size={18} style={{ color: school.color }} />
+                                    <span>{school.phone}</span>
+                                </div>
+                            )}
+
+                            {school.type === 'event' && (
+                                <div className="flex items-center gap-2 whitespace-nowrap text-purple-700 font-medium">
+                                    <Calendar size={18} />
+                                    <span>
+                                        {school.eventDates && school.eventDates.length > 0
+                                            ? school.eventDates.join(', ')
+                                            : (school.eventDate || 'Tarih seçilmedi')}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div className="flex gap-3">
                         {(user?.role === 'admin' || user?.role === 'manager') && (
                             <>
-                                <button
-                                    onClick={() => setIsShiftModalOpen(true)}
-                                    className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg flex items-center gap-2 hover:bg-purple-200 transition-colors font-medium border border-purple-200"
-                                >
-                                    <Calendar size={18} />
-                                    <span className="hidden md:inline">Takvim / Tatil</span>
-                                </button>
+                                {school.type !== 'event' && (
+                                    <button
+                                        onClick={() => setIsShiftModalOpen(true)}
+                                        className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg flex items-center gap-2 hover:bg-purple-200 transition-colors font-medium border border-purple-200"
+                                    >
+                                        <Calendar size={18} />
+                                        <span className="hidden md:inline">Takvim / Tatil</span>
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => setIsAddLessonModalOpen(true)}
                                     className="px-4 py-2 bg-purple-600 text-white rounded-lg flex items-center gap-2 hover:bg-purple-700 transition-colors font-medium shadow-sm ml-2"
@@ -527,7 +549,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                             }}
                         >
                             <Users size={18} />
-                            <span className="font-bold">{activeStudentCount}</span> Aktif Öğrenci
+                            <span className="font-bold">{activeStudentCount}</span> {school.type === 'event' ? 'Katılımcı' : 'Aktif Öğrenci'}
                         </div>
                     </div>
                 </div>
@@ -546,19 +568,20 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                         schoolId={school.id}
                         classGroups={schoolClasses}
                         eventDate={school.eventDate}
+                        eventDates={school.eventDates}
                     />
                 )}
 
                 {activeTab === 'classes' && (
                     <div className="space-y-6">
                         <div className="flex justify-between items-center">
-                            <h3 className="text-lg font-bold text-slate-800">Tanımlı Sınıflar</h3>
+                            <h3 className="text-lg font-bold text-slate-800">{school.type === 'event' ? 'Tanımlı Gruplar' : 'Tanımlı Sınıflar'}</h3>
                             <button
                                 onClick={() => setIsAddClassModalOpen(true)}
                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
                             >
                                 <Plus size={16} />
-                                Yeni Sınıf Ekle
+                                {school.type === 'event' ? 'Yeni Grup Ekle' : 'Yeni Sınıf Ekle'}
                             </button>
                         </div>
 
