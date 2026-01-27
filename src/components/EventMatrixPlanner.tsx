@@ -141,7 +141,6 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                     let isStartBlock = true;
 
                                     // Break Time variables
-                                    let gapBefore = 0;
                                     let gapAfter = 0;
 
                                     if (cellLesson) {
@@ -158,14 +157,6 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                                 .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
                                             const currentIndex = teacherLessons.findIndex(l => l.id === cellLesson.id);
-
-                                            // Check Previous Lesson Gap
-                                            if (currentIndex > 0) {
-                                                const prev = teacherLessons[currentIndex - 1];
-                                                const prevEnd = parseInt(prev.endTime.split(':')[0]) * 60 + parseInt(prev.endTime.split(':')[1]);
-                                                const currStart = parseInt(cellLesson.startTime.split(':')[0]) * 60 + parseInt(cellLesson.startTime.split(':')[1]);
-                                                gapBefore = currStart - prevEnd;
-                                            }
 
                                             // Check Next Lesson Gap
                                             if (currentIndex < teacherLessons.length - 1) {
@@ -192,14 +183,6 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                                     `}>
                                                         {isStartBlock ? (
                                                             <>
-                                                                {/* Break Before Indicator */}
-                                                                {gapBefore > 0 && (
-                                                                    <div className="flex items-center gap-1 text-[10px] text-orange-600 font-bold bg-orange-100 px-1.5 py-0.5 rounded w-fit mb-1" title="Önceki dersten sonraki boşluk">
-                                                                        <Clock size={10} />
-                                                                        <span>{gapBefore} dk ara</span>
-                                                                    </div>
-                                                                )}
-
                                                                 <div className="font-bold text-purple-900 text-sm line-clamp-1">
                                                                     {cellLesson.topic || 'Etkinlik'}
                                                                 </div>
@@ -213,12 +196,16 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                                                     </div>
                                                                 )}
 
-                                                                {/* Break After Indicator */}
+                                                                {/* Break After Indicator - Dashed Style */}
                                                                 {gapAfter > 0 && (
-                                                                    <div className="mt-auto pt-1">
-                                                                        <div className="flex items-center gap-1 text-[10px] text-blue-600 font-bold bg-blue-100 px-1.5 py-0.5 rounded w-fit" title="Sonraki derse kadar olan boşluk">
-                                                                            <Clock size={10} />
-                                                                            <span>{gapAfter} dk ara</span>
+                                                                    <div className="mt-auto pt-2 w-full">
+                                                                        <div className="flex items-center gap-1 select-none opacity-90 w-full" title={`Sonraki derse kadar ${gapAfter} dk boşluk`}>
+                                                                            <div className="h-px bg-purple-300 flex-1 border-t border-dashed border-purple-400"></div>
+                                                                            <div className="px-1.5 py-0.5 bg-white/50 text-purple-700 text-[10px] font-bold uppercase rounded border border-purple-300 flex items-center gap-1 whitespace-nowrap shadow-sm">
+                                                                                <Clock size={10} />
+                                                                                {gapAfter} dk Ara
+                                                                            </div>
+                                                                            <div className="h-px bg-purple-300 flex-1 border-t border-dashed border-purple-400"></div>
                                                                         </div>
                                                                     </div>
                                                                 )}
