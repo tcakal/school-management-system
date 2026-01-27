@@ -119,18 +119,13 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                     const slotStartMin = timeH * 60 + timeM;
                                     const slotEndMin = slotStartMin + 60; // 1 hour slots
 
-                                    // Find lesson for this cell (overlapping)
+                                    // Find lesson that STARTS in this time slot's hour
+                                    // Each lesson should only appear once - at its start hour
                                     const cellLesson = dayLessons.find(l => {
                                         if (l.classGroupId !== group.id) return false;
                                         const lStartH = parseInt(l.startTime.split(':')[0]);
-                                        const lStartM = parseInt(l.startTime.split(':')[1]);
-                                        const lEndH = parseInt(l.endTime.split(':')[0]);
-                                        const lEndM = parseInt(l.endTime.split(':')[1]);
-
-                                        const lStartMin = lStartH * 60 + lStartM;
-                                        const lEndMin = lEndH * 60 + lEndM;
-
-                                        return lStartMin < slotEndMin && lEndMin > slotStartMin;
+                                        // Only show lesson in the row where its start hour matches
+                                        return lStartH === timeH;
                                     });
 
                                     const teacher = teachers.find(t => t.id === cellLesson?.teacherId);
