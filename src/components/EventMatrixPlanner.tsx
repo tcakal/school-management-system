@@ -151,7 +151,7 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                         continuesDown = lEndMin > slotEndMin;
                                         isStartBlock = !continuesUp; // Only show details on the first block
 
-                                        if (isStartBlock && cellLesson.teacherId) {
+                                        if (cellLesson.teacherId) {
                                             // Filter lessons for this teacher on this day
                                             const teacherLessons = dayLessons.filter(l => l.teacherId === cellLesson.teacherId)
                                                 .sort((a, b) => a.startTime.localeCompare(b.startTime));
@@ -183,19 +183,6 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                                     `}>
                                                         {isStartBlock ? (
                                                             <>
-                                                                <div className="font-bold text-purple-900 text-sm line-clamp-1">
-                                                                    {cellLesson.topic || 'Etkinlik'}
-                                                                </div>
-                                                                <div className="flex items-center gap-1 text-xs text-purple-700 font-medium">
-                                                                    <User size={12} />
-                                                                    {teacher?.name || 'Öğretmen Yok'}
-                                                                </div>
-                                                                {cellLesson.notes && (
-                                                                    <div className="text-[10px] text-purple-600 italic line-clamp-2 mt-1 border-t border-purple-200/50 pt-1">
-                                                                        {cellLesson.notes}
-                                                                    </div>
-                                                                )}
-
                                                                 {/* Time Range */}
                                                                 <div className="flex items-center gap-1 text-[10px] font-mono text-purple-600/80 mb-0.5">
                                                                     <Clock size={10} />
@@ -215,17 +202,7 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                                                     </div>
                                                                 )}
 
-                                                                {/* Break After Indicator - Solid Block Style (Blue) */}
-                                                                {gapAfter > 0 && (
-                                                                    <div className="mt-auto pt-2 w-full">
-                                                                        <div className="w-full bg-blue-100 border border-blue-200 rounded flex items-center justify-center gap-1.5 py-0.5 text-[10px] text-blue-700 font-bold uppercase shadow-sm" title={`Sonraki derse kadar ${gapAfter} dk boşluk`}>
-                                                                            <Clock size={10} className="text-blue-600" />
-                                                                            {gapAfter} dk Ara
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Actions only on start block or if it's big enough? Let's keep on start block */}
+                                                                {/* Actions */}
                                                                 <button
                                                                     onClick={(e) => handleDeleteLesson(e, cellLesson.id)}
                                                                     className="absolute top-1 right-1 p-1 text-purple-400 hover:text-red-600 hover:bg-red-50 rounded opacity-0 group-hover/cell:opacity-100 transition-opacity"
@@ -235,8 +212,18 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                                             </>
                                                         ) : (
                                                             // Continuation block content
-                                                            <div className="h-full flex items-center justify-center opacity-30">
-                                                                <div className="w-1 h-4 bg-purple-300 rounded-full"></div>
+                                                            <div className="flex-1 flex items-center justify-center opacity-30 py-1">
+                                                                <div className="w-1 h-full bg-purple-300 rounded-full"></div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Break After Indicator - Only on LAST block */}
+                                                        {(!continuesDown && gapAfter > 0) && (
+                                                            <div className="mt-auto pt-2 w-full">
+                                                                <div className="w-full bg-blue-100 border border-blue-200 rounded flex items-center justify-center gap-1.5 py-0.5 text-[10px] text-blue-700 font-bold uppercase shadow-sm" title={`Sonraki derse kadar ${gapAfter} dk boşluk`}>
+                                                                    <Clock size={10} className="text-blue-600" />
+                                                                    {gapAfter} dk Ara
+                                                                </div>
                                                             </div>
                                                         )}
                                                     </div>
