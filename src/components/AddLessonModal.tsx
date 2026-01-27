@@ -223,17 +223,19 @@ export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, 
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                                Tarih
-                            </label>
-                            <input
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                className="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500"
-                            />
-                        </div>
+                        {!initialDate && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    Tarih
+                                </label>
+                                <input
+                                    type="date"
+                                    value={date}
+                                    onChange={(e) => setDate(e.target.value)}
+                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500"
+                                />
+                            </div>
+                        )}
 
                         {mode === 'existing' && (
                             <div>
