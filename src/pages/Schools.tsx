@@ -36,6 +36,7 @@ export function Schools() {
     const [managerName, setManagerName] = useState('');
     const [managerPhone, setManagerPhone] = useState('');
     const [managerEmail, setManagerEmail] = useState('');
+    const [newNotes, setNewNotes] = useState('');
 
     const openAddModal = () => {
         setNewSchoolColor(activeTab === 'events' ? '#9333ea' : '#2563eb');
@@ -59,7 +60,8 @@ export function Schools() {
             managerEmail: managerEmail,
             type: activeTab === 'events' ? 'event' : 'school',
             eventDate: activeTab === 'events' ? newEventDate : undefined,
-            eventDates: activeTab === 'events' && newEventDate ? [newEventDate] : undefined
+            eventDates: activeTab === 'events' && newEventDate ? [newEventDate] : undefined,
+            notes: activeTab === 'events' ? newNotes : undefined
         };
 
         await addSchool(newSchool);
@@ -74,6 +76,7 @@ export function Schools() {
         setManagerPhone('');
         setManagerEmail('');
         setNewEventDate('');
+        setNewNotes('');
     };
 
     // Edit School State
@@ -414,12 +417,52 @@ export function Schools() {
                             <span className="text-sm text-slate-500 uppercase">{newSchoolColor}</span>
                         </div>
                     </div>
-                    <button
-                        type="submit"
-                        className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium"
-                    >
-                        Kaydet
-                    </button>
+
+                    {activeTab === 'events' && (
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Genel Notlar / Hazırlıklar
+                            </label>
+                            <textarea
+                                value={newNotes}
+                                onChange={(e) => setNewNotes(e.target.value)}
+                                placeholder="Örn: 30 adet masa lazım, elektrik kablosu vs."
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 h-24 resize-none"
+                            />
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                            <div className="flex items-center gap-2">
+                                <ImageIcon size={16} />
+                                <span>Kapak Görseli URL (İsteğe bağlı)</span>
+                            </div>
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="https://..."
+                            value={newSchoolImage}
+                            onChange={e => setNewSchoolImage(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-slate-900"
+                        />
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={() => setIsAddModalOpen(false)}
+                            className="px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium text-sm"
+                        >
+                            İptal
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium text-sm"
+                        >
+                            {activeTab === 'schools' ? 'Okul Ekle' : 'Etkinlik Oluştur'}
+                        </button>
+                    </div>
                 </form>
             </Modal>
 
