@@ -1335,18 +1335,65 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                     <div className="pt-6 border-t border-slate-200">
                         <h4 className="font-medium text-slate-900 mb-4">Ders Programı ve Öğretmenler</h4>
                         <div className="space-y-3">
-                            {assignments.filter(a => a.classGroupId === editingClassId).map(assignment => {
-                                const teacher = teachers.find(t => t.id === assignment.teacherId);
-                                return (
-                                    <AssignmentItem
-                                        key={assignment.id}
-                                        assignment={assignment}
-                                        teacher={teacher}
-                                        updateAssignment={updateAssignment}
-                                        deleteAssignment={deleteAssignment}
-                                    />
-                                );
-                            })}
+                            {assignments
+                                .filter(a => a.classGroupId === editingClassId)
+                                .sort((a, b) => {
+                                    // Sort by Day then Start Time
+                                    if (a.dayOfWeek !== b.dayOfWeek) return a.dayOfWeek - b.dayOfWeek;
+                                    return a.startTime.localeCompare(b.startTime);
+                                })
+                                .map((assignment, index, array) => {
+                                    const teacher = teachers.find(t => t.id === assignment.teacherId);
+
+                                    // Calculate Break Time Logic
+                                    let breakElement = null;
+                                    const nextAssignment = array[index + 1];
+
+                                    // If next assignment exists and is on the SAME day
+                                    if (nextAssignment && nextAssignment.dayOfWeek === assignment.dayOfWeek) {
+                                        const currentEnd = assignment.endTime || '10:00'; // Default end if missing
+                                        const nextStart = nextAssignment.startTime;
+
+                                        if (currentEnd < nextStart) {
+                                            // Calculate duration in minutes
+                                            const [endH, endM] = currentEnd.split(':').map(Number);
+                                            const [startH, startM] = nextStart.split(':').map(Number);
+                                            const diffInMinutes = (startH * 60 + startM) - (endH * 60 + endM);
+
+                                            if (diffInMinutes > 0) {
+                                                let durationText = `${diffInMinutes} dk`;
+                                                if (diffInMinutes >= 60) {
+                                                    const h = Math.floor(diffInMinutes / 60);
+                                                    const m = diffInMinutes % 60;
+                                                    durationText = m > 0 ? `${h} saat ${m} dk` : `${h} saat`;
+                                                }
+
+                                                breakElement = (
+                                                    <div className="flex items-center gap-2 my-2 select-none">
+                                                        <div className="h-px bg-purple-200 flex-1 border-t border-dashed border-purple-300"></div>
+                                                        <div className="px-2 py-0.5 bg-purple-50 text-purple-600 text-[10px] font-bold uppercase rounded border border-purple-200 shadow-sm flex items-center gap-1">
+                                                            <Clock size={10} />
+                                                            {durationText} Ara
+                                                        </div>
+                                                        <div className="h-px bg-purple-200 flex-1 border-t border-dashed border-purple-300"></div>
+                                                    </div>
+                                                );
+                                            }
+                                        }
+                                    }
+
+                                    return (
+                                        <div key={assignment.id}>
+                                            <AssignmentItem
+                                                assignment={assignment}
+                                                teacher={teacher}
+                                                updateAssignment={updateAssignment}
+                                                deleteAssignment={deleteAssignment}
+                                            />
+                                            {breakElement}
+                                        </div>
+                                    );
+                                })}
                             {assignments.filter(a => a.classGroupId === editingClassId).length === 0 && (
                                 <div className="text-sm text-slate-400 text-center py-2">
                                     Atanmış ders yok.
