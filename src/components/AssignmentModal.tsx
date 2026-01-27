@@ -39,14 +39,15 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId, event
     const [availableTeachers, setAvailableTeachers] = useState<any[]>([]);
     const [isChecking, setIsChecking] = useState(false);
 
-    // Auto-set day for events
+    // Auto-set day for events based on the effective event date
     useEffect(() => {
-        if (isEvent && school?.eventDate) {
-            const date = new Date(school.eventDate);
+        if (isEvent && effectiveEventDate) {
+            const date = new Date(effectiveEventDate);
             const day = date.getDay() || 7; // Convert 0 (Sun) to 7
             setDayOfWeek(day);
+            console.log('[AssignmentModal] Auto-set dayOfWeek from effectiveEventDate:', effectiveEventDate, '-> day:', day);
         }
-    }, [isEvent, school?.eventDate]);
+    }, [isEvent, effectiveEventDate]);
 
     // Check availability when timing changes
     useState(() => {
@@ -71,16 +72,18 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId, event
         const check = async () => {
             setIsChecking(true);
             const date = getNextDayDate(dayOfWeek);
+            console.log('[AssignmentModal] Checking availability for date:', date, 'effectiveEventDate:', effectiveEventDate, 'startTime:', startTime, 'endTime:', endTime);
             // Verify findAvailableTeachers exists in store, assuming generic store type has it
             if (findAvailableTeachers) {
                 const available = await findAvailableTeachers(date, startTime, endTime);
+                console.log('[AssignmentModal] Available teachers:', available.length, available.map(t => t.name));
                 setAvailableTeachers(available);
             }
             setIsChecking(false);
         };
         const timer = setTimeout(check, 500); // 500ms debounce
         return () => clearTimeout(timer);
-    }, [dayOfWeek, startTime, endTime, findAvailableTeachers, isEvent, school?.eventDate]); // Added deps
+    }, [dayOfWeek, startTime, endTime, findAvailableTeachers, isEvent, effectiveEventDate]); // Fixed: use effectiveEventDate
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
