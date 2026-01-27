@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
-import { supabase } from '../supabase';
+
 import { Building2, ArrowRight, Plus, MapPin, Image as ImageIcon, Trash2, Edit, Tent, Calendar, X } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import type { School } from '../types';
