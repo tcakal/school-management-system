@@ -631,7 +631,10 @@ export const useStore = create<AppState>()(
                     image_url: school.imageUrl,
                     manager_name: school.managerName,
                     manager_phone: school.managerPhone,
-                    manager_email: school.managerEmail
+                    manager_email: school.managerEmail,
+                    type: school.type || 'school',
+                    event_date: school.eventDate,
+                    notes: school.notes
                 }]);
 
                 if (error) {
@@ -657,6 +660,9 @@ export const useStore = create<AppState>()(
                 if (updated.managerName) dbUpdate.manager_name = updated.managerName;
                 if (updated.managerPhone) dbUpdate.manager_phone = updated.managerPhone;
                 if (updated.managerEmail) dbUpdate.manager_email = updated.managerEmail;
+                if (updated.type) dbUpdate.type = updated.type;
+                if (updated.eventDate) dbUpdate.event_date = updated.eventDate;
+                if (updated.notes) dbUpdate.notes = updated.notes;
                 if (Object.keys(dbUpdate).length > 0) {
                     await supabase.from('schools').update(dbUpdate).eq('id', id);
                 }
@@ -1093,7 +1099,8 @@ export const useStore = create<AppState>()(
                     color: teacher.color,
                     role: teacher.role || 'teacher',
                     password: teacher.password || '123456',
-                    telegram_chat_id: teacher.telegramChatId
+                    telegram_chat_id: teacher.telegramChatId,
+                    type: teacher.type || 'regular'
                 }]);
             },
 
@@ -1109,12 +1116,12 @@ export const useStore = create<AppState>()(
                 if (updated.name) dbUpdate.name = updated.name;
                 if (updated.phone) dbUpdate.phone = updated.phone;
                 if (updated.email) dbUpdate.email = updated.email;
-                if (updated.email) dbUpdate.email = updated.email;
                 if (updated.specialties) dbUpdate.specialties = updated.specialties;
                 if (updated.password) dbUpdate.password = updated.password;
                 if (updated.role) dbUpdate.role = updated.role;
                 if (updated.color) dbUpdate.color = updated.color;
                 if (updated.telegramChatId) dbUpdate.telegram_chat_id = updated.telegramChatId;
+                if (updated.type) dbUpdate.type = updated.type;
                 if (Object.keys(dbUpdate).length > 0) {
                     await supabase.from('teachers').update(dbUpdate).eq('id', id);
                 }
