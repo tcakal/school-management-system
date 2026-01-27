@@ -98,13 +98,40 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate }: EventMa
                                     {time}
                                 </td>
                                 {classGroups.map(group => {
-                                    // Find lesson for this cell
-                                    const cellLesson = dayLessons.find(l =>
-                                        l.classGroupId === group.id &&
-                                        parseInt(l.startTime) === parseInt(time) // loose match
-                                    );
+                                    const timeH = parseInt(time.split(':')[0]);
+                                    const timeM = parseInt(time.split(':')[1]);
+                                    const slotStartMin = timeH * 60 + timeM;
+                                    const slotEndMin = slotStartMin + 60; // 1 hour slots
+
+                                    // Find lesson for this cell (overlapping)
+                                    const cellLesson = dayLessons.find(l => {
+                                        if (l.classGroupId !== group.id) return false;
+                                        const lStartH = parseInt(l.startTime.split(':')[0]);
+                                        const lStartM = parseInt(l.startTime.split(':')[1]);
+                                        const lEndH = parseInt(l.endTime.split(':')[0]);
+                                        const lEndM = parseInt(l.endTime.split(':')[1]);
+
+                                        const lStartMin = lStartH * 60 + lStartM;
+                                        const lEndMin = lEndH * 60 + lEndM;
+
+                                        return lStartMin < slotEndMin && lEndMin > slotStartMin;
+                                    });
 
                                     const teacher = teachers.find(t => t.id === cellLesson?.teacherId);
+
+                                    // Calc continuation for styling
+                                    let continuesUp = false;
+                                    let continuesDown = false;
+                                    let isStartBlock = true;
+
+                                    if (cellLesson) {
+                                        const lStartMin = parseInt(cellLesson.startTime.split(':')[0]) * 60 + parseInt(cellLesson.startTime.split(':')[1]);
+                                        const lEndMin = parseInt(cellLesson.endTime.split(':')[0]) * 60 + parseInt(cellLesson.endTime.split(':')[1]);
+
+                                        continuesUp = lStartMin < slotStartMin;
+                                        continuesDown = lEndMin > slotEndMin;
+                                        isStartBlock = !continuesUp; // Only show details on the first block
+                                    }
 
                                     return (
                                         <td
@@ -112,30 +139,42 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate }: EventMa
                                             onClick={() => handleCellClick(time, group.id)}
                                             className="p-2 border-b border-r border-slate-200 cursor-pointer relative align-top h-24"
                                         >
-                                            <div className="w-full h-full min-h-[80px] rounded-lg transition-all hover:ring-2 hover:ring-purple-400 p-2 flex flex-col justify-center items-center text-center gap-1 group/cell">
+                                            <div className="w-full h-full min-h-[80px] transition-all hover:ring-2 hover:ring-purple-400 flex flex-col justify-center items-center text-center gap-1 group/cell">
                                                 {cellLesson ? (
-                                                    <div className={`w-full h-full rounded-lg p-2 text-left flex flex-col gap-1 shadow-sm border relative ${cellLesson.status === 'cancelled' ? 'bg-red-50 border-red-200 opacity-60' : 'bg-purple-100 border-purple-200'
-                                                        }`}>
-                                                        <div className="font-bold text-purple-900 text-sm line-clamp-1">
-                                                            {cellLesson.topic || 'Etkinlik'}
-                                                        </div>
-                                                        <div className="flex items-center gap-1 text-xs text-purple-700 font-medium">
-                                                            <User size={12} />
-                                                            {teacher?.name || 'Öğretmen Yok'}
-                                                        </div>
-                                                        {cellLesson.notes && (
-                                                            <div className="text-[10px] text-purple-600 italic line-clamp-2 mt-1 border-t border-purple-200/50 pt-1">
-                                                                {cellLesson.notes}
+                                                    <div className={`w-full h-full p-2 text-left flex flex-col gap-1 shadow-sm border relative 
+                                                        ${cellLesson.status === 'cancelled' ? 'bg-red-50 border-red-200 opacity-60' : 'bg-purple-100 border-purple-200'}
+                                                        ${continuesUp ? 'rounded-t-none border-t-0' : 'rounded-t-lg'}
+                                                        ${continuesDown ? 'rounded-b-none border-b-0' : 'rounded-b-lg'}
+                                                    `}>
+                                                        {isStartBlock ? (
+                                                            <>
+                                                                <div className="font-bold text-purple-900 text-sm line-clamp-1">
+                                                                    {cellLesson.topic || 'Etkinlik'}
+                                                                </div>
+                                                                <div className="flex items-center gap-1 text-xs text-purple-700 font-medium">
+                                                                    <User size={12} />
+                                                                    {teacher?.name || 'Öğretmen Yok'}
+                                                                </div>
+                                                                {cellLesson.notes && (
+                                                                    <div className="text-[10px] text-purple-600 italic line-clamp-2 mt-1 border-t border-purple-200/50 pt-1">
+                                                                        {cellLesson.notes}
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Actions only on start block or if it's big enough? Let's keep on start block */}
+                                                                <button
+                                                                    onClick={(e) => handleDeleteLesson(e, cellLesson.id)}
+                                                                    className="absolute top-1 right-1 p-1 text-purple-400 hover:text-red-600 hover:bg-red-50 rounded opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                                                                >
+                                                                    <Trash2 size={12} />
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            // Continuation block content
+                                                            <div className="h-full flex items-center justify-center opacity-30">
+                                                                <div className="w-1 h-4 bg-purple-300 rounded-full"></div>
                                                             </div>
                                                         )}
-
-                                                        {/* Actions */}
-                                                        <button
-                                                            onClick={(e) => handleDeleteLesson(e, cellLesson.id)}
-                                                            className="absolute top-1 right-1 p-1 text-purple-400 hover:text-red-600 hover:bg-red-50 rounded opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                                                        >
-                                                            <Trash2 size={12} />
-                                                        </button>
                                                     </div>
                                                 ) : (
                                                     <div className="opacity-0 group-hover:opacity-100 group-hover:bg-slate-100 text-slate-400 font-medium text-sm w-full h-full flex items-center justify-center rounded-lg border border-dashed border-transparent group-hover:border-slate-300">

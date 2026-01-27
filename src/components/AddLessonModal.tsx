@@ -4,6 +4,7 @@ import { X, Calendar, User, School as SchoolIcon, MapPin } from 'lucide-react';
 import { supabase } from '../supabase';
 import { useStore } from '../store/useStore';
 import type { School, Teacher, ClassGroup } from '../types';
+import { TimeSelect } from './TimeSelect';
 
 interface AddLessonModalProps {
     isOpen: boolean;
@@ -257,11 +258,10 @@ export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, 
                             <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Başlangıç Saati
                             </label>
-                            <input
-                                type="time"
+                            <TimeSelect
                                 value={startTime}
-                                onChange={(e) => setStartTime(e.target.value)}
-                                className="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500"
+                                onChange={setStartTime}
+                                className="w-full"
                             />
                         </div>
 
@@ -269,11 +269,10 @@ export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, 
                             <label className="block text-sm font-medium text-slate-700 mb-1">
                                 Bitiş Saati
                             </label>
-                            <input
-                                type="time"
+                            <TimeSelect
                                 value={endTime}
-                                onChange={(e) => setEndTime(e.target.value)}
-                                className="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500"
+                                onChange={setEndTime}
+                                className="w-full"
                             />
                         </div>
 
