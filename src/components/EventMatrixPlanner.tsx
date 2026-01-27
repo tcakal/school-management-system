@@ -179,6 +179,8 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                                 const nextStart = parseInt(next.startTime.split(':')[0]) * 60 + parseInt(next.startTime.split(':')[1]);
                                                 const currEnd = parseInt(cellLesson.endTime.split(':')[0]) * 60 + parseInt(cellLesson.endTime.split(':')[1]);
                                                 gapAfter = nextStart - currEnd;
+                                                // Store the next lesson's start time for display
+                                                (cellLesson as any)._nextStartTime = next.startTime;
                                             }
                                         }
                                     }
@@ -235,9 +237,11 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                                         {/* Break After Indicator - Only on LAST block */}
                                                         {(!continuesDown && gapAfter > 0) && (
                                                             <div className="mt-auto pt-2 w-full">
-                                                                <div className="w-full bg-blue-100 border border-blue-200 rounded flex items-center justify-center gap-1.5 py-0.5 text-[10px] text-blue-700 font-bold uppercase shadow-sm" title={`Sonraki derse kadar ${gapAfter} dk boşluk`}>
+                                                                <div className="w-full bg-blue-100 border border-blue-200 rounded flex items-center justify-center gap-1.5 py-0.5 text-[10px] text-blue-700 font-bold shadow-sm" title={`Sonraki derse kadar ${gapAfter} dk boşluk`}>
                                                                     <Clock size={10} className="text-blue-600" />
-                                                                    {gapAfter} dk Ara
+                                                                    <span>{cellLesson.endTime} - {(cellLesson as any)._nextStartTime || ''}</span>
+                                                                    <span className="text-blue-500">•</span>
+                                                                    <span className="uppercase">{gapAfter} dk Ara</span>
                                                                 </div>
                                                             </div>
                                                         )}
