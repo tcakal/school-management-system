@@ -10,7 +10,7 @@ import { School, Users, User, Copy, Check, Star, AlertTriangle } from 'lucide-re
 export function Reports() {
     const { lessons, attendance, schools, teachers, classGroups, students, payments, teacherEvaluations, studentEvaluations } = useStore();
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState<'attendance' | 'financial' | 'teachers' | 'class_overview' | 'contacts' | 'evaluations'>('attendance');
+    const [activeTab, setActiveTab] = useState<'attendance' | 'financial' | 'teachers' | 'class_overview' | 'contacts' | 'evaluations' | 'events'>('attendance');
 
     // Attendance Filter State
     const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -18,6 +18,9 @@ export function Reports() {
     // @ts-ignore
     const [selectedSchoolId, setSelectedSchoolId] = useState('all');
     const [selectedTeacherId, setSelectedTeacherId] = useState('all');
+
+    // Event Filter State
+    const [eventYear, setEventYear] = useState(new Date().getFullYear());
 
     // Contacts Filter State
     const [contactSchoolId, setContactSchoolId] = useState(user?.role === 'manager' ? user.id : 'all');
@@ -33,6 +36,73 @@ export function Reports() {
     const [selectedTeacherReport, setSelectedTeacherReport] = useState<any | null>(null);
     const [isTeacherDetailModalOpen, setIsTeacherDetailModalOpen] = useState(false);
     const [teacherDetailTab, setTeacherDetailTab] = useState<'history' | 'trends'>('history');
+
+    // --- EVENT REPORT LOGIC ---
+    const eventReportData = useMemo(() => {
+        if (activeTab !== 'events') return [];
+
+        // Filter schools that are Type 'event'
+        const eventSchools = schools.filter(s => s.type === 'event');
+
+        return eventSchools.map(event => {
+            // Find lessons for this event in the selected year
+            // Events usually have 'eventDates' array.
+            // Check if any date in eventDates falls into selectedYear
+            const eventDates = event.eventDates || [];
+
+            // If legacy style (single date)
+            if (event.eventDate) eventDates.push(event.eventDate);
+
+            // Filter dates within selected year
+            const datesInYear = eventDates.filter(d => new Date(d).getFullYear() === eventYear);
+
+            if (datesInYear.length === 0) return null;
+
+            // Get lessons for this school/event
+            const eventLessons = lessons.filter(l => l.schoolId === event.id);
+
+            // Calculate Stats
+            const uniqueTeacherIds = [...new Set(eventLessons.map(l => l.teacherId))];
+            const teacherNames = uniqueTeacherIds.map(tid => {
+                const t = teachers.find(teacher => teacher.id === tid);
+                return t ? t.name : 'Bilinmiyor';
+            });
+
+            // Date Range String
+            const sortedDates = datesInYear.sort();
+            const dateRange = sortedDates.length > 0
+                ? (sortedDates.length === 1 ? format(new Date(sortedDates[0]), 'dd MMMM yyyy', { locale: tr }) : `${format(new Date(sortedDates[0]), 'dd MMM', { locale: tr })} - ${format(new Date(sortedDates[sortedDates.length - 1]), 'dd MMM yyyy', { locale: tr })}`)
+                : '-';
+
+            return {
+                id: event.id,
+                name: event.name,
+                manager: event.managerName || '-', // Location or Manager
+                dateRange: dateRange,
+                lessonCount: eventLessons.length,
+                teachers: teacherNames,
+                notes: event.notes || '',
+                excelData: {
+                    'Etkinlik Adı': event.name,
+                    'Yetkili / Yer': event.managerName,
+                    'Tarih': dateRange,
+                    'Ders Sayısı': eventLessons.length,
+                    'Öğretmenler': teacherNames.join(', '),
+                    'Notlar': event.notes
+                }
+            };
+        }).filter(Boolean) as any[]; // Remove nulls
+    }, [schools, lessons, teachers, activeTab, eventYear]);
+
+    const eventStats = useMemo(() => {
+        if (activeTab !== 'events') return { totalEvents: 0, totalLessons: 0, uniqueTeachers: 0 };
+
+        return {
+            totalEvents: eventReportData.length,
+            totalLessons: eventReportData.reduce((acc, curr) => acc + curr.lessonCount, 0),
+            uniqueTeachers: new Set(eventReportData.flatMap(e => e.teachers)).size
+        };
+    }, [eventReportData, activeTab]);
 
     // --- CONTACTS LOGIC ---
     const contactsData = useMemo(() => {
@@ -341,49 +411,73 @@ export function Reports() {
                         Öğrenci Değerlendirmeleri
                     </button>
                 )}
+                <button
+                    onClick={() => setActiveTab('events')}
+                    className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'events' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                >
+                    <Star size={18} />
+                    Etkinlik Raporları
+                </button>
             </div>
 
-            {/* SHARED FILTERS (Contacts & Evaluations) */}
-            {(activeTab === 'contacts' || activeTab === 'evaluations') && (
+            {/* SHARED FILTERS (Contacts & Evaluations & Events) */}
+            {(activeTab === 'contacts' || activeTab === 'evaluations' || activeTab === 'events') && (
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-4 items-end lg:items-center justify-between">
                     <div className="flex flex-col md:flex-row gap-4 w-full">
-                        {user?.role !== 'manager' && (
-                            <div className="flex-[2]">
-                                <label className="block text-xs font-medium text-slate-500 mb-1">Okul</label>
+                        {activeTab === 'events' ? (
+                            <div className="flex-1 max-w-xs">
+                                <label className="block text-xs font-medium text-slate-500 mb-1">Yıl</label>
                                 <select
                                     className="w-full text-sm border-slate-300 rounded-lg"
-                                    value={contactSchoolId}
-                                    onChange={e => setContactSchoolId(e.target.value)}
+                                    value={eventYear}
+                                    onChange={e => setEventYear(parseInt(e.target.value))}
                                 >
-                                    <option value="all">Tüm Okullar</option>
-                                    {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                                        <option key={year} value={year}>{year}</option>
+                                    ))}
                                 </select>
                             </div>
+                        ) : (
+                            <>
+                                {user?.role !== 'manager' && (
+                                    <div className="flex-[2]">
+                                        <label className="block text-xs font-medium text-slate-500 mb-1">Okul</label>
+                                        <select
+                                            className="w-full text-sm border-slate-300 rounded-lg"
+                                            value={contactSchoolId}
+                                            onChange={e => setContactSchoolId(e.target.value)}
+                                        >
+                                            <option value="all">Tüm Okullar</option>
+                                            {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                                <div className="flex-[2]">
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Sınıf Grubu</label>
+                                    <select
+                                        className="w-full text-sm border-slate-300 rounded-lg"
+                                        value={contactClassId}
+                                        onChange={e => setContactClassId(e.target.value)}
+                                    >
+                                        <option value="all">Tüm Sınıflar</option>
+                                        {classGroups.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-xs font-medium text-slate-500 mb-1">Sınıf Seviyesi</label>
+                                    <select
+                                        className="w-full text-sm border-slate-300 rounded-lg"
+                                        value={contactGrade}
+                                        onChange={e => setContactGrade(e.target.value)}
+                                    >
+                                        <option value="all">Hepsi</option>
+                                        {Array.from({ length: 12 }, (_, i) => i + 1).map(g => (
+                                            <option key={g} value={g}>{g}. Sınıf</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </>
                         )}
-                        <div className="flex-[2]">
-                            <label className="block text-xs font-medium text-slate-500 mb-1">Sınıf Grubu</label>
-                            <select
-                                className="w-full text-sm border-slate-300 rounded-lg"
-                                value={contactClassId}
-                                onChange={e => setContactClassId(e.target.value)}
-                            >
-                                <option value="all">Tüm Sınıflar</option>
-                                {classGroups.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                        </div>
-                        <div className="flex-1">
-                            <label className="block text-xs font-medium text-slate-500 mb-1">Sınıf Seviyesi</label>
-                            <select
-                                className="w-full text-sm border-slate-300 rounded-lg"
-                                value={contactGrade}
-                                onChange={e => setContactGrade(e.target.value)}
-                            >
-                                <option value="all">Hepsi</option>
-                                {Array.from({ length: 12 }, (_, i) => i + 1).map(g => (
-                                    <option key={g} value={g}>{g}. Sınıf</option>
-                                ))}
-                            </select>
-                        </div>
                     </div>
 
                     <div className="shrink-0 flex gap-2">
@@ -398,10 +492,94 @@ export function Reports() {
                             </button>
                         )}
                         <ExcelExportBtn
-                            data={activeTab === 'contacts' ? contactsData.map(x => x.excelData) : evaluationReportData.map(x => x.excelData)}
-                            fileName={activeTab === 'contacts' ? 'Iletisim_Listesi' : 'Ogrenci_Degerlendirmeleri'}
+                            data={
+                                activeTab === 'contacts' ? contactsData.map(x => x.excelData) :
+                                    activeTab === 'events' ? eventReportData.map(x => x.excelData) :
+                                        evaluationReportData.map(x => x.excelData)
+                            }
+                            fileName={
+                                activeTab === 'contacts' ? 'Iletisim_Listesi' :
+                                    activeTab === 'events' ? `Etkinlik_Raporu_${eventYear}` :
+                                        'Ogrenci_Degerlendirmeleri'
+                            }
                             label="Excel"
                         />
+                    </div>
+                </div>
+            )}
+
+            {/* EVENT REPORT CONTENT */}
+            {activeTab === 'events' && (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                    {/* Event Stats Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-purple-500">
+                            <div className="text-sm text-slate-500">Toplam Etkinlik</div>
+                            <div className="text-2xl font-bold text-purple-700">{eventStats.totalEvents}</div>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-blue-500">
+                            <div className="text-sm text-slate-500">Toplam Ders Saati</div>
+                            <div className="text-2xl font-bold text-blue-700">{eventStats.totalLessons}</div>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-indigo-500">
+                            <div className="text-sm text-slate-500">Görevli Öğretmen</div>
+                            <div className="text-2xl font-bold text-indigo-700">{eventStats.uniqueTeachers}</div>
+                        </div>
+                    </div>
+
+                    {/* Events Table */}
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th className="px-6 py-4 font-bold text-slate-500">Etkinlik Adı</th>
+                                    <th className="px-6 py-4 font-bold text-slate-500">Tarihler</th>
+                                    <th className="px-6 py-4 font-bold text-slate-500 text-center">Ders Saati</th>
+                                    <th className="px-6 py-4 font-bold text-slate-500">Öğretmenler</th>
+                                    <th className="px-6 py-4 font-bold text-slate-500">Malzemeler / Notlar</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {eventReportData.length > 0 ? (
+                                    eventReportData.map(event => (
+                                        <tr key={event.id} className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div className="font-bold text-slate-900">{event.name}</div>
+                                                <div className="text-xs text-slate-500 mt-0.5">{event.manager}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-slate-700 font-mono text-xs bg-slate-100 px-2 py-1 rounded inline-block">
+                                                    {event.dateRange}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <div className="font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block text-xs">
+                                                    {event.lessonCount} Ders
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-wrap gap-1">
+                                                    {event.teachers.map((t: string, idx: number) => (
+                                                        <span key={idx} className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-xs border border-indigo-100">
+                                                            {t}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-600 text-xs italic max-w-xs truncate" title={event.notes}>
+                                                {event.notes || '-'}
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                                            {eventYear} yılında yapılmış etkinlik bulunamadı.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             )}

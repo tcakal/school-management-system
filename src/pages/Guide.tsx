@@ -8,12 +8,13 @@ import { Book, Users, School, FileText, CheckSquare, Upload, Shield, LogOut, Sta
 
 
 export function Guide() {
-    const [activeTab, setActiveTab] = useState<'general' | 'teacher' | 'manager' | 'admin' | 'parent'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'teacher' | 'manager' | 'admin' | 'parent' | 'event'>('general');
     const [selectedVideo, setSelectedVideo] = useState<{ src: string; title: string } | null>(null);
 
     const tabs = [
         { id: 'general', label: 'Genel Bakış', icon: <Book size={18} /> },
         { id: 'teacher', label: 'Öğretmenler İçin', icon: <Users size={18} /> },
+        { id: 'event', label: 'Etkinlik Yönetimi', icon: <Star size={18} /> },
         { id: 'manager', label: 'Okul Müdürleri', icon: <School size={18} /> },
         { id: 'parent', label: 'Veliler İçin', icon: <Shield size={18} /> },
         { id: 'admin', label: 'Yöneticiler', icon: <Shield size={18} /> },
@@ -82,6 +83,113 @@ export function Guide() {
                                 </div>
                             </div>
                         </section>
+                    </div>
+                )}
+
+                {/* EVENT SECTION */}
+                {activeTab === 'event' && (
+                    <div className="space-y-8 animate-in fade-in duration-300">
+                        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-l-4 border-purple-500 p-6 rounded-r-xl shadow-sm">
+                            <h3 className="text-xl font-bold text-purple-900 flex items-center gap-2">
+                                <Star size={24} />
+                                Etkinlik ve Atölye Yönetimi
+                            </h3>
+                            <p className="text-purple-800 mt-2">
+                                Tek seferlik veya kısa süreli etkinlikleri yönetmek için özel araçlar.
+                            </p>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-6">
+                            {/* Card 1: Create Event */}
+                            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow group">
+                                <div className="bg-slate-50 p-4 border-b border-slate-100 flex items-center justify-between">
+                                    <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                                        <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm text-purple-600">
+                                            <School size={20} />
+                                        </div>
+                                        Etkinlik Oluşturma
+                                    </h4>
+                                    <span className="text-xs font-bold text-slate-400">Adım 1</span>
+                                </div>
+                                <div className="p-5 space-y-4">
+                                    <p className="text-sm text-slate-600">Yeni bir etkinlik veya kamp eklemek için:</p>
+                                    <ol className="list-decimal list-inside text-sm text-slate-600 space-y-2">
+                                        <li>"Okullar" sayfasında sağ üstteki <strong>"Okul Ekle"</strong> butonuna basın.</li>
+                                        <li>Tür olarak <strong>"Etkinlik / Atölye"</strong> seçeneğini işaretleyin.</li>
+                                        <li>Tarih, mekan ve yetkili bilgilerini girin.</li>
+                                        <li><strong>Kaydet</strong> butonuna basın.</li>
+                                    </ol>
+                                    <div className="text-xs text-purple-600 bg-purple-50 p-2 rounded border border-purple-100">
+                                        Etkinlikler "Okullar" listesinde ayrı bir sekmede görünür.
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 2: Planning with Matrix */}
+                            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow group">
+                                <div className="bg-slate-50 p-4 border-b border-slate-100 flex items-center justify-between">
+                                    <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                                        <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm text-blue-600">
+                                            <CheckSquare size={20} />
+                                        </div>
+                                        Planlama ve Atama
+                                    </h4>
+                                    <span className="text-xs font-bold text-slate-400">Adım 2</span>
+                                </div>
+                                <div className="p-5 space-y-4">
+                                    <p className="text-sm text-slate-600">Öğretmen ve saat planlaması:</p>
+                                    <ol className="list-decimal list-inside text-sm text-slate-600 space-y-2">
+                                        <li>Etkinlik kartındaki <strong>"Planla"</strong> butonuna basın.</li>
+                                        <li>Açılan Takvimde (Matris) ilgili gün ve saate tıklayın.</li>
+                                        <li>Dersi verecek öğretmeni seçin ve saat aralığını belirleyin.</li>
+                                        <li>Ders eklendikten sonra öğretmen otomatik bilgilendirilir (Telegram açıksa).</li>
+                                    </ol>
+                                </div>
+                            </div>
+
+                            {/* Card 3: Notes & Material */}
+                            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow group">
+                                <div className="bg-slate-50 p-4 border-b border-slate-100 flex items-center justify-between">
+                                    <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                                        <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm text-indigo-600">
+                                            <FileText size={20} />
+                                        </div>
+                                        Notlar ve Malzemeler
+                                    </h4>
+                                    <span className="text-xs font-bold text-slate-400">Detay</span>
+                                </div>
+                                <div className="p-5 space-y-4">
+                                    <p className="text-sm text-slate-600">Götürülecek malzemeleri takip edin:</p>
+                                    <ul className="list-disc list-inside text-sm text-slate-600 space-y-2">
+                                        <li>Etkinlik detayında <strong>"Notlar"</strong> alanına götürülecek malzemeleri (Robot setleri, bilgisayar sayısı vb.) yazın.</li>
+                                        <li>Bu notlar <strong>Raporlar {'>'} Etkinlikler</strong> altında yıllık dökümde listelenir.</li>
+                                        <li>Böylece yıl sonunda "Hangi etkinliğe ne götürdük?" sorusuna cevap bulabilirsiniz.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            {/* Card 4: Reporting */}
+                            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow group">
+                                <div className="bg-slate-50 p-4 border-b border-slate-100 flex items-center justify-between">
+                                    <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                                        <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm text-green-600">
+                                            <Banknote size={20} />
+                                        </div>
+                                        Raporlama
+                                    </h4>
+                                    <span className="text-xs font-bold text-slate-400">Analiz</span>
+                                </div>
+                                <div className="p-5 space-y-4">
+                                    <p className="text-sm text-slate-600">Yıllık performans takibi:</p>
+                                    <ul className="list-disc list-inside text-sm text-slate-600 space-y-2">
+                                        <li><strong>Raporlar</strong> sayfasına gidin.</li>
+                                        <li><strong>"Etkinlik Raporları"</strong> sekmesini seçin.</li>
+                                        <li>Yıl seçimi yaparak (2024, 2025...) o yıl yapılan tüm etkinlik sayısını, ders saatini ve görev alan öğretmenleri görebilirsiniz.</li>
+                                        <li>Excel'e aktar butonunu kullanarak listeyi alabilirsiniz.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 
