@@ -1297,44 +1297,44 @@ export const useStore = create<AppState>()(
                     });
                 }
 
-                // 4. Generate Lessons for EVENTS (only on specific eventDates)
+                // 4. Generate Lessons for EVENTS (using classGroup schedule as the event date)
+                const allClassGroups = get().classGroups;
                 eventAssignments.forEach(assignment => {
-                    const school = allSchools.find(s => s.id === assignment.schoolId);
-                    const eventDates = school?.eventDates || [];
+                    // Find the classGroup for this assignment to get its specific event date
+                    const classGroup = allClassGroups.find(cg => cg.id === assignment.classGroupId);
+                    const eventDateStr = classGroup?.schedule; // schedule contains the event date like "2026-01-30"
 
-                    // For each event date, create a lesson if the day of week matches the assignment
-                    eventDates.forEach(eventDateStr => {
-                        const eventDate = new Date(eventDateStr);
-                        const eventDayOfWeek = eventDate.getDay() || 7; // 1=Mon, 7=Sun (convert Sunday from 0 to 7)
+                    // If no valid event date found, skip
+                    if (!eventDateStr || !/^\d{4}-\d{2}-\d{2}$/.test(eventDateStr)) {
+                        console.log(`Skipping event assignment - no valid schedule date for classGroup ${classGroup?.name}`);
+                        return;
+                    }
 
-                        // Only create lesson if this event date's day matches the assignment's day
-                        if (eventDayOfWeek !== assignment.dayOfWeek) return;
+                    const dateStr = eventDateStr;
 
-                        const dateStr = format(eventDate, 'yyyy-MM-dd');
+                    // Skip if date is before today  
+                    if (dateStr < todayStr && !startDate) return;
 
-                        // Skip if date is before today
-                        if (dateStr < todayStr && !startDate) return;
+                    const exists = [...validFutureLessons, ...newLessons].some(l =>
+                        l.classGroupId === assignment.classGroupId &&
+                        l.date === dateStr &&
+                        l.startTime === assignment.startTime
+                    );
 
-                        const exists = [...validFutureLessons, ...newLessons].some(l =>
-                            l.classGroupId === assignment.classGroupId &&
-                            l.date === dateStr &&
-                            l.startTime === assignment.startTime
-                        );
-
-                        if (!exists) {
-                            newLessons.push({
-                                id: crypto.randomUUID(),
-                                schoolId: assignment.schoolId,
-                                classGroupId: assignment.classGroupId || '',
-                                teacherId: assignment.teacherId,
-                                date: dateStr,
-                                startTime: assignment.startTime,
-                                endTime: assignment.endTime,
-                                status: 'scheduled',
-                                type: 'regular'
-                            });
-                        }
-                    });
+                    if (!exists) {
+                        console.log(`Creating event lesson: ${classGroup?.name} on ${dateStr} at ${assignment.startTime}`);
+                        newLessons.push({
+                            id: crypto.randomUUID(),
+                            schoolId: assignment.schoolId,
+                            classGroupId: assignment.classGroupId || '',
+                            teacherId: assignment.teacherId,
+                            date: dateStr,
+                            startTime: assignment.startTime,
+                            endTime: assignment.endTime,
+                            status: 'scheduled',
+                            type: 'regular'
+                        });
+                    }
                 });
 
                 if (newLessons.length > 0) {
