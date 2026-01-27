@@ -588,28 +588,66 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                                                         if (a.dayOfWeek !== b.dayOfWeek) return a.dayOfWeek - b.dayOfWeek;
                                                         return a.startTime.localeCompare(b.startTime);
                                                     })
-                                                    .map(a => {
+                                                    .map((a, index, array) => {
                                                         const teacher = teachers.find(t => t.id === a.teacherId);
                                                         const dayName = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'][a.dayOfWeek - 1];
 
+                                                        // Calculate Break Time Logic
+                                                        let breakElement = null;
+                                                        const nextAssignment = array[index + 1];
+
+                                                        if (nextAssignment && nextAssignment.dayOfWeek === a.dayOfWeek) {
+                                                            const currentEnd = a.endTime || '10:00';
+                                                            const nextStart = nextAssignment.startTime;
+
+                                                            if (currentEnd < nextStart) {
+                                                                const [endH, endM] = currentEnd.split(':').map(Number);
+                                                                const [startH, startM] = nextStart.split(':').map(Number);
+                                                                const diffInMinutes = (startH * 60 + startM) - (endH * 60 + endM);
+
+                                                                if (diffInMinutes > 0) {
+                                                                    let durationText = `${diffInMinutes} dk`;
+                                                                    if (diffInMinutes >= 60) {
+                                                                        const h = Math.floor(diffInMinutes / 60);
+                                                                        const m = diffInMinutes % 60;
+                                                                        durationText = m > 0 ? `${h} sa ${m} dk` : `${h} saat`;
+                                                                    }
+
+                                                                    breakElement = (
+                                                                        <div className="flex items-center gap-2 my-1 select-none opacity-70">
+                                                                            <div className="h-px bg-purple-200 flex-1 border-t border-dashed border-purple-300"></div>
+                                                                            <div className="px-1.5 py-0.5 bg-purple-50 text-purple-600 text-[9px] font-bold uppercase rounded border border-purple-200 flex items-center gap-1">
+                                                                                <Clock size={8} />
+                                                                                {durationText} Ara
+                                                                            </div>
+                                                                            <div className="h-px bg-purple-200 flex-1 border-t border-dashed border-purple-300"></div>
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                            }
+                                                        }
+
                                                         return (
-                                                            <div key={a.id} className="flex items-start justify-between text-sm bg-blue-50 p-2 rounded-lg">
-                                                                <div>
-                                                                    <div className="font-medium text-blue-900">{teacher?.name || 'Unknown Teacher'}</div>
-                                                                    <div className="text-blue-700 text-xs flex items-center gap-1 mt-0.5">
-                                                                        <Calendar size={12} />
-                                                                        {dayName}
-                                                                        <span className="text-blue-300">|</span>
-                                                                        <Clock size={12} />
-                                                                        {a.startTime} - {a.endTime}
+                                                            <div key={a.id}>
+                                                                <div className="flex items-start justify-between text-sm bg-blue-50 p-2 rounded-lg">
+                                                                    <div>
+                                                                        <div className="font-medium text-blue-900">{teacher?.name || 'Unknown Teacher'}</div>
+                                                                        <div className="text-blue-700 text-xs flex items-center gap-1 mt-0.5">
+                                                                            <Calendar size={12} />
+                                                                            {dayName}
+                                                                            <span className="text-blue-300">|</span>
+                                                                            <Clock size={12} />
+                                                                            {a.startTime} - {a.endTime}
+                                                                        </div>
                                                                     </div>
+                                                                    <button
+                                                                        onClick={() => deleteAssignment(a.id)}
+                                                                        className="text-blue-300 hover:text-red-500 transition-colors"
+                                                                    >
+                                                                        <User size={14} />
+                                                                    </button>
                                                                 </div>
-                                                                <button
-                                                                    onClick={() => deleteAssignment(a.id)}
-                                                                    className="text-blue-300 hover:text-red-500 transition-colors"
-                                                                >
-                                                                    <User size={14} />
-                                                                </button>
+                                                                {breakElement}
                                                             </div>
                                                         );
                                                     })
