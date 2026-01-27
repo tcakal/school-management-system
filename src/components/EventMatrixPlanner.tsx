@@ -196,16 +196,31 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                                                     </div>
                                                                 )}
 
-                                                                {/* Break After Indicator - Dashed Style */}
+                                                                {/* Time Range */}
+                                                                <div className="flex items-center gap-1 text-[10px] font-mono text-purple-600/80 mb-0.5">
+                                                                    <Clock size={10} />
+                                                                    {cellLesson.startTime} - {cellLesson.endTime}
+                                                                </div>
+
+                                                                <div className="font-bold text-purple-900 text-sm line-clamp-1">
+                                                                    {cellLesson.topic || 'Etkinlik'}
+                                                                </div>
+                                                                <div className="flex items-center gap-1 text-xs text-purple-700 font-medium">
+                                                                    <User size={12} />
+                                                                    {teacher?.name || 'Öğretmen Yok'}
+                                                                </div>
+                                                                {cellLesson.notes && (
+                                                                    <div className="text-[10px] text-purple-600 italic line-clamp-2 mt-1 border-t border-purple-200/50 pt-1">
+                                                                        {cellLesson.notes}
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Break After Indicator - Solid Block Style */}
                                                                 {gapAfter > 0 && (
                                                                     <div className="mt-auto pt-2 w-full">
-                                                                        <div className="flex items-center gap-1 select-none opacity-90 w-full" title={`Sonraki derse kadar ${gapAfter} dk boşluk`}>
-                                                                            <div className="h-px bg-purple-300 flex-1 border-t border-dashed border-purple-400"></div>
-                                                                            <div className="px-1.5 py-0.5 bg-white/50 text-purple-700 text-[10px] font-bold uppercase rounded border border-purple-300 flex items-center gap-1 whitespace-nowrap shadow-sm">
-                                                                                <Clock size={10} />
-                                                                                {gapAfter} dk Ara
-                                                                            </div>
-                                                                            <div className="h-px bg-purple-300 flex-1 border-t border-dashed border-purple-400"></div>
+                                                                        <div className="w-full bg-purple-200/60 border border-purple-300/60 rounded flex items-center justify-center gap-1.5 py-0.5 text-[10px] text-purple-700 font-bold uppercase shadow-sm" title={`Sonraki derse kadar ${gapAfter} dk boşluk`}>
+                                                                            <Clock size={10} className="text-purple-600" />
+                                                                            {gapAfter} dk Ara
                                                                         </div>
                                                                     </div>
                                                                 )}
