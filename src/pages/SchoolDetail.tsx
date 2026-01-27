@@ -992,14 +992,32 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Program (Bilgi amaçlı)</label>
-                        <input
-                            type="text"
-                            placeholder="Örn: Salı 14:00"
-                            value={newClassSchedule}
-                            onChange={e => setNewClassSchedule(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
-                        />
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                            {school.type === 'event' ? 'Etkinlik Günü' : 'Program (Bilgi amaçlı)'}
+                        </label>
+
+                        {school.type === 'event' && school.eventDates && school.eventDates.length > 0 ? (
+                            <select
+                                value={newClassSchedule}
+                                onChange={e => setNewClassSchedule(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 bg-white"
+                            >
+                                <option value="">Bir tarih seçin...</option>
+                                {school.eventDates.map(date => (
+                                    <option key={date} value={date}>
+                                        {new Date(date).toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <input
+                                type="text"
+                                placeholder={school.type === 'event' ? 'Örn: 20 Mayıs 2024' : 'Örn: Salı 14:00'}
+                                value={newClassSchedule}
+                                onChange={e => setNewClassSchedule(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                            />
+                        )}
                     </div>
                     <button
                         type="submit"
