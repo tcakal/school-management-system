@@ -150,9 +150,11 @@ export function Schedule() {
                                                         onClick={() => handleLessonClick(lesson)}
                                                         className={`w-full text-left p-2 rounded-lg text-xs mb-1 transition-all hover:scale-[1.02] active:scale-95 shadow-sm border ${lesson.status === 'cancelled'
                                                             ? 'bg-red-50 border-red-100 text-red-700 opacity-70 line-through decoration-red-500'
-                                                            : lesson.type === 'makeup'
-                                                                ? 'bg-orange-50 border-orange-100 text-orange-700'
-                                                                : 'bg-blue-50 border-blue-100 text-blue-700'
+                                                            : school?.type === 'event'
+                                                                ? 'bg-purple-100 border-purple-200 text-purple-700 shadow-purple-100' // Event Highlighting
+                                                                : lesson.type === 'makeup'
+                                                                    ? 'bg-orange-50 border-orange-100 text-orange-700'
+                                                                    : 'bg-blue-50 border-blue-100 text-blue-700'
                                                             }`}
                                                     >
                                                         {/* Time Display for Granular Lessons */}
