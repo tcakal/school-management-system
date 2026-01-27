@@ -25,7 +25,10 @@ const DAYS = [
 
 
 export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: AssignmentModalProps) {
-    const { teachers, addAssignment, findAvailableTeachers } = useStore();
+    const { teachers, schools, addAssignment, findAvailableTeachers } = useStore();
+    const school = schools.find(s => s.id === schoolId);
+    const isEvent = school?.type === 'event';
+
     const [teacherId, setTeacherId] = useState('');
     const [dayOfWeek, setDayOfWeek] = useState(1);
     const [startTime, setStartTime] = useState('09:00');
@@ -33,12 +36,25 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
     const [availableTeachers, setAvailableTeachers] = useState<any[]>([]);
     const [isChecking, setIsChecking] = useState(false);
 
+    // Auto-set day for events
+    useEffect(() => {
+        if (isEvent && school?.eventDate) {
+            const date = new Date(school.eventDate);
+            const day = date.getDay() || 7; // Convert 0 (Sun) to 7
+            setDayOfWeek(day);
+        }
+    }, [isEvent, school?.eventDate]);
+
     // Check availability when timing changes
     useState(() => {
         // Initial check logic if needed, but better in useEffect
     });
 
     const getNextDayDate = (dayIndex: number) => {
+        // If event, check specifically for that date? 
+        // For now, keep existing logic or use eventDate if isEvent
+        if (isEvent && school?.eventDate) return school.eventDate;
+
         const today = new Date();
         const currentDay = today.getDay() || 7; // 1-7
         const diff = dayIndex - currentDay + (dayIndex <= currentDay ? 7 : 0); // Always next occurrence
@@ -62,7 +78,7 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
         };
         const timer = setTimeout(check, 500); // 500ms debounce
         return () => clearTimeout(timer);
-    }, [dayOfWeek, startTime, endTime, findAvailableTeachers]);
+    }, [dayOfWeek, startTime, endTime, findAvailableTeachers, isEvent, school?.eventDate]); // Added deps
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -82,7 +98,8 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
         onClose();
         // Reset form
         setTeacherId('');
-        setDayOfWeek(1);
+        // For events, keep the fixed day. For regular, reset to Monday?
+        if (!isEvent) setDayOfWeek(1);
         setStartTime('09:00');
         setEndTime('10:00');
     };
@@ -119,23 +136,25 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId }: Ass
                     {isChecking && <p className="text-xs text-blue-500 mt-1">Müsaitlik durumu kontrol ediliyor...</p>}
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                        <div className="flex items-center gap-2">
-                            <Calendar size={16} className="text-slate-400" />
-                            Gün
-                        </div>
-                    </label>
-                    <select
-                        value={dayOfWeek}
-                        onChange={(e) => setDayOfWeek(Number(e.target.value))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
-                    >
-                        {DAYS.map((d) => (
-                            <option key={d.value} value={d.value}>{d.label}</option>
-                        ))}
-                    </select>
-                </div>
+                {!isEvent && (
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                            <div className="flex items-center gap-2">
+                                <Calendar size={16} className="text-slate-400" />
+                                Gün
+                            </div>
+                        </label>
+                        <select
+                            value={dayOfWeek}
+                            onChange={(e) => setDayOfWeek(Number(e.target.value))}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
+                        >
+                            {DAYS.map((d) => (
+                                <option key={d.value} value={d.value}>{d.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                     <div>
