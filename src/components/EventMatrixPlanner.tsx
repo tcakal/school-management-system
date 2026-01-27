@@ -119,14 +119,34 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                     const slotStartMin = timeH * 60 + timeM;
                                     const slotEndMin = slotStartMin + 60; // 1 hour slots
 
-                                    // Find lesson that STARTS in this time slot's hour
-                                    // Each lesson should only appear once - at its start hour
-                                    const cellLesson = dayLessons.find(l => {
-                                        if (l.classGroupId !== group.id) return false;
+                                    // HYBRID APPROACH:
+                                    // 1. First, find a lesson that STARTS in this hour (has priority)
+                                    // 2. If none, check for a lesson that CONTINUES through this slot
+
+                                    // Get all lessons for this classGroup
+                                    const groupLessons = dayLessons.filter(l => l.classGroupId === group.id);
+
+                                    // Find lesson that STARTS in this hour slot
+                                    let cellLesson = groupLessons.find(l => {
                                         const lStartH = parseInt(l.startTime.split(':')[0]);
-                                        // Only show lesson in the row where its start hour matches
                                         return lStartH === timeH;
                                     });
+
+                                    // If no lesson starts here, check for CONTINUING lesson
+                                    if (!cellLesson) {
+                                        cellLesson = groupLessons.find(l => {
+                                            const lStartH = parseInt(l.startTime.split(':')[0]);
+                                            const lStartM = parseInt(l.startTime.split(':')[1]);
+                                            const lEndH = parseInt(l.endTime.split(':')[0]);
+                                            const lEndM = parseInt(l.endTime.split(':')[1]);
+
+                                            const lStartMin = lStartH * 60 + lStartM;
+                                            const lEndMin = lEndH * 60 + lEndM;
+
+                                            // Lesson continues through this slot (started before, ends after slot start)
+                                            return lStartMin < slotStartMin && lEndMin > slotStartMin;
+                                        });
+                                    }
 
                                     const teacher = teachers.find(t => t.id === cellLesson?.teacherId);
 
