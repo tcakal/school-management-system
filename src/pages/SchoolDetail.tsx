@@ -583,31 +583,36 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
 
                                         <div className="space-y-3 mb-4">
                                             {classAssignments.length > 0 ? (
-                                                classAssignments.map(a => {
-                                                    const teacher = teachers.find(t => t.id === a.teacherId);
-                                                    const dayName = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'][a.dayOfWeek - 1];
+                                                classAssignments
+                                                    .sort((a, b) => {
+                                                        if (a.dayOfWeek !== b.dayOfWeek) return a.dayOfWeek - b.dayOfWeek;
+                                                        return a.startTime.localeCompare(b.startTime);
+                                                    })
+                                                    .map(a => {
+                                                        const teacher = teachers.find(t => t.id === a.teacherId);
+                                                        const dayName = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'][a.dayOfWeek - 1];
 
-                                                    return (
-                                                        <div key={a.id} className="flex items-start justify-between text-sm bg-blue-50 p-2 rounded-lg">
-                                                            <div>
-                                                                <div className="font-medium text-blue-900">{teacher?.name || 'Unknown Teacher'}</div>
-                                                                <div className="text-blue-700 text-xs flex items-center gap-1 mt-0.5">
-                                                                    <Calendar size={12} />
-                                                                    {dayName}
-                                                                    <span className="text-blue-300">|</span>
-                                                                    <Clock size={12} />
-                                                                    {a.startTime} - {a.endTime}
+                                                        return (
+                                                            <div key={a.id} className="flex items-start justify-between text-sm bg-blue-50 p-2 rounded-lg">
+                                                                <div>
+                                                                    <div className="font-medium text-blue-900">{teacher?.name || 'Unknown Teacher'}</div>
+                                                                    <div className="text-blue-700 text-xs flex items-center gap-1 mt-0.5">
+                                                                        <Calendar size={12} />
+                                                                        {dayName}
+                                                                        <span className="text-blue-300">|</span>
+                                                                        <Clock size={12} />
+                                                                        {a.startTime} - {a.endTime}
+                                                                    </div>
                                                                 </div>
+                                                                <button
+                                                                    onClick={() => deleteAssignment(a.id)}
+                                                                    className="text-blue-300 hover:text-red-500 transition-colors"
+                                                                >
+                                                                    <User size={14} />
+                                                                </button>
                                                             </div>
-                                                            <button
-                                                                onClick={() => deleteAssignment(a.id)}
-                                                                className="text-blue-300 hover:text-red-500 transition-colors"
-                                                            >
-                                                                <User size={14} />
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                })
+                                                        );
+                                                    })
                                             ) : (
                                                 <div className="text-sm text-slate-400 italic">Henüz öğretmen atanmamış</div>
                                             )}
