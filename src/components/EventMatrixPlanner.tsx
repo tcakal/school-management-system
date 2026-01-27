@@ -215,11 +215,11 @@ export function EventMatrixPlanner({ schoolId, classGroups, eventDate, eventDate
                                                                     </div>
                                                                 )}
 
-                                                                {/* Break After Indicator - Solid Block Style */}
+                                                                {/* Break After Indicator - Solid Block Style (Blue) */}
                                                                 {gapAfter > 0 && (
                                                                     <div className="mt-auto pt-2 w-full">
-                                                                        <div className="w-full bg-purple-200/60 border border-purple-300/60 rounded flex items-center justify-center gap-1.5 py-0.5 text-[10px] text-purple-700 font-bold uppercase shadow-sm" title={`Sonraki derse kadar ${gapAfter} dk boşluk`}>
-                                                                            <Clock size={10} className="text-purple-600" />
+                                                                        <div className="w-full bg-blue-100 border border-blue-200 rounded flex items-center justify-center gap-1.5 py-0.5 text-[10px] text-blue-700 font-bold uppercase shadow-sm" title={`Sonraki derse kadar ${gapAfter} dk boşluk`}>
+                                                                            <Clock size={10} className="text-blue-600" />
                                                                             {gapAfter} dk Ara
                                                                         </div>
                                                                     </div>
