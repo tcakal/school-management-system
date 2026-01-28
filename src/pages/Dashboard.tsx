@@ -101,12 +101,7 @@ export function Dashboard() {
                     icon={Users}
                     color="bg-emerald-500"
                 />
-                <StatCard
-                    title="Toplam Kayıtlı Öğrenci"
-                    value={activeStudents}
-                    icon={Users}
-                    color="bg-emerald-500"
-                />
+
                 {user?.role === 'admin' && (
                     <StatCard
                         title="Toplam Ciro"
