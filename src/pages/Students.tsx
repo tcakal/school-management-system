@@ -22,7 +22,7 @@ export function Students() {
 
     // FILTERS
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedSchoolId, setSelectedSchoolId] = useState<string>('all');
+    const [selectedSchoolId, setSelectedSchoolId] = useState<string>(user?.role === 'manager' ? user.id : 'all');
     const [selectedClassGroupId, setSelectedClassGroupId] = useState<string>('all');
     const [statusFilter] = useState<'Active' | 'Left' | 'All'>('All');
     const [paymentStatusFilter, setPaymentStatusFilter] = useState<'All' | 'paid' | 'claimed' | 'unpaid'>('All');
