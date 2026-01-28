@@ -113,7 +113,7 @@ export function ManagerSchoolDashboard() {
             // if (s.status !== 'Active') return false; // Show all? Usually managers want Active.
             if (s.status === 'Left') return false; // Hide left students
             if (selectedClassGroupId !== 'all' && s.classGroupId !== selectedClassGroupId) return false;
-            if (searchTerm && !s.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+            if (searchTerm && !s.name.toLocaleLowerCase('tr').includes(searchTerm.toLocaleLowerCase('tr'))) return false;
             return true;
         });
     }, [students, schoolId, selectedClassGroupId, searchTerm]);
