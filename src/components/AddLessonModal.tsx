@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Calendar, User, School as SchoolIcon, MapPin } from 'lucide-react';
 import { supabase } from '../supabase';
 import { useStore } from '../store/useStore';
+import { useAuth } from '../store/useAuth';
 import type { School, Teacher, ClassGroup } from '../types';
 import { TimeSelect } from './TimeSelect';
 
@@ -46,7 +47,14 @@ export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, 
             setDate(initialDate || new Date().toISOString().split('T')[0]);
             setStartTime(initialStartTime || '09:00');
             setEndTime('10:00');
-            setTeacherId('');
+
+            const currentUser = useAuth.getState().user;
+            if (currentUser?.role === 'teacher') {
+                setTeacherId(currentUser.id);
+            } else {
+                setTeacherId('');
+            }
+
             setClassGroupId(initialClassGroupId || 'all');
             setTopic('');
             setNotes('');
@@ -287,7 +295,8 @@ export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, 
                                 <select
                                     value={teacherId}
                                     onChange={(e) => setTeacherId(e.target.value)}
-                                    className="w-full pl-10 border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                                    disabled={useAuth.getState().user?.role === 'teacher'}
+                                    className="w-full pl-10 border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500 bg-white disabled:bg-slate-100 disabled:text-slate-500"
                                 >
                                     <option value="">Öğretmen Seçin</option>
                                     {teachers.map((t: Teacher) => (

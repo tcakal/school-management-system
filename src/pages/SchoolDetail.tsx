@@ -521,9 +521,9 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                         </div>
                     </div>
                     <div className="flex gap-3">
-                        {(user?.role === 'admin' || user?.role === 'manager') && (
+                        {(user?.role === 'admin' || user?.role === 'teacher') && (
                             <>
-                                {school.type !== 'event' && (
+                                {user?.role === 'admin' && school.type !== 'event' && (
                                     <button
                                         onClick={() => setIsShiftModalOpen(true)}
                                         className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg flex items-center gap-2 hover:bg-purple-200 transition-colors font-medium border border-purple-200"
@@ -576,13 +576,15 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                     <div className="space-y-6">
                         <div className="flex justify-between items-center">
                             <h3 className="text-lg font-bold text-slate-800">{school.type === 'event' ? 'Tanımlı Gruplar' : 'Tanımlı Sınıflar'}</h3>
-                            <button
-                                onClick={() => setIsAddClassModalOpen(true)}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
-                            >
-                                <Plus size={16} />
-                                {school.type === 'event' ? 'Yeni Grup Ekle' : 'Yeni Sınıf Ekle'}
-                            </button>
+                            {(user?.role === 'admin' || user?.role === 'teacher') && (
+                                <button
+                                    onClick={() => setIsAddClassModalOpen(true)}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
+                                >
+                                    <Plus size={16} />
+                                    {school.type === 'event' ? 'Yeni Grup Ekle' : 'Yeni Sınıf Ekle'}
+                                </button>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -793,13 +795,15 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                                     </button>
                                 </div>
 
-                                <button
-                                    onClick={() => setIsAddStudentModalOpen(true)}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
-                                >
-                                    <Plus size={16} />
-                                    <span className="hidden md:inline">Yeni Kayıt</span>
-                                </button>
+                                {(user?.role === 'admin' || user?.role === 'teacher') && (
+                                    <button
+                                        onClick={() => setIsAddStudentModalOpen(true)}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
+                                    >
+                                        <Plus size={16} />
+                                        <span className="hidden md:inline">Yeni Kayıt</span>
+                                    </button>
+                                )}
                             </div>
                         </div>
 
