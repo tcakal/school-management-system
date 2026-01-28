@@ -329,29 +329,31 @@ export function ManagerSchoolDashboard() {
 
             <div className="space-y-6">
                 {/* Financial Summary for Students Tab */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="flex gap-4">
-                        <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-400 uppercase">Toplam Borç</span>
-                            <span className="text-lg font-bold text-slate-900">{stats.totalDebt.toLocaleString('tr-TR')} ₺</span>
+                {user?.role === 'admin' && (
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="flex gap-4">
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-slate-400 uppercase">Toplam Borç</span>
+                                <span className="text-lg font-bold text-slate-900">{stats.totalDebt.toLocaleString('tr-TR')} ₺</span>
+                            </div>
+                            <div className="w-px h-10 bg-slate-200"></div>
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-slate-400 uppercase">Ödenen</span>
+                                <span className="text-lg font-bold text-emerald-600">{stats.paidAmount.toLocaleString('tr-TR')} ₺</span>
+                            </div>
+                            <div className="w-px h-10 bg-slate-200"></div>
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-slate-400 uppercase">Kalan</span>
+                                <span className={`text-lg font-bold ${stats.remainingDebt > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                    {stats.remainingDebt.toLocaleString('tr-TR')} ₺
+                                </span>
+                            </div>
                         </div>
-                        <div className="w-px h-10 bg-slate-200"></div>
-                        <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-400 uppercase">Ödenen</span>
-                            <span className="text-lg font-bold text-emerald-600">{stats.paidAmount.toLocaleString('tr-TR')} ₺</span>
-                        </div>
-                        <div className="w-px h-10 bg-slate-200"></div>
-                        <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-400 uppercase">Kalan</span>
-                            <span className={`text-lg font-bold ${stats.remainingDebt > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                                {stats.remainingDebt.toLocaleString('tr-TR')} ₺
-                            </span>
+                        <div className="text-sm font-medium text-slate-500">
+                            Tahsilat Oranı: <span className="text-slate-900 font-bold">%{Math.round((stats.paidAmount / (stats.totalDebt || 1)) * 100)}</span>
                         </div>
                     </div>
-                    <div className="text-sm font-medium text-slate-500">
-                        Tahsilat Oranı: <span className="text-slate-900 font-bold">%{Math.round((stats.paidAmount / (stats.totalDebt || 1)) * 100)}</span>
-                    </div>
-                </div>
+                )}
 
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
 
@@ -419,7 +421,9 @@ export function ManagerSchoolDashboard() {
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Öğrenci</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Sınıf</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Son 4 Ders</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Ödeme Durumu</th>
+                                {user?.role === 'admin' && (
+                                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Ödeme Durumu</th>
+                                )}
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">İşlemler</th>
                             </tr>
                         </thead>
@@ -483,29 +487,32 @@ export function ManagerSchoolDashboard() {
                                                 ))}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-center gap-6">
-                                                <div className="flex flex-col items-center gap-1" title="Geçmiş Dönem Borçları">
-                                                    <div className={`w-4 h-4 rounded-full transition-all ${hasPastDebt
-                                                        ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse'
-                                                        : 'bg-slate-200'
-                                                        }`}></div>
-                                                    <span className="text-[10px] uppercase font-bold text-slate-400">Geçmiş</span>
-                                                </div>
 
-                                                <div className="flex flex-col items-center gap-1" title="Bu Dönem Ödemesi">
-                                                    <div className={`w-4 h-4 rounded-full transition-all ${currentStatus === 'paid'
-                                                        ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
-                                                        : currentStatus === 'claimed'
-                                                            ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)] animate-bounce'
-                                                            : 'bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.5)]'
-                                                        }`}></div>
-                                                    <span className="text-[10px] uppercase font-bold text-slate-400">
-                                                        {currentStatus === 'claimed' ? 'Bildirim' : 'Dönem'}
-                                                    </span>
+                                        {user?.role === 'admin' && (
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center justify-center gap-6">
+                                                    <div className="flex flex-col items-center gap-1" title="Geçmiş Dönem Borçları">
+                                                        <div className={`w-4 h-4 rounded-full transition-all ${hasPastDebt
+                                                            ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse'
+                                                            : 'bg-slate-200'
+                                                            }`}></div>
+                                                        <span className="text-[10px] uppercase font-bold text-slate-400">Geçmiş</span>
+                                                    </div>
+
+                                                    <div className="flex flex-col items-center gap-1" title="Bu Dönem Ödemesi">
+                                                        <div className={`w-4 h-4 rounded-full transition-all ${currentStatus === 'paid'
+                                                            ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                                                            : currentStatus === 'claimed'
+                                                                ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)] animate-bounce'
+                                                                : 'bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.5)]'
+                                                            }`}></div>
+                                                        <span className="text-[10px] uppercase font-bold text-slate-400">
+                                                            {currentStatus === 'claimed' ? 'Bildirim' : 'Dönem'}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
+                                            </td>
+                                        )}
                                         <td className="px-6 py-4 text-right">
                                             {currentStatus === 'unpaid' && (
                                                 <button
@@ -546,9 +553,9 @@ export function ManagerSchoolDashboard() {
                     </table>
                 </div>
 
-            </div>
+            </div >
 
-        </div>
+        </div >
     );
 }
 

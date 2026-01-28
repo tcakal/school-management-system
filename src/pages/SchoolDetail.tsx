@@ -891,7 +891,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                                                     </div>
 
                                                     {/* Payment Action Button (Only for claimed) */}
-                                                    {student.last_payment_status === 'claimed' && student.status === 'Active' && (
+                                                    {useAuth.getState().user?.role === 'admin' && student.last_payment_status === 'claimed' && student.status === 'Active' && (
                                                         <div className="flex justify-end mt-2">
                                                             <button
                                                                 onClick={async () => {
@@ -1245,66 +1245,68 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                         </select>
                     </div>
 
-                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Ödeme Durumu</label>
-                        <div className="grid grid-cols-3 gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setEditStudentPaymentStatus('paid')}
-                                className={`py-2 text-sm font-medium rounded-lg border transition-all ${editStudentPaymentStatus === 'paid'
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 ring-2 ring-emerald-500/20'
-                                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                                    }`}
-                            >
-                                Tam Ücret
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setEditStudentPaymentStatus('discounted');
-                                    if (!editStudentDiscount) setEditStudentDiscount('50');
-                                }}
-                                className={`py-2 text-sm font-medium rounded-lg border transition-all ${editStudentPaymentStatus === 'discounted'
-                                    ? 'bg-blue-50 text-blue-700 border-blue-200 ring-2 ring-blue-500/20'
-                                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                                    }`}
-                            >
-                                İndirimli
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setEditStudentPaymentStatus('free')}
-                                className={`py-2 text-sm font-medium rounded-lg border transition-all ${editStudentPaymentStatus === 'free'
-                                    ? 'bg-purple-50 text-purple-700 border-purple-200 ring-2 ring-purple-500/20'
-                                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                                    }`}
-                            >
-                                Ücretsiz
-                            </button>
-                        </div>
-                        {editStudentPaymentStatus === 'discounted' && (
-                            <div className="mt-3 animate-in fade-in slide-in-from-top-2">
-                                <label className="block text-xs text-slate-500 mb-1">İndirim Oranı (%)</label>
-                                <div className="relative">
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="99"
-                                        value={editStudentDiscount}
-                                        onChange={e => setEditStudentDiscount(e.target.value)}
-                                        className="w-full pl-3 pr-8 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
-                                        placeholder="Örn: 50"
-                                    />
-                                    <span className="absolute right-3 top-2 text-slate-400 font-medium">%</span>
-                                </div>
+                    {useAuth.getState().user?.role === 'admin' && (
+                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Ödeme Durumu</label>
+                            <div className="grid grid-cols-3 gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditStudentPaymentStatus('paid')}
+                                    className={`py-2 text-sm font-medium rounded-lg border transition-all ${editStudentPaymentStatus === 'paid'
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 ring-2 ring-emerald-500/20'
+                                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                                        }`}
+                                >
+                                    Tam Ücret
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEditStudentPaymentStatus('discounted');
+                                        if (!editStudentDiscount) setEditStudentDiscount('50');
+                                    }}
+                                    className={`py-2 text-sm font-medium rounded-lg border transition-all ${editStudentPaymentStatus === 'discounted'
+                                        ? 'bg-blue-50 text-blue-700 border-blue-200 ring-2 ring-blue-500/20'
+                                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                                        }`}
+                                >
+                                    İndirimli
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setEditStudentPaymentStatus('free')}
+                                    className={`py-2 text-sm font-medium rounded-lg border transition-all ${editStudentPaymentStatus === 'free'
+                                        ? 'bg-purple-50 text-purple-700 border-purple-200 ring-2 ring-purple-500/20'
+                                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                                        }`}
+                                >
+                                    Ücretsiz
+                                </button>
                             </div>
-                        )}
-                        {editStudentPaymentStatus === 'free' && (
-                            <p className="mt-2 text-xs text-purple-600 font-medium flex items-center gap-1">
-                                ✨ Bu öğrenci okul ödemesine dahil edilmeyecek.
-                            </p>
-                        )}
-                    </div>
+                            {editStudentPaymentStatus === 'discounted' && (
+                                <div className="mt-3 animate-in fade-in slide-in-from-top-2">
+                                    <label className="block text-xs text-slate-500 mb-1">İndirim Oranı (%)</label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="99"
+                                            value={editStudentDiscount}
+                                            onChange={e => setEditStudentDiscount(e.target.value)}
+                                            className="w-full pl-3 pr-8 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                                            placeholder="Örn: 50"
+                                        />
+                                        <span className="absolute right-3 top-2 text-slate-400 font-medium">%</span>
+                                    </div>
+                                </div>
+                            )}
+                            {editStudentPaymentStatus === 'free' && (
+                                <p className="mt-2 text-xs text-purple-600 font-medium flex items-center gap-1">
+                                    ✨ Bu öğrenci okul ödemesine dahil edilmeyecek.
+                                </p>
+                            )}
+                        </div>
+                    )}
                     <div className="flex justify-end gap-3 pt-4">
                         <button
                             type="button"
@@ -1502,55 +1504,57 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
             </Modal>
 
 
-            <Modal
-                isOpen={isPaymentModalOpen}
-                onClose={() => setIsPaymentModalOpen(false)}
-                title="Ödeme Tahsil Et"
-            >
-                <form onSubmit={handleProcessPayment} className="space-y-4">
-                    <div className="p-3 bg-blue-50 text-blue-800 rounded-lg text-sm mb-4">
-                        <strong>{selectedStudentForPayment?.name}</strong> için ödeme girişi yapıyorsunuz.
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Tutar (TL)</label>
-                        <input
-                            type="number"
-                            required
-                            min="0"
-                            value={paymentAmount}
-                            onChange={e => setPaymentAmount(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Ödeme Yöntemi</label>
-                        <div className="grid grid-cols-3 gap-2">
-                            {(['Cash', 'Transfer', 'CreditCard'] as const).map(m => (
-                                <button
-                                    key={m}
-                                    type="button"
-                                    onClick={() => setPaymentMethod(m)}
-                                    className={`py-2 text-sm font-medium rounded-lg border ${paymentMethod === m
-                                        ? 'bg-blue-600 text-white border-blue-600'
-                                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
-                                        }`}
-                                >
-                                    {m === 'Cash' ? 'Nakit' : m === 'Transfer' ? 'Havale' : 'Kredi Kartı'}
-                                </button>
-                            ))}
+            {useAuth.getState().user?.role === 'admin' && (
+                <Modal
+                    isOpen={isPaymentModalOpen}
+                    onClose={() => setIsPaymentModalOpen(false)}
+                    title="Ödeme Tahsil Et"
+                >
+                    <form onSubmit={handleProcessPayment} className="space-y-4">
+                        <div className="p-3 bg-blue-50 text-blue-800 rounded-lg text-sm mb-4">
+                            <strong>{selectedStudentForPayment?.name}</strong> için ödeme girişi yapıyorsunuz.
                         </div>
-                    </div>
 
-                    <button
-                        type="submit"
-                        className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium mt-4"
-                    >
-                        Tahsil Et ve Onayla
-                    </button>
-                </form>
-            </Modal>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Tutar (TL)</label>
+                            <input
+                                type="number"
+                                required
+                                min="0"
+                                value={paymentAmount}
+                                onChange={e => setPaymentAmount(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Ödeme Yöntemi</label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {(['Cash', 'Transfer', 'CreditCard'] as const).map(m => (
+                                    <button
+                                        key={m}
+                                        type="button"
+                                        onClick={() => setPaymentMethod(m)}
+                                        className={`py-2 text-sm font-medium rounded-lg border ${paymentMethod === m
+                                            ? 'bg-blue-600 text-white border-blue-600'
+                                            : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        {m === 'Cash' ? 'Nakit' : m === 'Transfer' ? 'Havale' : 'Kredi Kartı'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium mt-4"
+                        >
+                            Tahsil Et ve Onayla
+                        </button>
+                    </form>
+                </Modal>
+            )}
 
             {/* Inventory Tab Content */}
             {activeTab === 'inventory' && (

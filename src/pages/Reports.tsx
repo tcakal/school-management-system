@@ -377,7 +377,7 @@ export function Reports() {
                         Öğretmen Performansı
                     </button>
                 )}
-                {(user?.role === 'admin' || user?.role === 'manager') && (
+                {user?.role === 'admin' && (
                     <button
                         onClick={() => setActiveTab('financial')}
                         className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'financial' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}

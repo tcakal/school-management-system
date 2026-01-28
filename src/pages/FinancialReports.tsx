@@ -1,12 +1,30 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
-import { BarChart3, TrendingUp, ArrowLeft } from 'lucide-react';
+import { BarChart3, TrendingUp, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function FinancialReports() {
     const { user } = useAuth();
     const navigate = useNavigate();
+
+    // Access Control
+    if (user?.role !== 'admin') {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
+                <AlertTriangle size={48} className="text-red-500 mb-4" />
+                <h1 className="text-2xl font-bold text-slate-800">Yetkisiz Erişim</h1>
+                <p className="text-slate-500 mt-2">Bu sayfayı görüntüleme yetkiniz yok.</p>
+                <button
+                    onClick={() => navigate('/')}
+                    className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                    Ana Sayfaya Dön
+                </button>
+            </div>
+        );
+    }
+
     const { schools, seasons, fetchSeasons, fetchSchoolPeriods, payments } = useStore();
 
     const [selectedSchoolId, setSelectedSchoolId] = useState<string>('');

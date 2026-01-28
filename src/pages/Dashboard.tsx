@@ -102,11 +102,19 @@ export function Dashboard() {
                     color="bg-emerald-500"
                 />
                 <StatCard
-                    title="Toplam Ciro"
-                    value={`${totalRevenue.toLocaleString('tr-TR')} ₺`}
-                    icon={Banknote}
-                    color="bg-slate-500"
+                    title="Toplam Kayıtlı Öğrenci"
+                    value={activeStudents}
+                    icon={Users}
+                    color="bg-emerald-500"
                 />
+                {user?.role === 'admin' && (
+                    <StatCard
+                        title="Toplam Ciro"
+                        value={`${totalRevenue.toLocaleString('tr-TR')} ₺`}
+                        icon={Banknote}
+                        color="bg-slate-500"
+                    />
+                )}
             </div>
 
             {/* List Section */}
