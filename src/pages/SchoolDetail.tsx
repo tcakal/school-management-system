@@ -857,7 +857,8 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                                                             {student.status === 'Active' ? 'Aktif' : 'Ayrıldı'}
                                                         </span>
                                                         {/* Payment Status Badge */}
-                                                        {student.last_payment_status === 'claimed' && (
+                                                        {/* Payment Status Badge - Visible to Admin & Manager Only */}
+                                                        {['admin', 'manager'].includes(useAuth.getState().user?.role || '') && student.last_payment_status === 'claimed' && (
                                                             <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 animate-pulse">
                                                                 Ödeme Bildirimi
                                                             </span>
@@ -895,7 +896,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                                                     </div>
 
                                                     {/* Payment Action Button (Only for claimed) */}
-                                                    {useAuth.getState().user?.role === 'admin' && student.last_payment_status === 'claimed' && student.status === 'Active' && (
+                                                    {['admin', 'manager'].includes(useAuth.getState().user?.role || '') && student.last_payment_status === 'claimed' && student.status === 'Active' && (
                                                         <div className="flex justify-end mt-2">
                                                             <button
                                                                 onClick={async () => {
@@ -1249,7 +1250,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                         </select>
                     </div>
 
-                    {useAuth.getState().user?.role === 'admin' && (
+                    {['admin', 'manager'].includes(useAuth.getState().user?.role || '') && (
                         <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                             <label className="block text-sm font-medium text-slate-700 mb-2">Ödeme Durumu</label>
                             <div className="grid grid-cols-3 gap-3">

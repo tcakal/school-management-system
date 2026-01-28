@@ -400,8 +400,8 @@ export function ManagerSchoolDashboard() {
 
 
             <div className="space-y-6">
-                {/* Financial Summary for Students Tab */}
-                {user?.role === 'admin' && (
+                {/* Financial Summary for Students Tab - Visible to Admin and Manager (Hidden for Teachers) */}
+                {(user?.role === 'admin' || user?.role === 'manager') && (
                     <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
                         <div className="flex gap-4">
                             <div className="flex flex-col">
@@ -493,7 +493,7 @@ export function ManagerSchoolDashboard() {
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Öğrenci</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Sınıf</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Son 4 Ders</th>
-                                {user?.role === 'admin' && (
+                                {['admin', 'manager'].includes(user?.role || '') && (
                                     <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Ödeme Durumu</th>
                                 )}
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">İşlemler</th>
@@ -560,7 +560,7 @@ export function ManagerSchoolDashboard() {
                                             </div>
                                         </td>
 
-                                        {user?.role === 'admin' && (
+                                        {['admin', 'manager'].includes(user?.role || '') && (
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-center gap-6">
                                                     <div className="flex flex-col items-center gap-1" title="Geçmiş Dönem Borçları">
@@ -586,7 +586,7 @@ export function ManagerSchoolDashboard() {
                                             </td>
                                         )}
                                         <td className="px-6 py-4 text-right">
-                                            {currentStatus === 'unpaid' && (
+                                            {['admin', 'manager'].includes(user?.role || '') && currentStatus === 'unpaid' && (
                                                 <button
                                                     onClick={() => handleManualPayment(student)}
                                                     className="text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-orange-100 transition-colors border border-orange-100"
@@ -594,7 +594,7 @@ export function ManagerSchoolDashboard() {
                                                     Ödeme Al
                                                 </button>
                                             )}
-                                            {currentStatus === 'claimed' && (
+                                            {['admin', 'manager'].includes(user?.role || '') && currentStatus === 'claimed' && (
                                                 <button
                                                     onClick={() => handleApproveClaim(student)}
                                                     className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-sm transition-all animate-pulse"
@@ -602,7 +602,7 @@ export function ManagerSchoolDashboard() {
                                                     Ödemeyi Onayla
                                                 </button>
                                             )}
-                                            {currentStatus === 'paid' && (
+                                            {['admin', 'manager'].includes(user?.role || '') && currentStatus === 'paid' && (
                                                 <button
                                                     disabled
                                                     className="text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg text-xs font-bold border border-emerald-100"
