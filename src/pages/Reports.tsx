@@ -411,13 +411,15 @@ export function Reports() {
                         Öğrenci Değerlendirmeleri
                     </button>
                 )}
-                <button
-                    onClick={() => setActiveTab('events')}
-                    className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'events' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                >
-                    <Star size={18} />
-                    Etkinlik Raporları
-                </button>
+                {user?.role === 'admin' && (
+                    <button
+                        onClick={() => setActiveTab('events')}
+                        className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'events' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <Star size={18} />
+                        Etkinlik Raporları
+                    </button>
+                )}
             </div>
 
             {/* SHARED FILTERS (Contacts & Evaluations & Events) */}
