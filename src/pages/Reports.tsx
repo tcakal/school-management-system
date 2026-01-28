@@ -462,7 +462,9 @@ export function Reports() {
                                         onChange={e => setContactClassId(e.target.value)}
                                     >
                                         <option value="all">Tüm Sınıflar</option>
-                                        {classGroups.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        {classGroups
+                                            .filter(c => contactSchoolId === 'all' || c.schoolId === contactSchoolId)
+                                            .map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
                                 </div>
                                 <div className="flex-1">
