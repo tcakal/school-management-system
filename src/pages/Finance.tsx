@@ -25,6 +25,7 @@ export function Finance() {
     const [amount, setAmount] = useState('');
     const [paymentType, setPaymentType] = useState<PaymentType>('Tuition');
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
+    const [paymentNote, setPaymentNote] = useState('');
 
     // 1. Calculate Total Expected Revenue (Snapshot)
     // Logic: Sum of (School Total Active Students * School Per Student Price)
@@ -71,12 +72,14 @@ export function Finance() {
             date: new Date().toISOString().split('T')[0],
             type: paymentType,
             method: paymentMethod,
-            month: new Date().toISOString().slice(0, 7) // Current month
+            month: new Date().toISOString().slice(0, 7), // Current month
+            notes: paymentNote // Add Note
         };
 
         addPayment(newPayment);
         setIsPaymentModalOpen(false);
         setAmount('');
+        setPaymentNote('');
     };
 
     return (
@@ -349,6 +352,18 @@ export function Finance() {
                                 </button>
                             ))}
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Not (Sadece Admin görür)
+                        </label>
+                        <textarea
+                            value={paymentNote}
+                            onChange={(e) => setPaymentNote(e.target.value)}
+                            placeholder="Ödeme ile ilgili notlar..."
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm min-h-[80px]"
+                        />
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4">
