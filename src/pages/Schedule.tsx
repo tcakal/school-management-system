@@ -45,44 +45,48 @@ export function Schedule() {
                     <p className="text-slate-500 mt-1">Haftalık ders takvimi ve yoklama yönetimi.</p>
                 </div>
                 <div className="flex gap-3">
-                    <div className="flex items-center gap-2 bg-purple-50 p-1 rounded-lg border border-purple-100">
-                        <div className="flex flex-col px-2">
-                            <span className="text-[10px] text-purple-600 font-bold uppercase">Başlangıç</span>
-                            <input
-                                type="date"
-                                value={startDateGen}
-                                onChange={(e) => setStartDateGen(e.target.value)}
-                                className="bg-transparent text-xs font-medium text-purple-900 border-none p-0 focus:ring-0 cursor-pointer w-24"
-                            />
+                    {user?.role === 'admin' && (
+                        <div className="flex items-center gap-2 bg-purple-50 p-1 rounded-lg border border-purple-100">
+                            <div className="flex flex-col px-2">
+                                <span className="text-[10px] text-purple-600 font-bold uppercase">Başlangıç</span>
+                                <input
+                                    type="date"
+                                    value={startDateGen}
+                                    onChange={(e) => setStartDateGen(e.target.value)}
+                                    className="bg-transparent text-xs font-medium text-purple-900 border-none p-0 focus:ring-0 cursor-pointer w-24"
+                                />
+                            </div>
+                            <div className="w-px h-8 bg-purple-200 mx-1"></div>
+                            <select
+                                value={generationWeeks}
+                                onChange={(e) => setGenerationWeeks(Number(e.target.value))}
+                                className="bg-transparent text-sm font-medium text-purple-700 border-none focus:ring-0 cursor-pointer"
+                            >
+                                <option value={1}>1 Hafta</option>
+                                <option value={4}>4 Hafta</option>
+                                <option value={8}>8 Hafta</option>
+                                <option value={12}>12 Hafta</option>
+                                <option value={16}>16 Hafta</option>
+                            </select>
+                            <button
+                                onClick={handleGenerate}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 font-medium text-sm transition-colors"
+                            >
+                                <Wand2 size={16} />
+                                Oluştur
+                            </button>
                         </div>
-                        <div className="w-px h-8 bg-purple-200 mx-1"></div>
-                        <select
-                            value={generationWeeks}
-                            onChange={(e) => setGenerationWeeks(Number(e.target.value))}
-                            className="bg-transparent text-sm font-medium text-purple-700 border-none focus:ring-0 cursor-pointer"
-                        >
-                            <option value={1}>1 Hafta</option>
-                            <option value={4}>4 Hafta</option>
-                            <option value={8}>8 Hafta</option>
-                            <option value={12}>12 Hafta</option>
-                            <option value={16}>16 Hafta</option>
-                        </select>
-                        <button
-                            onClick={handleGenerate}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 font-medium text-sm transition-colors"
-                        >
-                            <Wand2 size={16} />
-                            Oluştur
-                        </button>
-                    </div>
+                    )}
 
-                    <button
-                        onClick={() => setIsAddLessonModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm transition-colors shadow-sm ml-2"
-                    >
-                        <Plus size={16} />
-                        Ek Ders / Etkinlik Ekle
-                    </button>
+                    {user?.role === 'admin' && (
+                        <button
+                            onClick={() => setIsAddLessonModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm transition-colors shadow-sm ml-2"
+                        >
+                            <Plus size={16} />
+                            Ek Ders / Etkinlik Ekle
+                        </button>
+                    )}
 
 
 
