@@ -19,8 +19,8 @@ export function Schools() {
         ? schools.filter(s => s.id === user.id)
         : schools;
 
-    const visibleRegularSchools = allSchools.filter(s => s.type !== 'event');
-    const visibleEvents = allSchools.filter(s => s.type === 'event');
+    const visibleRegularSchools = allSchools.filter(s => s.type !== 'event').sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+    const visibleEvents = allSchools.filter(s => s.type === 'event').sort((a, b) => a.name.localeCompare(b.name, 'tr'));
 
     const displayedList = activeTab === 'schools' ? visibleRegularSchools : visibleEvents;
 

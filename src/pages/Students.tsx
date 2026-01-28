@@ -106,7 +106,7 @@ export function Students() {
             if (searchTerm && !student.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
 
             return true;
-        });
+        }).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
     }, [students, selectedSchoolId, selectedClassGroupId, statusFilter, searchTerm, paymentStatusFilter]);
 
     // --- HANDLERS ---

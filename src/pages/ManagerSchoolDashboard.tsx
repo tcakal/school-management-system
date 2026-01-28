@@ -120,7 +120,7 @@ export function ManagerSchoolDashboard() {
             if (selectedClassGroupId !== 'all' && s.classGroupId !== selectedClassGroupId) return false;
             if (searchTerm && !s.name.toLocaleLowerCase('tr').includes(searchTerm.toLocaleLowerCase('tr'))) return false;
             return true;
-        });
+        }).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
     }, [students, schoolId, selectedClassGroupId, searchTerm]);
 
     // 3. Attendance Data (Unchanged)

@@ -390,7 +390,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
             if (studentSearchTerm && !s.name.toLowerCase().includes(studentSearchTerm.toLowerCase())) return false;
 
             return true;
-        });
+        }).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
     }, [students, school, studentSearchTerm, studentStatusFilter]);
 
     // const { user } = useAuth(); // Removed duplicate declaration
