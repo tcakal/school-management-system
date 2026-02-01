@@ -38,6 +38,7 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId, event
     const [endTime, setEndTime] = useState('10:00');
     const [availableTeachers, setAvailableTeachers] = useState<any[]>([]);
     const [isChecking, setIsChecking] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Auto-set day for events based on the effective event date
     useEffect(() => {
@@ -66,20 +67,24 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId, event
         return nextDate.toISOString().split('T')[0];
     };
 
-
-
     useEffect(() => {
         const check = async () => {
             setIsChecking(true);
-            const date = getNextDayDate(dayOfWeek);
-            console.log('[AssignmentModal] Checking availability for date:', date, 'effectiveEventDate:', effectiveEventDate, 'startTime:', startTime, 'endTime:', endTime);
-            // Verify findAvailableTeachers exists in store, assuming generic store type has it
-            if (findAvailableTeachers) {
-                const available = await findAvailableTeachers(date, startTime, endTime);
-                console.log('[AssignmentModal] Available teachers:', available.length, available.map(t => t.name));
-                setAvailableTeachers(available);
+            try {
+                const date = getNextDayDate(dayOfWeek);
+                console.log('[AssignmentModal] Checking availability for date:', date, 'effectiveEventDate:', effectiveEventDate, 'startTime:', startTime, 'endTime:', endTime);
+                // Verify findAvailableTeachers exists in store, assuming generic store type has it
+                if (findAvailableTeachers) {
+                    const available = await findAvailableTeachers(date, startTime, endTime);
+                    console.log('[AssignmentModal] Available teachers:', available.length, available.map(t => t.name));
+                    setAvailableTeachers(available);
+                }
+            } catch (error) {
+                console.error('Error checking availability:', error);
+                setAvailableTeachers([]);
+            } finally {
+                setIsChecking(false);
             }
-            setIsChecking(false);
         };
         const timer = setTimeout(check, 500); // 500ms debounce
         return () => clearTimeout(timer);
@@ -87,26 +92,34 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId, event
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!teacherId) return;
+        if (!teacherId || isSubmitting) return;
 
-        const newAssignment: TeacherAssignment = {
-            id: crypto.randomUUID(),
-            schoolId,
-            classGroupId,
-            teacherId,
-            dayOfWeek,
-            startTime,
-            endTime
-        };
+        setIsSubmitting(true);
+        try {
+            const newAssignment: TeacherAssignment = {
+                id: crypto.randomUUID(),
+                schoolId,
+                classGroupId,
+                teacherId,
+                dayOfWeek,
+                startTime,
+                endTime
+            };
 
-        await addAssignment(newAssignment);
-        onClose();
-        // Reset form
-        setTeacherId('');
-        // For events, keep the fixed day. For regular, reset to Monday?
-        if (!isEvent) setDayOfWeek(1);
-        setStartTime('09:00');
-        setEndTime('10:00');
+            await addAssignment(newAssignment);
+            onClose();
+            // Reset form
+            setTeacherId('');
+            // For events, keep the fixed day. For regular, reset to Monday?
+            if (!isEvent) setDayOfWeek(1);
+            setStartTime('09:00');
+            setEndTime('10:00');
+        } catch (error: any) {
+            console.error('Error adding assignment:', error);
+            alert(`Atama yapılırken bir hata oluştu: ${error?.message || error?.details || 'Bilinmeyen hata'}`);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -200,10 +213,10 @@ export function AssignmentModal({ isOpen, onClose, schoolId, classGroupId, event
                     </button>
                     <button
                         type="submit"
-                        disabled={isChecking}
-                        className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium text-sm disabled:opacity-50"
+                        disabled={isChecking || isSubmitting}
+                        className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium text-sm disabled:opacity-50 flex items-center gap-2"
                     >
-                        Ata
+                        {isSubmitting ? 'Atanıyor...' : 'Ata'}
                     </button>
                 </div>
             </form>

@@ -63,7 +63,7 @@ export function AddLessonModal({ isOpen, onClose, initialSchoolId, initialDate, 
 
     // Use Memo for filtering
     const availableClasses = React.useMemo(() =>
-        classGroups.filter(c => c.schoolId === schoolId && c.status === 'active'),
+        classGroups.filter(c => (c.schoolId === schoolId || c.branchId === schoolId) && c.status === 'active'),
         [classGroups, schoolId]
     );
 

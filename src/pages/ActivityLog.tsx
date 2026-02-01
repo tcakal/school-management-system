@@ -7,9 +7,10 @@ import { tr } from 'date-fns/locale';
 import { utils, writeFile } from 'xlsx';
 
 export function ActivityLog() {
-    const { logs, fetchMoreLogs, markActivityLogSeen, traceLogs, fetchTraceLogs } = useStore();
-    const [activeTab, setActiveTab] = useState<'all' | 'teacher' | 'manager' | 'parent' | 'system' | 'trace'>('all');
+    const { logs, fetchMoreLogs, markActivityLogSeen, traceLogs, fetchTraceLogs, teachers, branches, schools } = useStore();
+    const [activeTab, setActiveTab] = useState<'all' | 'teacher' | 'branch_manager' | 'school_principal' | 'parent' | 'admin' | 'trace'>('all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedEntityId, setSelectedEntityId] = useState<string>('all');
     const [exporting, setExporting] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
 
@@ -41,7 +42,12 @@ export function ActivityLog() {
                 const rows = data.map(l => [
                     format(new Date(l.created_at), 'dd.MM.yyyy HH:mm', { locale: tr }),
                     l.user_name,
-                    l.user_role === 'admin' ? 'Yönetici' : l.user_role === 'manager' ? 'Müdür' : l.user_role === 'teacher' ? 'Öğretmen' : l.user_role,
+                    l.user_role === 'admin' ? 'Süper Yönetici' :
+                        l.user_role === 'manager' ? (
+                            teachers.find(t => t.id === l.user_id)?.branchId ? 'Şube Yöneticisi' : 'Okul Müdürü'
+                        ) :
+                            l.user_role === 'teacher' ? 'Öğretmen' :
+                                l.user_role === 'parent' ? 'Veli' : l.user_role,
                     l.action,
                     l.details
                 ]);
@@ -85,9 +91,40 @@ export function ActivityLog() {
         // Tab Filter
         if (activeTab === 'trace') return false; // Handled separately
         if (activeTab === 'teacher' && log.userRole !== 'teacher') return false;
-        if (activeTab === 'manager' && log.userRole !== 'manager') return false;
+
+        if (activeTab === 'branch_manager') {
+            if (log.userRole !== 'manager') return false;
+            const teacher = teachers.find(t => t.id === log.userId);
+            if (!teacher?.branchId) return false;
+        }
+
+        if (activeTab === 'school_principal') {
+            if (log.userRole !== 'manager') return false;
+            const teacher = teachers.find(t => t.id === log.userId);
+            if (!teacher?.schoolId) return false;
+        }
+
         if (activeTab === 'parent' && log.userRole !== 'parent') return false;
-        if (activeTab === 'system' && log.userRole !== 'admin') return false; // Assuming 'admin' is system for now, or check log.entityType === 'system'
+        if (activeTab === 'admin' && log.userRole !== 'admin') return false;
+
+        // Combined Branch/School Filter
+        if (selectedEntityId !== 'all') {
+            // Check if selected ID is a branch
+            const branch = branches.find(b => b.id === selectedEntityId);
+            if (branch) {
+                const isManagerAction = branch.managerId === log.userId;
+                const isRelatedToBranch = log.details?.toLowerCase().includes(branch.name.toLowerCase());
+                if (!isManagerAction && !isRelatedToBranch) return false;
+            } else {
+                // Check if selected ID is a school
+                const school = schools.find(s => s.id === selectedEntityId);
+                if (school) {
+                    const isPrincipalAction = teachers.find(t => t.id === log.userId)?.schoolId === school.id;
+                    const isRelatedToSchool = log.details?.toLowerCase().includes(school.name.toLowerCase());
+                    if (!isPrincipalAction && !isRelatedToSchool) return false;
+                }
+            }
+        }
 
         // Search Filter
         if (searchTerm) {
@@ -123,6 +160,17 @@ export function ActivityLog() {
                 </div>
 
                 <div className="flex gap-2">
+                    <button
+                        onClick={() => setActiveTab(activeTab === 'trace' ? 'all' : 'trace')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all border ${activeTab === 'trace'
+                            ? 'bg-red-900/80 text-red-200 border-red-500/50 shadow-lg'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                            }`}
+                        title="Sistem İzleme (Debug)"
+                    >
+                        <Shield size={18} className={activeTab === 'trace' ? 'animate-pulse' : ''} />
+                        <span className="hidden md:inline">Sistem İzleme</span>
+                    </button>
                     {activeTab === 'trace' && (
                         <button
                             onClick={() => fetchTraceLogs()}
@@ -149,16 +197,16 @@ export function ActivityLog() {
                     {[
                         { id: 'all', label: 'Tümü' },
                         { id: 'teacher', label: 'Öğretmen' },
-                        { id: 'manager', label: 'Müdür' },
+                        { id: 'branch_manager', label: 'Şube Yöneticisi' },
+                        { id: 'school_principal', label: 'Okul Müdürü' },
                         { id: 'parent', label: 'Veli' },
-                        { id: 'system', label: 'Yönetici' },
-                        { id: 'trace', label: 'Sistem İzleme (Debug)' }
+                        { id: 'admin', label: 'Süper Yönetici' }
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
                             className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === tab.id
-                                ? tab.id === 'trace' ? 'bg-red-900/80 text-red-200 shadow-lg ring-1 ring-red-500/50' : 'bg-purple-600 text-white shadow-lg'
+                                ? tab.id === 'trace' ? 'bg-red-900/80 text-red-200 shadow-lg ring-1 ring-red-500/50' : 'bg-orange-600 text-white shadow-lg'
                                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                                 }`}
                         >
@@ -168,16 +216,40 @@ export function ActivityLog() {
                 </div>
 
                 {activeTab !== 'trace' && (
-                    <div className="relative w-full md:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                        <input
-                            type="text"
-                            placeholder="İşlem veya kişi ara..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 rounded-lg focus:ring-2 focus:ring-purple-500/50 transition-all border-slate-700 !bg-slate-800 !text-slate-200 !border-slate-700 placeholder:text-slate-500"
-                            style={{ backgroundColor: '#1e293b', color: '#e2e8f0', borderColor: '#334155' }}
-                        />
+                    <div className="flex flex-wrap gap-4 w-full md:w-auto">
+                        <div className="relative w-full md:w-56">
+                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                            <select
+                                value={selectedEntityId}
+                                onChange={(e) => setSelectedEntityId(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 rounded-lg focus:ring-2 focus:ring-purple-500/50 outline-none border-slate-700 !bg-slate-800 !text-slate-200 !border-slate-700 appearance-none"
+                                style={{ backgroundColor: '#1e293b', color: '#e2e8f0', borderColor: '#334155' }}
+                            >
+                                <option value="all">Tüm Şubeler / Okullar</option>
+                                <optgroup label="Şubeler">
+                                    {branches.map(b => (
+                                        <option key={b.id} value={b.id}>{b.name}</option>
+                                    ))}
+                                </optgroup>
+                                <optgroup label="Okullar">
+                                    {schools.filter(s => s.type === 'school').map(s => (
+                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                    ))}
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div className="relative w-full md:w-64">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                            <input
+                                type="text"
+                                placeholder="İşlem veya kişi ara..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 rounded-lg focus:ring-2 focus:ring-purple-500/50 transition-all border-slate-700 !bg-slate-800 !text-slate-200 !border-slate-700 placeholder:text-slate-500"
+                                style={{ backgroundColor: '#1e293b', color: '#e2e8f0', borderColor: '#334155' }}
+                            />
+                        </div>
                     </div>
                 )}
             </div>
@@ -197,10 +269,10 @@ export function ActivityLog() {
                                         {format(new Date(log.log_time), 'HH:mm:ss.SSS')}
                                     </span>
                                     <span className={`break-all ${log.message.includes('MATCH') ? 'text-green-400 font-bold' :
-                                            log.message.includes('SENDING') ? 'text-blue-400 font-bold' :
-                                                log.message.includes('SKIP') ? 'text-yellow-500' :
-                                                    log.message.includes('FAIL') || log.message.includes('ERROR') ? 'text-red-500 font-bold' :
-                                                        'text-slate-300'
+                                        log.message.includes('SENDING') ? 'text-blue-400 font-bold' :
+                                            log.message.includes('SKIP') ? 'text-yellow-500' :
+                                                log.message.includes('FAIL') || log.message.includes('ERROR') ? 'text-red-500 font-bold' :
+                                                    'text-slate-300'
                                         }`}>
                                         {log.message}
                                     </span>
@@ -241,9 +313,11 @@ export function ActivityLog() {
                                                     log.userRole === 'teacher' ? 'bg-blue-500/10 text-blue-400' :
                                                         'bg-emerald-500/10 text-emerald-400'}`}
                                             >
-                                                {log.userRole === 'admin' ? 'Yönetici' :
+                                                {log.userRole === 'admin' ? 'Süper Yönetici' :
                                                     log.userRole === 'teacher' ? 'Öğretmen' :
-                                                        log.userRole === 'manager' ? 'Müdür' :
+                                                        log.userRole === 'manager' ? (
+                                                            teachers.find(t => t.id === log.userId)?.branchId ? 'Şube Yöneticisi' : 'Okul Müdürü'
+                                                        ) :
                                                             log.userRole === 'parent' ? 'Veli' : log.userRole}
                                             </span>
                                         </h4>

@@ -17,6 +17,7 @@ import { Guide } from './pages/Guide';
 import { useAuth } from './store/useAuth';
 import { ManagerSchoolDashboard } from './pages/ManagerSchoolDashboard';
 import { FinancialReports } from './pages/FinancialReports';
+import { BranchDetail } from './pages/BranchDetail';
 
 import { ParentDashboard } from './pages/ParentDashboard';
 
@@ -70,6 +71,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="schools" element={<Schools />} />
           <Route path="school/:id" element={<SchoolDetail />} />
+          <Route path="branch/:id" element={<BranchDetail />} />
           <Route path="students" element={<Students />} />
           <Route path="student-panel/:studentId" element={<StudentPanel />} />
           <Route path="finance" element={

@@ -24,14 +24,16 @@ export function Settings() {
     const [selectedSchoolId, setSelectedSchoolId] = useState('');
     const [editId, setEditId] = useState<string | null>(null);
 
-    // Sync selectedSchoolId removed to allow "Global" (empty) selection
-    // useEffect(() => {
-    //     if (!selectedSchoolId && schools.length > 0) {
-    //         setSelectedSchoolId(schools[0].id);
-    //     }
-    // }, [schools, selectedSchoolId]);
+    // Initial selectedSchoolId based on user role
+    useEffect(() => {
+        if (!selectedSchoolId) {
+            if (user?.role === 'manager') {
+                setSelectedSchoolId(user.branchId || user.schoolId || '');
+            }
+        }
+    }, [user, selectedSchoolId]);
 
-    if (user?.role !== 'admin') {
+    if (user?.role !== 'admin' && user?.role !== 'manager') {
         return (
             <div className="p-8 text-center bg-white rounded-xl border border-red-200">
                 <h3 className="text-red-600 font-bold">Yetkisiz Erişim</h3>
@@ -124,7 +126,9 @@ export function Settings() {
             </div>
 
             <Tabs
-                tabs={[
+                tabs={user?.role === 'manager' ? [
+                    { id: 'notifications', label: 'Bildirim Şablonları' }
+                ] : [
                     { id: 'appearance', label: 'Görünüm', icon: Palette },
                     { id: 'notifications', label: 'Bildirim Şablonları' },
                     { id: 'telegram', label: 'Telegram & İletişim', icon: Phone },
@@ -144,10 +148,20 @@ export function Settings() {
                             <select
                                 value={selectedSchoolId}
                                 onChange={e => setSelectedSchoolId(e.target.value)}
-                                className="p-2 border border-slate-300 rounded-lg text-sm w-full bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="p-2 border border-slate-300 rounded-lg text-sm w-full bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-50 disabled:text-slate-500"
                             >
-                                <option value="">Tüm Okullar (Global Şablonlar)</option>
-                                {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {(user?.role === 'admin' || user?.role === 'manager') && <option value="">Tüm Okullar (Global Şablonlar)</option>}
+                                {schools
+                                    .filter(s => {
+                                        if (user?.role === 'admin') return true;
+                                        if (user?.role === 'manager') {
+                                            // Only show branches to managers, never schools or events
+                                            return s.type === 'branch';
+                                        }
+                                        return s.id === user?.schoolId || s.id === user?.branchId;
+                                    })
+                                    .map(s => <option key={s.id} value={s.id}>{s.name}</option>)
+                                }
                             </select>
                         </div>
                     </div>
@@ -277,7 +291,7 @@ export function Settings() {
                                     </div>
 
                                     <div className="flex gap-1 flex-wrap">
-                                        {t.targetRoles && t.targetRoles.map(role => (
+                                        {t.targetRoles && t.targetRoles.filter(role => user?.role === 'admin' || (role !== 'admin' && role !== 'manager')).map(role => (
                                             <span key={role} className={`text-[10px] px-1 rounded border ${role === 'student' ? 'bg-green-50 text-green-700 border-green-200' :
                                                 role === 'teacher' ? 'bg-purple-50 text-purple-700 border-purple-200' :
                                                     'bg-orange-50 text-orange-700 border-orange-200'
@@ -499,8 +513,11 @@ export function Settings() {
                                         {[
                                             { id: 'student', label: 'Veli/Öğrenci' },
                                             { id: 'teacher', label: 'Öğretmen' },
-                                            { id: 'manager', label: 'Okul Müdürü' },
-                                            { id: 'admin', label: 'Admin (Ben)' }
+                                            ...(user?.role === 'admin' ? [
+                                                { id: 'manager', label: 'Okul Müdürü' },
+                                                { id: 'branch_manager', label: 'Şube Yöneticisi' },
+                                                { id: 'admin', label: 'Admin (Ben)' }
+                                            ] : [])
                                         ].map((role) => {
                                             const isSelected = newTemplate.targetRoles?.includes(role.id as any);
                                             return (

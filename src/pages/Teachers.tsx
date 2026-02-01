@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
-import { Phone, Mail, Plus, Edit2, BookOpen, Trash2, Shield, Filter, Calendar, Star } from 'lucide-react';
+import { Phone, Mail, Plus, Edit2, BookOpen, Trash2, Shield, Filter, Calendar, Star, Link, RefreshCw, CheckCircle2, MessageSquare } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { TeacherLeaveModal } from '../components/TeacherLeaveModal';
 import { EvaluateTeacherModal } from '../components/EvaluateTeacherModal';
+import { MessageModal } from '../components/MessageModal';
 import type { Teacher } from '../types';
 import { TelegramService } from '../services/TelegramService';
-import { Link, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export function Teachers() {
     const { teachers, schools, assignments, addTeacher, updateTeacher, deleteTeacher } = useStore();
@@ -16,20 +16,20 @@ export function Teachers() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [leaveModalTeacherId, setLeaveModalTeacherId] = useState<string | null>(null);
     const [evaluateModalTeacherId, setEvaluateModalTeacherId] = useState<string | null>(null);
-    // Initialize with manager's school ID if manager, else 'all'
-    const [selectedSchoolId, setSelectedSchoolId] = useState<string>(user?.role === 'manager' ? user.id : 'all');
-
-    // ... (rest of state)
+    const [messageModalTeacherId, setMessageModalTeacherId] = useState<string | null>(null);
+    // Initialize with manager's branch ID if manager, else 'all'
+    const [selectedSchoolId, setSelectedSchoolId] = useState<string>(user?.role === 'manager' ? (user.branchId || user.schoolId || 'all') : 'all');
 
     // Form State
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [specialties, setSpecialties] = useState('');
-    const [role, setRole] = useState<'teacher' | 'admin'>('teacher');
+    const [role, setRole] = useState<'teacher' | 'admin' | 'manager'>('teacher');
     const [type, setType] = useState<'regular' | 'guest'>('regular');
     const [password, setPassword] = useState('');
     const [telegramChatId, setTelegramChatId] = useState('');
+    const [isActive, setIsActive] = useState(true);
 
     // Telegram Connect State
     const [connectCode, setConnectCode] = useState<string | null>(null);
@@ -42,10 +42,11 @@ export function Teachers() {
             setPhone(teacher.phone);
             setEmail(teacher.email || '');
             setSpecialties(teacher.specialties?.join(', ') || '');
-            setRole(teacher.role);
+            setRole(teacher.role as 'teacher' | 'admin' | 'manager');
             setType(teacher.type || 'regular');
             setPassword(teacher.password || '');
             setTelegramChatId(teacher.telegramChatId || '');
+            setIsActive(teacher.isActive !== false); // Default true
         } else {
             setEditingId(null);
             setName('');
@@ -55,9 +56,9 @@ export function Teachers() {
             setRole('teacher');
             setType('regular');
             setPassword('');
-            setPassword('');
             setTelegramChatId('');
             setConnectCode(null);
+            setIsActive(true);
         }
         setIsModalOpen(true);
     };
@@ -111,7 +112,8 @@ export function Teachers() {
             role,
             type,
             password: password || '123456',
-            telegramChatId: telegramChatId || undefined
+            telegramChatId: telegramChatId || undefined,
+            isActive
         };
 
         if (editingId) {
@@ -121,6 +123,7 @@ export function Teachers() {
                 ...teacherData,
                 id: crypto.randomUUID(),
                 color: `bg-${['red', 'green', 'blue', 'yellow', 'purple', 'pink'][Math.floor(Math.random() * 6)]}-100`,
+                isActive: true
             } as Teacher;
             await addTeacher(newTeacher);
         }
@@ -130,7 +133,7 @@ export function Teachers() {
     };
 
     // Filter and Sort Logic
-    const { admins, teachingStaff, guestStaff } = useMemo(() => {
+    const { superAdmins, managers, teachingStaff, guestStaff } = useMemo(() => {
         // 1. Filter by School if selected
         let filtered = teachers;
         if (selectedSchoolId !== 'all') {
@@ -142,11 +145,6 @@ export function Teachers() {
             );
 
             filtered = teachers.filter(t => {
-                if (t.role === 'admin') return true; // Always show admins? Maybe not for school managers?
-                // For managers, maybe only show admins if they are school admins? 
-                // But admins are global currently. 
-                // Let's assume Managers only care about Teachers assigned to their school.
-
                 // If Manager, hide global admins? Or show them? 
                 // Let's keep admins visible but separated.
                 if ((t.role as string) === 'admin') return true;
@@ -162,15 +160,18 @@ export function Teachers() {
 
         // 3. Split by Role and Type
         return {
-            admins: sorted.filter(t => t.role === 'admin'),
-            teachingStaff: sorted.filter(t => t.role !== 'admin' && (t.type === 'regular' || !t.type)),
-            guestStaff: sorted.filter(t => t.role !== 'admin' && t.type === 'guest')
+            superAdmins: sorted.filter(t => t.role === 'admin'),
+            managers: sorted.filter(t => t.role === 'manager'),
+            teachingStaff: sorted.filter(t => t.role !== 'admin' && t.role !== 'manager' && (t.type === 'regular' || !t.type)),
+            guestStaff: sorted.filter(t => t.role !== 'admin' && t.role !== 'manager' && t.type === 'guest')
         };
     }, [teachers, assignments, selectedSchoolId]);
 
     // Check assignment status for visualization
-    const getTeacherStatus = (teacherId: string) => {
-        const hasAssignment = assignments.some(a => a.teacherId === teacherId);
+    const getTeacherStatus = (teacher: Teacher) => {
+        if (teacher.role === 'admin') return 'admin';
+        if (teacher.role === 'manager') return 'manager';
+        const hasAssignment = assignments.some(a => a.teacherId === teacher.id);
         return hasAssignment ? 'assigned' : 'unassigned';
     };
 
@@ -184,17 +185,22 @@ export function Teachers() {
 
                 <div className="flex items-center gap-3">
                     {/* School Filter */}
-                    {user?.role !== 'manager' && (
+                    {(user?.role === 'admin' || user?.role === 'manager') && (
                         <div className="relative">
                             <select
                                 value={selectedSchoolId}
                                 onChange={(e) => setSelectedSchoolId(e.target.value)}
                                 className="appearance-none bg-white border border-slate-200 text-slate-700 pl-10 pr-8 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer hover:border-slate-300 transition-colors"
                             >
-                                <option value="all">Tüm Okullar</option>
-                                {schools.map(school => (
-                                    <option key={school.id} value={school.id}>{school.name}</option>
-                                ))}
+                                <option value="all">Tüm Şubeler / Okullar</option>
+                                {schools
+                                    .filter(s => {
+                                        if (user?.role === 'admin') return true;
+                                        return s.type === 'branch';
+                                    })
+                                    .map(school => (
+                                        <option key={school.id} value={school.id}>{school.name}</option>
+                                    ))}
                             </select>
                             <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         </div>
@@ -219,17 +225,17 @@ export function Teachers() {
                         </div>
                         <h3 className="text-xl font-bold text-slate-800">Yöneticiler</h3>
                         <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs font-medium">
-                            {admins.length}
+                            {superAdmins.length}
                         </span>
                     </div>
 
-                    {admins.length === 0 ? (
+                    {superAdmins.length === 0 ? (
                         <div className="text-center py-8 text-slate-400 italic bg-slate-50 rounded-lg border border-dashed border-slate-200">
                             Yönetici bulunamadı.
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {admins.map(admin => (
+                            {superAdmins.map(admin => (
                                 <TeacherCard
                                     key={admin.id}
                                     teacher={admin}
@@ -241,11 +247,45 @@ export function Teachers() {
                                         }
                                     }}
                                     onManageLeaves={() => setLeaveModalTeacherId(admin.id)}
+                                    onMessage={() => setMessageModalTeacherId(admin.id)}
                                 />
                             ))}
                         </div>
                     )}
                 </section>
+
+                {/* Şube Yöneticileri Section */}
+                {managers.length > 0 && (
+                    <section>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
+                                <Shield size={24} />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-800">Şube Yöneticileri</h3>
+                            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs font-medium">
+                                {managers.length}
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {managers.map(manager => (
+                                <TeacherCard
+                                    key={manager.id}
+                                    teacher={manager}
+                                    status="manager"
+                                    onEdit={() => openModal(manager)}
+                                    onDelete={() => {
+                                        if (window.confirm('Bu şube yöneticisini silmek istediğinize emin misiniz?')) {
+                                            deleteTeacher(manager.id);
+                                        }
+                                    }}
+                                    onManageLeaves={() => setLeaveModalTeacherId(manager.id)}
+                                    onMessage={() => setMessageModalTeacherId(manager.id)}
+                                />
+                            ))}
+                        </div>
+                    </section>
+                )}
 
                 {/* Divider */}
                 <div className="border-t border-slate-200"></div>
@@ -272,7 +312,7 @@ export function Teachers() {
                                 <TeacherCard
                                     key={teacher.id}
                                     teacher={teacher}
-                                    status={getTeacherStatus(teacher.id)}
+                                    status={getTeacherStatus(teacher) as any}
                                     onEdit={() => openModal(teacher)}
                                     onDelete={() => {
                                         if (window.confirm('Bu öğretmeni silmek istediğinize emin misiniz?')) {
@@ -282,6 +322,7 @@ export function Teachers() {
                                     onManageLeaves={() => setLeaveModalTeacherId(teacher.id)}
                                     // Only admins can evaluate teachers
                                     onEvaluate={() => setEvaluateModalTeacherId(teacher.id)}
+                                    onMessage={() => setMessageModalTeacherId(teacher.id)}
                                 />
                             ))}
                         </div>
@@ -313,7 +354,7 @@ export function Teachers() {
                                 <TeacherCard
                                     key={teacher.id}
                                     teacher={teacher}
-                                    status={getTeacherStatus(teacher.id)}
+                                    status={getTeacherStatus(teacher) as any}
                                     onEdit={() => openModal(teacher)}
                                     onDelete={() => {
                                         if (window.confirm('Bu eğitmeni silmek istediğinize emin misiniz?')) {
@@ -321,6 +362,7 @@ export function Teachers() {
                                         }
                                     }}
                                     onManageLeaves={() => setLeaveModalTeacherId(teacher.id)}
+                                    onMessage={() => setMessageModalTeacherId(teacher.id)}
                                 />
                             ))}
                         </div>
@@ -426,11 +468,12 @@ export function Teachers() {
                             <div className="space-y-4">
                                 <select
                                     value={role}
-                                    onChange={(e) => setRole(e.target.value as 'admin' | 'teacher')}
+                                    onChange={(e) => setRole(e.target.value as 'admin' | 'teacher' | 'manager')}
                                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
                                 >
                                     <option value="teacher">Eğitmen</option>
-                                    <option value="admin">Yönetici</option>
+                                    <option value="admin">Yönetici (Süper)</option>
+                                    <option value="manager">Şube Yöneticisi</option>
                                 </select>
 
                                 {role === 'teacher' && (
@@ -483,6 +526,21 @@ export function Teachers() {
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
                             />
                         </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Durum</label>
+                            <label className="flex items-center gap-2 p-2 border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50">
+                                <input
+                                    type="checkbox"
+                                    checked={isActive}
+                                    onChange={e => setIsActive(e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                />
+                                <span className={`text-sm font-medium ${isActive ? 'text-green-600' : 'text-slate-500'}`}>
+                                    {isActive ? 'Hesap Aktif (Giriş Yapabilir)' : 'Hesap Pasif (Giriş Engellendi)'}
+                                </span>
+                            </label>
+                        </div>
                     </div>
 
                     <div>
@@ -526,23 +584,37 @@ export function Teachers() {
                 onClose={() => setEvaluateModalTeacherId(null)}
                 teacher={teachers.find(t => t.id === evaluateModalTeacherId) || null}
             />
+
+            {messageModalTeacherId && (
+                <MessageModal
+                    teacher={teachers.find(t => t.id === messageModalTeacherId)!}
+                    onClose={() => setMessageModalTeacherId(null)}
+                    onSend={async (msg: string) => {
+                        const t = teachers.find(t => t.id === messageModalTeacherId);
+                        if (!t?.telegramChatId) return { success: false, error: 'Chat ID bulunamadı.' };
+                        return await TelegramService.sendMessage(t.telegramChatId, `📩 *Yöneticinizden Mesaj Var*\n\n${msg}`);
+                    }}
+                />
+            )}
         </div >
     );
 }
 
-function TeacherCard({ teacher, status, onEdit, onDelete, onManageLeaves, onEvaluate }: {
+
+
+function TeacherCard({ teacher, status, onEdit, onDelete, onManageLeaves, onEvaluate, onMessage }: {
     teacher: Teacher,
-    status: 'admin' | 'assigned' | 'unassigned',
+    status: 'admin' | 'manager' | 'assigned' | 'unassigned',
     onEdit: () => void,
     onDelete: () => void,
     onManageLeaves: () => void,
-    onEvaluate?: () => void
+    onEvaluate?: () => void,
+    onMessage: () => void
 }) {
-    const borderColor = status === 'admin' ? 'border-purple-500 shadow-purple-50' : status === 'unassigned' ? 'border-orange-200 shadow-orange-50' : 'border-green-200 shadow-green-50';
+    const borderColor = !teacher.isActive ? 'border-slate-200 bg-slate-50 opacity-75' : status === 'admin' ? 'border-purple-500 shadow-purple-50' : status === 'manager' ? 'border-indigo-500 shadow-indigo-50' : status === 'unassigned' ? 'border-orange-200 shadow-orange-50' : 'border-green-200 shadow-green-50';
 
-    // const isActive = status === 'assigned' || status === 'admin';
-    const statusText = status === 'admin' ? 'Yönetici' : status === 'assigned' ? 'Ders Ataması Var' : 'Ders Ataması Yok';
-    const statusBg = status === 'admin' ? 'bg-purple-100 text-purple-700' : status === 'assigned' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700';
+    const statusText = !teacher.isActive ? 'PASİF' : status === 'admin' ? 'Yönetici' : status === 'manager' ? 'Şube Yöneticisi' : status === 'assigned' ? 'Ders Ataması Var' : 'Ders Ataması Yok';
+    const statusBg = !teacher.isActive ? 'bg-slate-200 text-slate-600' : status === 'admin' ? 'bg-purple-100 text-purple-700' : status === 'manager' ? 'bg-indigo-100 text-indigo-700' : status === 'assigned' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700';
 
     return (
         <div className={`bg-white p-6 rounded-2xl shadow-sm border-2 ${borderColor} hover:shadow-md transition-all group flex flex-col h-full`}>
@@ -561,6 +633,12 @@ function TeacherCard({ teacher, status, onEdit, onDelete, onManageLeaves, onEval
                                 <Shield size={12} fill="currentColor" />
                             </div>
                         )}
+                        {teacher.role === 'manager' && (
+                            <div className="absolute -bottom-1 -right-1 bg-indigo-600 text-white p-1 rounded-full border-2 border-white" title="Şube Yöneticisi">
+                                <Shield size={12} fill="currentColor" />
+                            </div>
+                        )}
+                        {/* Status Orb for online/offline? Or simple indicator? */}
                     </div>
                     <div>
                         <h3 className="font-bold text-lg text-slate-900">{teacher.name}</h3>
@@ -611,6 +689,18 @@ function TeacherCard({ teacher, status, onEdit, onDelete, onManageLeaves, onEval
                     <Calendar size={18} />
                 </button>
                 <div className="w-px bg-slate-200 my-1"></div>
+                {teacher.telegramChatId && (
+                    <>
+                        <button
+                            onClick={onMessage}
+                            className="text-slate-400 hover:text-blue-500 transition-colors p-2 hover:bg-blue-50 rounded-lg"
+                            title="Telegram Mesajı Gönder"
+                        >
+                            <MessageSquare size={18} />
+                        </button>
+                        <div className="w-px bg-slate-200 my-1"></div>
+                    </>
+                )}
                 {onEvaluate && (
                     <>
                         <button

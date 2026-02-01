@@ -5,6 +5,7 @@ import { useAuth } from '../store/useAuth';
 
 import { Building2, ArrowRight, Plus, MapPin, Image as ImageIcon, Trash2, Edit, Tent, Calendar, X } from 'lucide-react';
 import { Modal } from '../components/Modal';
+import { BranchesTab } from '../components/BranchesTab';
 import type { School } from '../types';
 
 export function Schools() {
@@ -12,14 +13,16 @@ export function Schools() {
     const { user } = useAuth();
     const navigate = useNavigate();
 
-    const [activeTab, setActiveTab] = useState<'schools' | 'events'>('schools');
+    const [activeTab, setActiveTab] = useState<'schools' | 'events' | 'branches'>(
+        (user?.role === 'manager' && user.branchId) ? 'branches' : 'schools'
+    );
 
     // Filter schools for manager
     const allSchools = user?.role === 'manager'
-        ? schools.filter(s => s.id === user.id)
+        ? schools.filter(s => s.id === user.id || s.id === user.schoolId)
         : schools;
 
-    const visibleRegularSchools = allSchools.filter(s => s.type !== 'event').sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+    const visibleRegularSchools = allSchools.filter(s => s.type !== 'event' && s.type !== 'branch').sort((a, b) => a.name.localeCompare(b.name, 'tr'));
     const visibleEvents = allSchools.filter(s => s.type === 'event').sort((a, b) => a.name.localeCompare(b.name, 'tr'));
 
     const displayedList = activeTab === 'schools' ? visibleRegularSchools : visibleEvents;
@@ -203,115 +206,128 @@ export function Schools() {
                     Etkinlikler
                     {activeTab === 'events' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 rounded-t-full" />}
                 </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {displayedList.map(school => {
-                    const activeStudents = students.filter(s => s.schoolId === school.id && s.status === 'Active');
-                    const hasStudents = activeStudents.length > 0;
-                    const hasAssignments = useStore.getState().assignments.some(a => a.schoolId === school.id);
-                    const isActive = hasStudents || hasAssignments;
-
-                    let borderColorClass = school.type === 'event'
-                        ? 'border-purple-200'
-                        : (isActive ? 'border-emerald-500 border-2' : 'border-orange-400 border-2');
-
-                    return (
-                        <div
-                            key={school.id}
-                            onClick={() => navigate(`/school/${school.id}`)}
-                            className={`bg-white p-6 rounded-xl hover:shadow-xl hover:translate-y-[-2px] transition-all cursor-pointer group ${borderColorClass} flex flex-col h-full relative`}
-                        >
-                            <div className="flex-1">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div
-                                        className="w-12 h-12 rounded-lg flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform bg-cover bg-center"
-                                        style={{
-                                            backgroundColor: school.color || '#eff6ff',
-                                            color: school.color ? '#fff' : '#2563eb',
-                                            backgroundImage: school.imageUrl ? `url(${school.imageUrl})` : undefined
-                                        }}
-                                    >
-                                        {!school.imageUrl && (school.type === 'event' ? <Tent size={24} /> : <Building2 size={24} />)}
-                                    </div>
-                                    {school.type === 'event' && (
-                                        <div className="px-2 py-1 bg-purple-50 text-purple-700 rounded text-[10px] font-bold uppercase border border-purple-100">
-                                            Etkinlik
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="mb-4">
-                                    <h3
-                                        className="font-bold text-lg text-slate-900 mb-1"
-                                        style={{ color: school.color }}
-                                    >
-                                        {school.name}
-                                    </h3>
-                                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                                        <MapPin size={14} />
-                                        <span className="line-clamp-1">{school.address || 'Adres belirtilmedi'}</span>
-                                    </div>
-                                    {school.type === 'event' && school.eventDate && (
-                                        <div className="flex items-center gap-2 text-sm text-purple-600 mt-1">
-                                            <Calendar size={14} />
-                                            <span>{school.eventDate}</span>
-                                            {school.eventDates && school.eventDates.length > 1 && (
-                                                <span className="text-xs bg-purple-100 px-1 rounded">+{school.eventDates.length - 1} gün</span>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="text-sm font-medium text-slate-600 mb-4">
-                                    <span>
-                                        {students.filter(s => s.schoolId === school.id && s.status === 'Active').length} {school.type === 'event' ? 'Katılımcı' : 'Öğrenci'}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                                <span className="text-blue-600 text-xs font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                                    Detaylar <ArrowRight size={14} />
-                                </span>
-
-                                {useAuth.getState().user?.role === 'admin' && (
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleEditSchoolClick(school);
-                                            }}
-                                            className="text-slate-400 hover:text-blue-600 transition-colors p-2 hover:bg-slate-50 rounded-lg"
-                                            title="Düzenle"
-                                        >
-                                            <Edit size={18} />
-                                        </button>
-                                        <div className="w-px h-4 bg-slate-200"></div>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (window.confirm('Bu kaydı silmek istediğinizden emin misiniz?')) {
-                                                    useStore.getState().deleteSchool(school.id);
-                                                }
-                                            }}
-                                            className="text-slate-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
-                                            title="Sil"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    );
-
-                })}
-                {displayedList.length === 0 && (
-                    <div className="col-span-3 py-12 text-center text-slate-400 bg-slate-50 rounded-xl border-dashed border border-slate-200">
-                        {activeTab === 'schools' ? 'Kayıtlı okul bulunamadı.' : 'Planlanmış etkinlik bulunamadı.'}
-                    </div>
+                {(user?.role === 'admin' || user?.role === 'manager') && (
+                    <button
+                        onClick={() => setActiveTab('branches')}
+                        className={`px-6 py-3 font-medium text-sm transition-colors relative ${activeTab === 'branches' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        Şubeler
+                        {activeTab === 'branches' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 rounded-t-full" />}
+                    </button>
                 )}
             </div>
+
+            {activeTab === 'branches' ? (
+                <BranchesTab />
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {displayedList.map(school => {
+                        const activeStudents = students.filter(s => s.schoolId === school.id && s.status === 'Active');
+                        const hasStudents = activeStudents.length > 0;
+                        const hasAssignments = useStore.getState().assignments.some(a => a.schoolId === school.id);
+                        const isActive = hasStudents || hasAssignments;
+
+                        let borderColorClass = school.type === 'event'
+                            ? 'border-purple-200'
+                            : (isActive ? 'border-emerald-500 border-2' : 'border-orange-400 border-2');
+
+                        return (
+                            <div
+                                key={school.id}
+                                onClick={() => navigate(`/school/${school.id}`)}
+                                className={`bg-white p-6 rounded-xl hover:shadow-xl hover:translate-y-[-2px] transition-all cursor-pointer group ${borderColorClass} flex flex-col h-full relative`}
+                            >
+                                <div className="flex-1">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div
+                                            className="w-12 h-12 rounded-lg flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform bg-cover bg-center"
+                                            style={{
+                                                backgroundColor: school.color || '#eff6ff',
+                                                color: school.color ? '#fff' : '#2563eb',
+                                                backgroundImage: school.imageUrl ? `url(${school.imageUrl})` : undefined
+                                            }}
+                                        >
+                                            {!school.imageUrl && (school.type === 'event' ? <Tent size={24} /> : <Building2 size={24} />)}
+                                        </div>
+                                        {school.type === 'event' && (
+                                            <div className="px-2 py-1 bg-purple-50 text-purple-700 rounded text-[10px] font-bold uppercase border border-purple-100">
+                                                Etkinlik
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="mb-4">
+                                        <h3
+                                            className="font-bold text-lg text-slate-900 mb-1"
+                                            style={{ color: school.color }}
+                                        >
+                                            {school.name}
+                                        </h3>
+                                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                                            <MapPin size={14} />
+                                            <span className="line-clamp-1">{school.address || 'Adres belirtilmedi'}</span>
+                                        </div>
+                                        {school.type === 'event' && school.eventDate && (
+                                            <div className="flex items-center gap-2 text-sm text-purple-600 mt-1">
+                                                <Calendar size={14} />
+                                                <span>{school.eventDate}</span>
+                                                {school.eventDates && school.eventDates.length > 1 && (
+                                                    <span className="text-xs bg-purple-100 px-1 rounded">+{school.eventDates.length - 1} gün</span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="text-sm font-medium text-slate-600 mb-4">
+                                        <span>
+                                            {students.filter(s => s.schoolId === school.id && s.status === 'Active').length} {school.type === 'event' ? 'Katılımcı' : 'Öğrenci'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                                    <span className="text-blue-600 text-xs font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                                        Detaylar <ArrowRight size={14} />
+                                    </span>
+
+                                    {useAuth.getState().user?.role === 'admin' && (
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleEditSchoolClick(school);
+                                                }}
+                                                className="text-slate-400 hover:text-blue-600 transition-colors p-2 hover:bg-slate-50 rounded-lg"
+                                                title="Düzenle"
+                                            >
+                                                <Edit size={18} />
+                                            </button>
+                                            <div className="w-px h-4 bg-slate-200"></div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm('Bu kaydı silmek istediğinizden emin misiniz?')) {
+                                                        useStore.getState().deleteSchool(school.id);
+                                                    }
+                                                }}
+                                                className="text-slate-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
+                                                title="Sil"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+
+                    })}
+                    {displayedList.length === 0 && (
+                        <div className="col-span-3 py-12 text-center text-slate-400 bg-slate-50 rounded-xl border-dashed border border-slate-200">
+                            {activeTab === 'schools' ? 'Kayıtlı okul bulunamadı.' : 'Planlanmış etkinlik bulunamadı.'}
+                        </div>
+                    )}
+                </div>
+            )}
 
             <Modal
                 isOpen={isAddModalOpen}

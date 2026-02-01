@@ -10,7 +10,7 @@ interface ProfileModalProps {
 }
 
 export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
-    const { user, login } = useAuth(); // We might need login to update session user after edit
+    const { user, login, updatePassword } = useAuth(); // Destructure updatePassword
     const { updateTeacher, addTeacher } = useStore();
 
     const [name, setName] = useState('');
@@ -33,44 +33,57 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         e.preventDefault();
         if (!user) return;
 
-        // Special handling for Super Admin migration
-        if (user.id === 'super-admin') {
-            const newId = crypto.randomUUID();
-            const newAdmin: Teacher = {
-                id: newId,
-                name: name,
-                phone: phone,
-                email: email,
-                role: 'admin',
-                password: password || 'Atolye8008.', // Keep old one if not changed? Actually logic implies we want to change it.
-                specialties: [],
-                color: 'bg-purple-100'
-            };
-
-            await addTeacher(newAdmin);
-
-            // Re-login seamlessly
-            await login(phone, password || 'Atolye8008.');
-            onClose();
-            alert('Profiliniz oluşturuldu ve güncellendi. Yeni bilgilerinizle giriş yaptınız.');
-            return;
+        // 1. Handle Password Update (Universal)
+        if (password) {
+            const success = await updatePassword(password);
+            if (!success) {
+                alert('Şifre güncellenemedi. Lütfen tekrar deneyin.');
+                return;
+            }
         }
 
-        // Regular Update
-        await updateTeacher(user.id, {
-            name,
-            phone,
-            email,
-            ...(password ? { password } : {})
-        });
+        // 2. Handle Profile Information Update (Teachers/Admins/Managers only)
+        // Parents usually shouldn't edit their main record name/phone here without admin oversight, 
+        // or we need a restricted updateStudent method. For now, we limit it.
+        if (user.role === 'admin' || user.role === 'teacher' || user.role === 'manager') {
+            // Special handling for Super Admin migration logic (legacy)
+            if (user.id === 'super-admin') {
+                const newId = crypto.randomUUID();
+                const newAdmin: Teacher = {
+                    id: newId,
+                    name: name,
+                    phone: phone,
+                    email: email,
+                    role: 'admin',
+                    password: password || 'Atolye8008.',
+                    specialties: [],
+                    color: 'bg-purple-100',
+                    isActive: true
+                };
 
-        // Trigger re-login or manual state update if needed?
-        // Ideally we should update the useAuth user state too if name/email changed
-        // For now, simpler to just close. The sidebar updates on refresh or we can force update.
-        // Let's re-login to be safe and refresh state
+                await addTeacher(newAdmin);
+                await login(phone, password || 'Atolye8008.');
+                onClose();
+                alert('Profiliniz oluşturuldu. Yeni bilgilerinizle giriş yaptınız.');
+                return;
+            }
+
+            // Normal Teacher Update
+            // Check if info actually changed to avoid unnecessary calls
+            if (name !== user.name || phone !== (useStore.getState().teachers.find(t => t.id === user.id)?.phone) || email !== user.email) {
+                await updateTeacher(user.id, {
+                    name,
+                    phone,
+                    email
+                });
+            }
+        } else if (user.role === 'parent') {
+            // Optional: Allow parents to update email if we want
+        }
+
         if (password) {
             alert('Şifreniz güncellendi. Lütfen tekrar giriş yapın.');
-            window.location.reload(); // Simple logout/refresh
+            window.location.reload();
         } else {
             onClose();
         }

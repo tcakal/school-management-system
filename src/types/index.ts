@@ -14,7 +14,7 @@ export interface School {
     telegramChatId?: string;
     payment_cycle_start_date?: string; // ISO Date "2024-01-01"
     makerFairDate?: string; // ISO Date for Maker Fair countdown
-    type: 'school' | 'event';
+    type: 'school' | 'event' | 'branch';
     eventDate?: string; // ISO Date (Primary/Start)
     eventDates?: string[]; // Multiple dates for multi-day events
     notes?: string;
@@ -23,17 +23,21 @@ export interface School {
 export interface ClassGroup {
     id: string;
     schoolId: string;
+    branchId?: string; // For branch-specific classes
     name: string; // e.g. "1. Grup", "Cumartesi Sabah"
     schedule?: string; // Human readable schedule for now
     status?: 'active' | 'archived';
 }
 
 export type StudentStatus = 'Active' | 'Left';
+export type EnrollmentType = '4week' | '12week' | 'daily' | 'hourly' | 'unassigned';
 
 export interface Student {
     id: string;
-    schoolId: string;
+    schoolId?: string; // Optional for branch-only students
+    branchId?: string; // For branch students
     classGroupId?: string;
+    enrollmentType?: EnrollmentType; // Default: '4week'
     name: string;
     parentName?: string; // New field
     phone: string;
@@ -118,11 +122,29 @@ export interface Teacher {
     email?: string;
     specialties?: string[];
     color?: string; // For calendar visualization
-    role: 'admin' | 'teacher';
+    role: 'admin' | 'teacher' | 'manager';
+    isActive?: boolean;
     type?: 'regular' | 'guest'; // New field for Event system
     schoolId?: string; // Optional linkage for managers/filtering
+    branchId?: string; // Link to branch for managers
     password?: string; // Optional for now to handle migration, but ideally required
     telegramChatId?: string; // For Telegram notifications
+}
+
+export interface Branch {
+    id: string;
+    name: string;
+    managerId?: string; // FK to teachers.id (role='manager')
+    address?: string;
+    phone?: string;
+    color?: string; // Custom theme color
+    defaultPrice?: number; // Deprecated - use specific prices below
+    price4Week?: number;  // 4-week enrollment price
+    price12Week?: number; // 12-week enrollment price
+    priceDaily?: number;  // Daily rate
+    priceHourly?: number; // Hourly rate
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 // ... (Student interface was not requested to be updated in the prompt, but the SQL migration included it. Let's update it too for consistency if needed, but the focus is Teacher/Admin first.)

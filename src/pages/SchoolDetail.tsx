@@ -521,9 +521,9 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                         </div>
                     </div>
                     <div className="flex gap-3">
-                        {(user?.role === 'admin' || user?.role === 'teacher') && (
+                        {(user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'manager') && (
                             <>
-                                {user?.role === 'admin' && school.type !== 'event' && (
+                                {(user?.role === 'admin' || user?.role === 'manager') && (
                                     <button
                                         onClick={() => setIsShiftModalOpen(true)}
                                         className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg flex items-center gap-2 hover:bg-purple-200 transition-colors font-medium border border-purple-200"
@@ -532,13 +532,15 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                                         <span className="hidden md:inline">Takvim / Tatil</span>
                                     </button>
                                 )}
-                                <button
-                                    onClick={() => setIsAddLessonModalOpen(true)}
-                                    className="px-4 py-2 bg-purple-600 text-white rounded-lg flex items-center gap-2 hover:bg-purple-700 transition-colors font-medium shadow-sm ml-2"
-                                >
-                                    <Plus size={18} />
-                                    <span className="hidden md:inline">Ek Ders Ekle</span>
-                                </button>
+                                {(user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'manager') && (
+                                    <button
+                                        onClick={() => setIsAddLessonModalOpen(true)}
+                                        className="px-4 py-2 bg-purple-600 text-white rounded-lg flex items-center gap-2 hover:bg-purple-700 transition-colors font-medium shadow-sm"
+                                    >
+                                        <Plus size={18} />
+                                        <span className="hidden md:inline">Ek Ders Ekle</span>
+                                    </button>
+                                )}
                             </>
                         )}
                         <div
@@ -576,7 +578,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                     <div className="space-y-6">
                         <div className="flex justify-between items-center">
                             <h3 className="text-lg font-bold text-slate-800">{school.type === 'event' ? 'Tanımlı Gruplar' : 'Tanımlı Sınıflar'}</h3>
-                            {(user?.role === 'admin' || user?.role === 'teacher') && (
+                            {(user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'manager') && (
                                 <button
                                     onClick={() => setIsAddClassModalOpen(true)}
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
@@ -795,7 +797,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                                     </button>
                                 </div>
 
-                                {(user?.role === 'admin' || user?.role === 'teacher') && (
+                                {(user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'manager') && (
                                     <button
                                         onClick={() => setIsAddStudentModalOpen(true)}
                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
@@ -1703,6 +1705,7 @@ export function SchoolDetail({ schoolId: propSchoolId }: { schoolId?: string }) 
                 isOpen={isShiftModalOpen}
                 onClose={() => setIsShiftModalOpen(false)}
                 schoolId={school.id}
+                contextName={school.name}
             />
             {/* Add Lesson Modal */}
             <AddLessonModal

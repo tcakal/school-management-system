@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../supabase';
 import { useAuth } from './useAuth';
-import type { School, Student, ClassGroup, Payment, Teacher, TeacherAssignment, ActivityLog, Lesson, Attendance, NotificationTemplate, TeacherLeave, SystemSettings, StudentEvaluation, TeacherEvaluation, InventoryItem, MakerProject, MakerProjectUpdate, MakerProjectDocument, MakerProjectStudent } from '../types';
+import type { School, Student, ClassGroup, Payment, Teacher, TeacherAssignment, ActivityLog, Lesson, Attendance, NotificationTemplate, TeacherLeave, SystemSettings, StudentEvaluation, TeacherEvaluation, InventoryItem, MakerProject, MakerProjectUpdate, MakerProjectDocument, MakerProjectStudent, Branch } from '../types';
 import { addWeeks, format, startOfWeek } from 'date-fns';
 
 interface AppState {
@@ -18,6 +18,7 @@ interface AppState {
     notificationTemplates: NotificationTemplate[];
     leaves: TeacherLeave[];
     inventory: InventoryItem[];
+    branches: Branch[]; // NEW: Branches array
 
     // Theme & Settings
     theme: 'light' | 'dark';
@@ -131,6 +132,12 @@ interface AppState {
     closeSchoolSeason: (schoolId: string, seasonId: string, notes?: string) => Promise<void>;
     addSchoolPeriod: (schoolId: string, seasonId: string, startDate: string, endDate: string) => Promise<void>;
     deleteSchoolPeriod: (periodId: string) => Promise<void>;
+
+    // Branches CRUD
+    fetchBranches: () => Promise<void>;
+    addBranch: (branch: Omit<Branch, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+    updateBranch: (id: string, updates: Partial<Branch>) => Promise<void>;
+    deleteBranch: (id: string) => Promise<void>;
 }
 
 import { persist } from 'zustand/middleware';
@@ -158,6 +165,7 @@ export const useStore = create<AppState>()(
             makerProjectDocuments: [],
             makerProjectStudents: [],
             seasons: [],
+            branches: [], // NEW: Branches initial state
             theme: 'light',
             systemSettings: null,
             loading: false,
@@ -280,7 +288,9 @@ export const useStore = create<AppState>()(
                     const students: Student[] = (studentsRes.data || []).map(s => ({
                         id: s.id,
                         schoolId: s.school_id,
+                        branchId: s.branch_id,
                         classGroupId: s.class_group_id,
+                        enrollmentType: s.enrollment_type || '4week',
                         name: s.name,
                         phone: s.phone,
                         status: s.status as any,
@@ -307,6 +317,7 @@ export const useStore = create<AppState>()(
                     const classGroups: ClassGroup[] = (classGroupsRes.data || []).map(c => ({
                         id: c.id,
                         schoolId: c.school_id,
+                        branchId: c.branch_id,
                         name: c.name,
                         schedule: c.schedule,
                         status: c.status || 'active'
@@ -334,7 +345,8 @@ export const useStore = create<AppState>()(
                         role: t.role || 'teacher',
                         schoolId: t.school_id,
                         password: t.password,
-                        telegramChatId: t.telegram_chat_id
+                        telegramChatId: t.telegram_chat_id,
+                        isActive: t.is_active
                     }));
 
                     const assignments: TeacherAssignment[] = (assignmentsRes.data || []).map(a => ({
@@ -679,8 +691,10 @@ export const useStore = create<AppState>()(
 
                 const { error } = await supabase.from('students').insert([{
                     id: student.id,
-                    school_id: student.schoolId,
-                    class_group_id: student.classGroupId,
+                    school_id: student.schoolId || null,
+                    branch_id: student.branchId || null,
+                    class_group_id: student.classGroupId || null,
+                    enrollment_type: student.enrollmentType || '4week',
                     name: student.name,
                     phone: student.phone,
                     status: student.status,
@@ -774,7 +788,8 @@ export const useStore = create<AppState>()(
 
                 await supabase.from('class_groups').insert([{
                     id: group.id,
-                    school_id: group.schoolId,
+                    school_id: group.schoolId || group.branchId || null,
+                    branch_id: group.branchId || null,
                     name: group.name,
                     schedule: group.schedule
                 }]);
@@ -1103,7 +1118,9 @@ export const useStore = create<AppState>()(
                     role: teacher.role || 'teacher',
                     password: teacher.password || '123456',
                     telegram_chat_id: teacher.telegramChatId,
-                    type: teacher.type || 'regular'
+                    type: teacher.type || 'regular',
+                    is_active: teacher.isActive !== undefined ? teacher.isActive : true,
+                    school_id: teacher.schoolId // Also adding school_id as it seemed missing in insert, though maybe optional? Better safe.
                 }]);
             },
 
@@ -1125,6 +1142,9 @@ export const useStore = create<AppState>()(
                 if (updated.color) dbUpdate.color = updated.color;
                 if (updated.telegramChatId) dbUpdate.telegram_chat_id = updated.telegramChatId;
                 if (updated.type) dbUpdate.type = updated.type;
+                if (updated.schoolId) dbUpdate.school_id = updated.schoolId;
+                if (updated.isActive !== undefined) dbUpdate.is_active = updated.isActive;
+
                 if (Object.keys(dbUpdate).length > 0) {
                     await supabase.from('teachers').update(dbUpdate).eq('id', id);
                 }
@@ -1137,18 +1157,62 @@ export const useStore = create<AppState>()(
 
             addAssignment: async (assignment) => {
                 set((state) => ({ assignments: [...state.assignments, assignment] }));
-                await supabase.from('teacher_assignments').insert([{
+
+                // Lookup correct school_id from class_group to ensure FK consistency
+                const classGroup = get().classGroups.find(c => c.id === assignment.classGroupId);
+
+                console.log('[useStore:addAssignment] Debug Info:', {
+                    receivedClassGroupId: assignment.classGroupId,
+                    receivedSchoolId: assignment.schoolId,
+                    foundClassGroup: !!classGroup,
+                    classGroupSchoolId: classGroup?.schoolId
+                });
+
+                let effectiveSchoolId = classGroup ? classGroup.schoolId : assignment.schoolId;
+
+                // Emergency Fetch: If store lookup failed (e.g. RLS filtering issue or stale store), fetch directly
+                if (!effectiveSchoolId || effectiveSchoolId === '') {
+                    console.warn('[useStore:addAssignment] Store lookup failed for schoolId, attempting direct DB fetch...');
+                    const { data: directClass } = await supabase
+                        .from('class_groups')
+                        .select('school_id')
+                        .eq('id', assignment.classGroupId)
+                        .single();
+
+                    if (directClass?.school_id) {
+                        effectiveSchoolId = directClass.school_id;
+                        console.log('[useStore:addAssignment] Direct fetch success:', effectiveSchoolId);
+                    } else {
+                        console.error('[useStore:addAssignment] Direct fetch failed. Insert will likely fail.');
+                    }
+                } else {
+                    console.log('[useStore:addAssignment] Using effectiveSchoolId:', effectiveSchoolId);
+                }
+
+
+                // 1. Insert assignment to DB (Critical path)
+                const { error } = await supabase.from('teacher_assignments').insert([{
                     id: assignment.id,
                     teacher_id: assignment.teacherId,
-                    school_id: assignment.schoolId,
+                    school_id: (effectiveSchoolId && effectiveSchoolId !== '') ? effectiveSchoolId : (classGroup?.branchId || null), // Ensure no empty string
                     class_group_id: assignment.classGroupId,
                     day_of_week: assignment.dayOfWeek,
                     start_time: assignment.startTime,
                     end_time: assignment.endTime
                 }]);
 
-                // Trigger lesson generation for this group immediately
-                await get().generateLessons(4, assignment.classGroupId);
+                if (error) {
+                    console.error('Error inserting assignment:', error);
+                    // Revert local state if DB fails? 
+                    // For now, let's throw so the UI knows
+                    set(state => ({ assignments: state.assignments.filter(a => a.id !== assignment.id) }));
+                    throw error;
+                }
+
+                // 2. Trigger lesson generation in BACKGROUND (Non-blocking)
+                get().generateLessons(4, assignment.classGroupId).catch(err => {
+                    console.error('Background lesson generation failed:', err);
+                });
             },
 
             deleteAssignment: async (id) => {
@@ -1778,26 +1842,48 @@ export const useStore = create<AppState>()(
 
 
             findAvailableTeachers: async (date, startTime, endTime) => {
-                const { data, error } = await supabase.rpc('find_available_teachers', {
-                    p_date: date,
-                    p_start_time: startTime,
-                    p_end_time: endTime
+                const state = get();
+                const allTeachers = state.teachers.filter(t => t.isActive !== false && t.role === 'teacher');
+
+                // Helper to check time overlap
+                const isOverlapping = (start1: string, end1: string, start2: string, end2: string) => {
+                    return start1 < end2 && start2 < end1;
+                };
+
+                const availableTeachers = allTeachers.filter(teacher => {
+                    // 1. Check Leaves
+                    const hasLeave = state.leaves.some(leave => {
+                        if (leave.teacherId !== teacher.id) return false;
+                        const leaveStart = new Date(leave.startDate);
+                        const leaveEnd = new Date(leave.endDate);
+                        const checkDate = new Date(date);
+
+                        // Simple date range check
+                        if (checkDate >= leaveStart && checkDate <= leaveEnd) {
+                            // If leave has specific times, check overlap
+                            if (leave.startTime && leave.endTime) {
+                                return isOverlapping(leave.startTime, leave.endTime, startTime, endTime);
+                            }
+                            return true; // Full day leave
+                        }
+                        return false;
+                    });
+                    if (hasLeave) return false;
+
+                    // 2. Check Lessons
+                    const hasLesson = state.lessons.some(lesson => {
+                        if (lesson.teacherId !== teacher.id) return false;
+                        if (lesson.status === 'cancelled') return false;
+                        if (lesson.date !== date) return false;
+
+                        return isOverlapping(lesson.startTime, lesson.endTime, startTime, endTime);
+                    });
+                    if (hasLesson) return false;
+
+                    return true;
                 });
 
-                if (error) {
-                    console.error('Error finding available teachers:', error);
-                    return [];
-                }
-
-                return (data || []).map((t: any) => ({
-                    id: t.id,
-                    name: t.name,
-                    phone: t.phone,
-                    role: 'teacher' as const,
-                    email: '',
-                    specialties: t.specialties || [],
-                    schoolId: 'system'
-                }));
+                return availableTeachers;
             },
 
             fetchMoreLogs: async () => {
@@ -2065,6 +2151,109 @@ export const useStore = create<AppState>()(
                 set(state => ({ makerProjectDocuments: state.makerProjectDocuments.filter(d => d.id !== id) }));
                 await supabase.from('maker_project_documents').delete().eq('id', id);
             },
+
+            // ============ BRANCHES CRUD ============
+            async fetchBranches() {
+                const { data, error } = await supabase.from('branches').select('*').order('name');
+                if (error) {
+                    console.error('Error fetching branches:', error);
+                    return;
+                }
+                set({
+                    branches: data?.map(b => ({
+                        id: b.id,
+                        name: b.name,
+                        managerId: b.manager_id,
+                        address: b.address,
+                        phone: b.phone,
+                        color: b.color,
+                        defaultPrice: b.default_price,
+                        price4Week: b.price_4week,
+                        price12Week: b.price_12week,
+                        priceDaily: b.price_daily,
+                        priceHourly: b.price_hourly,
+                        createdAt: b.created_at,
+                        updatedAt: b.updated_at
+                    })) || []
+                });
+            },
+
+            async addBranch(branch) {
+                const { data, error } = await supabase.from('branches').insert({
+                    name: branch.name,
+                    manager_id: branch.managerId,
+                    address: branch.address,
+                    phone: branch.phone,
+                    color: branch.color
+                }).select().single();
+                if (error) {
+                    console.error('Error adding branch:', error);
+                    throw error;
+                }
+                set(state => ({
+                    branches: [...state.branches, {
+                        id: data.id,
+                        name: data.name,
+                        managerId: data.manager_id,
+                        address: data.address,
+                        phone: data.phone,
+                        color: data.color,
+                        createdAt: data.created_at,
+                        updatedAt: data.updated_at
+                    }]
+                }));
+            },
+
+            updateBranch: async (id, updates) => {
+                // 1. Optimistic Update: Update UI immediately
+                const previousBranches = get().branches;
+                set(state => ({
+                    branches: state.branches.map(b => b.id === id ? { ...b, ...updates } : b)
+                }));
+
+                const dbUpdates: any = {};
+                if (updates.name !== undefined) dbUpdates.name = updates.name;
+                if (updates.managerId !== undefined) dbUpdates.manager_id = updates.managerId;
+                if (updates.address !== undefined) dbUpdates.address = updates.address;
+                if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+                if (updates.color !== undefined) dbUpdates.color = updates.color;
+                if (updates.defaultPrice !== undefined) dbUpdates.default_price = updates.defaultPrice;
+                if (updates.price4Week !== undefined) dbUpdates.price_4week = updates.price4Week;
+                if (updates.price12Week !== undefined) dbUpdates.price_12week = updates.price12Week;
+                if (updates.priceDaily !== undefined) dbUpdates.price_daily = updates.priceDaily;
+                if (updates.priceHourly !== undefined) dbUpdates.price_hourly = updates.priceHourly;
+                dbUpdates.updated_at = new Date().toISOString();
+
+                // 2. Perform DB Update in background (Non-blocking)
+                (async () => {
+                    try {
+                        const { error } = await supabase.from('branches').update(dbUpdates).eq('id', id);
+                        if (error) {
+                            console.error('Error updating branch in DB:', error);
+                            // Rollback on failure
+                            set({ branches: previousBranches });
+                            alert('Veritabanı güncellemesi başarısız oldu, değişiklikler geri alındı.');
+                        }
+                    } catch (err) {
+                        console.error('Unexpected error in branch update:', err);
+                        set({ branches: previousBranches });
+                    }
+                })();
+
+                // Return immediately to let UI close the modal
+                return Promise.resolve();
+            },
+
+            deleteBranch: async (id) => {
+                const { error } = await supabase.from('branches').delete().eq('id', id);
+                if (error) {
+                    console.error('Error deleting branch:', error);
+                    throw error;
+                }
+                set(state => ({
+                    branches: state.branches.filter(b => b.id !== id)
+                }));
+            },
         }),
         {
             name: 'school-storage',
@@ -2079,6 +2268,7 @@ export const useStore = create<AppState>()(
                 assignments: state.assignments,
                 lessons: state.lessons,
                 inventory: state.inventory,
+                branches: state.branches, // NEW: Persist branches
             }),
         }
     )

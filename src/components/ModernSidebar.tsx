@@ -1,18 +1,23 @@
-
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     Building2, Users, GraduationCap, LayoutDashboard,
-    Wallet, Calendar, FileText, Settings, LogOut, Activity, BookOpen
+    Wallet, Calendar, FileText, Settings, LogOut, Activity, BookOpen, KeyRound
 } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { useAuth } from '../store/useAuth';
 import { useStore } from '../store/useStore';
+import { ProfileModal } from './ProfileModal';
 
 export function ModernSidebar() {
     const { user, logout } = useAuth();
     const { systemSettings, logs, lastActivityLogView } = useStore();
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     const hasNewLogs = logs.length > 0 && (!lastActivityLogView || new Date(logs[0].timestamp).getTime() > new Date(lastActivityLogView).getTime());
+
+    // ... (rest of nav items logic is same, skip for brevity if possible, or replace full file if easier)
+    // Actually better to target specific blocks. 
 
     // Base Navigation Items
     const allNavItems = [
@@ -32,16 +37,28 @@ export function ModernSidebar() {
     let navItems = allNavItems;
 
     if (user?.role === 'manager') {
-        // Manager ONLY sees Panel (Manager Dashboard) and Reports
+        // Manager ONLY sees Panel (Redirects to Branch) and Reports
         navItems = [
-            { to: '/manager-dashboard', icon: LayoutDashboard, label: 'Panel' },
+            { to: '/manager-dashboard', icon: Building2, label: 'Şubem' },
             { to: '/schedule', icon: Calendar, label: 'Ders Programı' },
+            { to: '/teachers', icon: Users, label: 'Kadro' },
             { to: '/reports', icon: FileText, label: 'Raporlar' },
+            { to: '/settings', icon: Settings, label: 'Ayarlar' },
+            { to: '/rehber', icon: BookOpen, label: 'Yardım / Kılavuz' },
         ];
     } else if (user?.role === 'teacher') {
-        // Teacher sees: Dashboard, Schedule, Schools, Students, Reports, Guide
+        // Teacher sees: Schools (as Dashboard), Schedule, Schools, Students, Reports, Guide
+        // Since dashboard redirects to schools, we can just put Schools as primary or keep Dashboard label but point to schools?
+        // User said "open directly in schools section".
+        // Let's make "Panel" point to schools or just remove Panel and put Schools first?
+        // If we remove Panel, they might lose context. Let's keep Panel but make it redirect to Schools (already done in Dashboard.tsx).
+        // Actually, let's just show 'Schools' as the first item and maybe rename 'Panel' to 'Okullar'?
+        // No, let's keep it simple.
+
         const teacherAllowed = ['/', '/schedule', '/schools', '/students', '/reports', '/rehber'];
         navItems = allNavItems.filter(item => teacherAllowed.includes(item.to));
+
+        // Optional: Rename 'Panel' to 'Ana Sayfa' or similar if needed, but 'Panel' is fine.
     } else if (user?.role === 'admin') {
         // Admin sees everything
         navItems = allNavItems;
@@ -120,10 +137,17 @@ export function ModernSidebar() {
                     <div className="w-10 h-10 rounded-full bg-blue-900/50 border border-blue-800 flex items-center justify-center text-blue-200 font-bold shrink-0">
                         {user?.name?.charAt(0) || 'U'}
                     </div>
-                    <div className="overflow-hidden">
+                    <div className="overflow-hidden flex-1">
                         <div className="text-sm font-medium text-white truncate">{user?.name}</div>
-                        <div className="text-xs text-slate-500 truncate capitalize">{user?.role === 'manager' ? 'Okul Müdürü' : user?.role === 'admin' ? 'Yönetici' : 'Öğretmen'}</div>
+                        <div className="text-xs text-slate-500 truncate capitalize">{user?.role === 'manager' ? 'Şube Yöneticisi' : user?.role === 'admin' ? 'Yönetici' : 'Öğretmen'}</div>
                     </div>
+                    <button
+                        onClick={() => setIsProfileOpen(true)}
+                        className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
+                        title="Şifre Değiştir"
+                    >
+                        <KeyRound size={16} />
+                    </button>
                 </div>
 
                 <button
@@ -134,6 +158,8 @@ export function ModernSidebar() {
                     Çıkış Yap
                 </button>
             </div>
+
+            <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
         </div>
     );
 }

@@ -5,17 +5,18 @@ import { format, startOfMonth, endOfMonth, parseISO, isFuture } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { ExcelExportBtn } from '../components/ExcelExportBtn';
 import { Modal } from '../components/Modal';
-import { School, Users, User, Copy, Check, Star, AlertTriangle } from 'lucide-react';
+import { School, Users, User, Copy, Check, Star, AlertTriangle, Banknote } from 'lucide-react';
 
 export function Reports() {
-    const { lessons, attendance, schools, teachers, classGroups, students, payments, teacherEvaluations, studentEvaluations } = useStore();
+    const { lessons, attendance, schools, teachers, classGroups, students, payments, teacherEvaluations, studentEvaluations, branches, addPayment } = useStore();
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<'attendance' | 'financial' | 'teachers' | 'class_overview' | 'contacts' | 'evaluations' | 'events'>('attendance');
 
     // Attendance Filter State
     const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
     const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
-    // @ts-ignore
+
+    // Fix: Manager ID is no longer School ID. Use branchId if available.
     const [selectedSchoolId, setSelectedSchoolId] = useState('all');
     const [selectedTeacherId, setSelectedTeacherId] = useState('all');
 
@@ -23,7 +24,7 @@ export function Reports() {
     const [eventYear, setEventYear] = useState(new Date().getFullYear());
 
     // Contacts Filter State
-    const [contactSchoolId, setContactSchoolId] = useState(user?.role === 'manager' ? user.id : 'all');
+    const [contactSchoolId, setContactSchoolId] = useState('all');
     const [contactClassId, setContactClassId] = useState('all');
     const [contactGrade, setContactGrade] = useState('all');
     const [copiedEmails, setCopiedEmails] = useState(false);
@@ -31,6 +32,12 @@ export function Reports() {
     // Evaulation Report State
     const [selectedEvaluation, setSelectedEvaluation] = useState<any | null>(null);
     const [isEvalDetailModalOpen, setIsEvalDetailModalOpen] = useState(false);
+
+    // Payment Modal State
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [paymentStudentId, setPaymentStudentId] = useState<string | null>(null);
+    const [paymentStudentName, setPaymentStudentName] = useState('');
+    const [paymentAmount, setPaymentAmount] = useState('');
 
     // Teacher Detail State
     const [selectedTeacherReport, setSelectedTeacherReport] = useState<any | null>(null);
@@ -110,6 +117,11 @@ export function Reports() {
 
         let filtered = students.filter(s => s.status === 'Active');
 
+        // RBAC: Manager Branch Filter
+        if (user?.role === 'manager' && user.branchId) {
+            filtered = filtered.filter(s => s.branchId === user.branchId);
+        }
+
         if (contactSchoolId !== 'all') {
             filtered = filtered.filter(s => s.schoolId === contactSchoolId);
         }
@@ -142,13 +154,18 @@ export function Reports() {
                 }
             };
         });
-    }, [students, schools, classGroups, contactSchoolId, contactClassId, contactGrade, activeTab]);
+    }, [students, schools, classGroups, contactSchoolId, contactClassId, contactGrade, activeTab, user]);
 
     // --- EVALUATIONS LOGIC ---
     const evaluationReportData = useMemo(() => {
         if (activeTab !== 'evaluations') return [];
 
         let filteredStudents = students.filter(s => s.status === 'Active');
+
+        // RBAC: Manager Branch Filter
+        if (user?.role === 'manager' && user.branchId) {
+            filteredStudents = filteredStudents.filter(s => s.branchId === user.branchId);
+        }
 
         // Reuse Contact Filters for Evaluations
         if (contactSchoolId !== 'all') {
@@ -208,7 +225,7 @@ export function Reports() {
         });
 
         return reportRows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [students, studentEvaluations, schools, classGroups, teachers, contactSchoolId, contactClassId, contactGrade, activeTab]);
+    }, [students, studentEvaluations, schools, classGroups, teachers, contactSchoolId, contactClassId, contactGrade, activeTab, user]);
 
     const handleCopyEmails = () => {
         const emails = contactsData
@@ -232,8 +249,17 @@ export function Reports() {
             // RBAC: If teacher, only show own lessons
             if (user?.role === 'teacher' && l.teacherId !== user.id) return false;
 
-            // RBAC: If manager, only show own school
-            if (user?.role === 'manager' && l.schoolId !== user.id) return false;
+            // RBAC: If manager, only show own branch lessons
+            if (user?.role === 'manager') {
+                if (user.branchId) {
+                    // Find class group for this lesson
+                    const group = classGroups.find(c => c.id === l.classGroupId);
+                    if (!group || group.branchId !== user.branchId) return false;
+                } else {
+                    // Legacy Fallback (user.id == schoolId) - Remove if migrated, keeping for safety if older data exists
+                    if (l.schoolId !== user.id) return false;
+                }
+            }
 
             const date = parseISO(l.date);
             const start = parseISO(startDate);
@@ -241,15 +267,14 @@ export function Reports() {
             const isDateInRange = date >= start && date <= end;
 
             if (!isDateInRange) return false;
+
             if (selectedSchoolId !== 'all' && l.schoolId !== selectedSchoolId) return false;
-            // Manager is handled by user.id check above, but if they selected 'all' (which they shouldn't be able to change), it's fine.
-            // Actually better to enforce selectedSchoolId for manager in UI or here.
 
             if (selectedTeacherId !== 'all' && l.teacherId !== selectedTeacherId) return false;
 
             return true;
         });
-    }, [lessons, user, startDate, endDate, selectedSchoolId, selectedTeacherId, activeTab]);
+    }, [lessons, user, startDate, endDate, selectedSchoolId, selectedTeacherId, activeTab, classGroups]);
 
     const attendanceData = useMemo(() => {
         return filteredLessons.map(lesson => {
@@ -352,6 +377,120 @@ export function Reports() {
         }), { lessons: 0, present: 0, absent: 0, late: 0 });
     }, [attendanceData]);
 
+    // --- FINANCIAL REPORT LOGIC ---
+    const financialReportData = useMemo(() => {
+        if (activeTab !== 'financial') return [];
+
+        let relevantStudents = students.filter(s => s.status === 'Active');
+
+        // RBAC: Manager Branch Filter
+        if (user?.role === 'manager') {
+            const allowedId = user.branchId || user.schoolId || user.id;
+            relevantStudents = relevantStudents.filter(s => s.schoolId === allowedId || s.branchId === allowedId);
+        } else if (user?.role === 'admin' && selectedSchoolId !== 'all') {
+            // Admin School Filter (if needed, currently relying on global list or could add filter)
+            // reusing contactSchoolId or creating new state?
+            // For simplicity, let's show ALL for admin unless filtered. 
+            // Admin doesn't have a specific filter state wired for this tab yet in the UI plan above.
+            // But we can respect selectedSchoolId if we add that control.
+            // For now, listing all ACTIVE students.
+        }
+
+        return relevantStudents.map(student => {
+            const school = schools.find(s => s.id === student.schoolId);
+            const branch = branches.find(b => b.id === student.branchId);
+            const group = classGroups.find(c => c.id === student.classGroupId);
+
+            // Calculate Monthly Fee - check school first, then branch
+            let monthlyFee = 0;
+            const enrollmentType = student.enrollmentType || '4week';
+
+            // Map enrollment type to specific branch price fields
+            const priceMap: Record<string, number | undefined> = {
+                '4week': branch?.price4Week,
+                '12week': branch?.price12Week,
+                'daily': branch?.priceDaily,
+                'hourly': branch?.priceHourly,
+                'unassigned': 0
+            };
+
+            // Selection Logic:
+            // 1. specific price from branch
+            // 2. default price from branch (legacy/migration)
+            // 3. default price from school (legacy)
+            const basePrice = priceMap[enrollmentType] ?? (branch?.defaultPrice || school?.defaultPrice || 0);
+
+            if (basePrice > 0) {
+                if (student.paymentStatus === 'free') {
+                    monthlyFee = 0;
+                } else if (student.paymentStatus === 'discounted' && student.discountPercentage) {
+                    monthlyFee = basePrice * ((100 - student.discountPercentage) / 100);
+                } else {
+                    // Default: 'paid' or undefined = full price
+                    monthlyFee = basePrice;
+                }
+            }
+
+            // Find Payments (Current Month? Or Last Payment?)
+            // User wants to see "Who owes". 
+            // We'll check payments in the current month to see if "Paid".
+            // Or look at last_payment_date.
+
+            const currentMonthStr = format(new Date(), 'yyyy-MM');
+            const thisMonthPayments = payments.filter(p =>
+                p.studentId === student.id &&
+                (p.month === currentMonthStr || p.date.startsWith(currentMonthStr))
+            );
+
+            const totalPaidThisMonth = thisMonthPayments.reduce((acc, p) => acc + p.amount, 0);
+
+            // Determine status
+            let status = 'Ödenmedi';
+            if (student.paymentStatus === 'free') {
+                status = 'Ücretsiz';
+            } else if (basePrice === 0) {
+                // No price configured for school/branch
+                status = 'Fiyat Belirtilmemiş';
+            } else if (totalPaidThisMonth >= monthlyFee && monthlyFee > 0) {
+                status = 'Ödendi';
+            } else if (totalPaidThisMonth > 0) {
+                status = 'Kısmi Ödeme';
+            }
+
+            // Override with manual status if set and valid for this month? 
+            // Stick to calculated for now.
+
+            return {
+                id: student.id,
+                name: student.name,
+                parentName: student.parentName || '-',
+                className: group?.name || '-',
+                monthlyFee,
+                lastPaymentDate: student.last_payment_date,
+                status,
+                totalPaidThisMonth,
+                excelData: {
+                    'Öğrenci': student.name,
+                    'Veli': student.parentName,
+                    'Sınıf': group?.name,
+                    'Aylık Ücret': monthlyFee,
+                    'Son Ödeme Tarihi': student.last_payment_date || '-',
+                    'Durum': status,
+                    'Bu Ay Ödenen': totalPaidThisMonth
+                }
+            };
+        }).sort((a, b) => b.monthlyFee - a.monthlyFee); // Highest value first? Or name? Let's use name.
+        // .sort((a, b) => a.name.localeCompare(b.name));
+    }, [students, user, schools, classGroups, payments, activeTab]);
+
+    const financialStats = useMemo(() => {
+        if (activeTab !== 'financial') return { totalExpected: 0, totalCollected: 0 };
+        return financialReportData.reduce((acc, curr) => ({
+            totalExpected: acc.totalExpected + curr.monthlyFee,
+            totalCollected: acc.totalCollected + curr.totalPaidThisMonth
+        }), { totalExpected: 0, totalCollected: 0 });
+    }, [financialReportData]);
+
     return (
         <div className="space-y-6">
             <div>
@@ -377,12 +516,12 @@ export function Reports() {
                         Öğretmen Performansı
                     </button>
                 )}
-                {user?.role === 'admin' && (
+                {(user?.role === 'admin' || user?.role === 'manager') && (
                     <button
                         onClick={() => setActiveTab('financial')}
                         className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'financial' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
                     >
-                        <School size={18} />
+                        <Banknote size={18} />
                         Finansal Rapor
                     </button>
                 )}
@@ -402,15 +541,13 @@ export function Reports() {
                 >
                     Öğrenci İletişim
                 </button>
-                {user?.role !== 'manager' && (
-                    <button
-                        onClick={() => setActiveTab('evaluations')}
-                        className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'evaluations' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <Star size={18} />
-                        Öğrenci Değerlendirmeleri
-                    </button>
-                )}
+                <button
+                    onClick={() => setActiveTab('evaluations')}
+                    className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'evaluations' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                >
+                    <Star size={18} />
+                    Öğrenci Değerlendirmeleri
+                </button>
                 {user?.role === 'admin' && (
                     <button
                         onClick={() => setActiveTab('events')}
@@ -584,6 +721,114 @@ export function Reports() {
                                 )}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+
+            {/* FINANCIAL REPORT CONTENT */}
+            {activeTab === 'financial' && (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                    {/* Financial Stats Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-blue-500">
+                            <div className="text-sm text-slate-500">Aylık Beklenen Ciro</div>
+                            <div className="text-2xl font-bold text-blue-700">{financialStats.totalExpected.toLocaleString('tr-TR')} ₺</div>
+                            <div className="text-xs text-slate-400 mt-1">Aktif Öğrenci x Ücret</div>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-emerald-500">
+                            <div className="text-sm text-slate-500">Bu Ay Tahsil Edilen</div>
+                            <div className="text-2xl font-bold text-emerald-700">{financialStats.totalCollected.toLocaleString('tr-TR')} ₺</div>
+                            <div className="text-xs text-slate-400 mt-1">
+                                {financialStats.totalExpected > 0 ? `%${Math.round((financialStats.totalCollected / financialStats.totalExpected) * 100)} Tahsilat Oranı` : 'Veri Yok'}
+                            </div>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-rose-500">
+                            <div className="text-sm text-slate-500">Bekleyen Bakiye</div>
+                            <div className="text-2xl font-bold text-rose-700">{(financialStats.totalExpected - financialStats.totalCollected).toLocaleString('tr-TR')} ₺</div>
+                            <div className="text-xs text-slate-400 mt-1">Tahsil edilmemiş ücretler</div>
+                        </div>
+                    </div>
+
+                    {/* Controls & Export */}
+                    <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="text-sm font-medium text-slate-600">
+                            Öğrenci Ödeme Listesi ({financialReportData.length} Öğrenci)
+                        </div>
+                        <ExcelExportBtn
+                            data={financialReportData.map(x => x.excelData)}
+                            fileName={`Finansal_Rapor_${format(new Date(), 'yyyy_MM')}`}
+                            label="Excele Aktar"
+                        />
+                    </div>
+
+                    {/* Financial Table */}
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th className="px-6 py-4 font-bold text-slate-500">Öğrenci</th>
+                                        <th className="px-6 py-4 font-bold text-slate-500">Sınıf</th>
+                                        <th className="px-6 py-4 font-bold text-slate-500 text-right">Aylık Ücret</th>
+                                        <th className="px-6 py-4 font-bold text-slate-500">Son Ödeme</th>
+                                        <th className="px-6 py-4 font-bold text-slate-500 text-center">Durum</th>
+                                        <th className="px-6 py-4 font-bold text-slate-500 text-center">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {financialReportData.length > 0 ? (
+                                        financialReportData.map(item => (
+                                            <tr key={item.id} className={`hover:bg-slate-50 transition-colors ${item.status === 'Ödenmedi' ? 'bg-red-50/30' : ''}`}>
+                                                <td className="px-6 py-4">
+                                                    <div className="font-bold text-slate-900">{item.name}</div>
+                                                    <div className="text-xs text-slate-500 mt-0.5">{item.parentName}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-slate-700">{item.className}</div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right font-mono">
+                                                    {item.monthlyFee.toLocaleString('tr-TR')} ₺
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-600">
+                                                    {item.lastPaymentDate ? format(new Date(item.lastPaymentDate), 'dd MMM yyyy', { locale: tr }) : '-'}
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${item.status === 'Ödendi' ? 'bg-emerald-100 text-emerald-700' :
+                                                        item.status === 'Kısmi Ödeme' ? 'bg-yellow-100 text-yellow-700' :
+                                                            item.status === 'Ücretsiz' ? 'bg-slate-100 text-slate-600' :
+                                                                item.status === 'Fiyat Belirtilmemiş' ? 'bg-orange-100 text-orange-600' :
+                                                                    'bg-red-100 text-red-700'
+                                                        }`}>
+                                                        {item.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    {item.status !== 'Ücretsiz' && item.monthlyFee > 0 && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setPaymentStudentId(item.id);
+                                                                setPaymentStudentName(item.name);
+                                                                setPaymentAmount(item.monthlyFee.toString());
+                                                                setIsPaymentModalOpen(true);
+                                                            }}
+                                                            className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors"
+                                                        >
+                                                            Ödeme Al
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                                                Kayıt bulunamadı.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}
@@ -1397,6 +1642,62 @@ export function Reports() {
                         </div>
                     </div>
                 )}
+            </Modal>
+
+            {/* Payment Modal */}
+            <Modal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} title="Ödeme Al">
+                <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!paymentStudentId || !paymentAmount) return;
+
+                    const student = students.find(s => s.id === paymentStudentId);
+                    const branch = branches.find(b => b.id === student?.branchId);
+
+                    await addPayment({
+                        id: crypto.randomUUID(),
+                        studentId: paymentStudentId,
+                        schoolId: student?.schoolId || branch?.id || '',
+                        amount: parseFloat(paymentAmount),
+                        date: new Date().toISOString(),
+                        type: 'Tuition',
+                        method: 'Cash',
+                        month: format(new Date(), 'yyyy-MM'),
+                        status: 'paid',
+                        paidAt: new Date().toISOString()
+                    });
+
+                    setIsPaymentModalOpen(false);
+                    setPaymentStudentId(null);
+                    setPaymentStudentName('');
+                    setPaymentAmount('');
+                }} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Öğrenci</label>
+                        <div className="font-bold text-slate-900">{paymentStudentName}</div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Ödeme Tutarı *</label>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="number"
+                                value={paymentAmount}
+                                onChange={(e) => setPaymentAmount(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
+                                placeholder="0"
+                                required
+                            />
+                            <span className="text-slate-600 font-medium">₺</span>
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4">
+                        <button type="button" onClick={() => setIsPaymentModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg">
+                            İptal
+                        </button>
+                        <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium">
+                            Ödeme Kaydet
+                        </button>
+                    </div>
+                </form>
             </Modal>
         </div >
     );

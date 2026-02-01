@@ -8,11 +8,13 @@ interface ShiftScheduleModalProps {
     isOpen: boolean;
     onClose: () => void;
     schoolId: string;
+    contextName?: string;
 }
 
-export function ShiftScheduleModal({ isOpen, onClose, schoolId }: ShiftScheduleModalProps) {
+export function ShiftScheduleModal({ isOpen, onClose, schoolId, contextName }: ShiftScheduleModalProps) {
     const [targetDate, setTargetDate] = useState('');
     const [selectedClassId, setSelectedClassId] = useState<string>('all');
+    const [shiftMode, setShiftMode] = useState<'exact' | 'week_based'>('week_based');
     const [loading, setLoading] = useState(false);
     const [previewData, setPreviewData] = useState<{
         count: number;
@@ -25,12 +27,13 @@ export function ShiftScheduleModal({ isOpen, onClose, schoolId }: ShiftScheduleM
 
     const allClassGroups = useStore((state) => state.classGroups);
     // Fix: Filter with useMemo to avoid infinite loop caused by new array reference in selector
-    const classGroups = React.useMemo(() => allClassGroups.filter(c => c.schoolId === schoolId), [allClassGroups, schoolId]);
+    const classGroups = React.useMemo(() => allClassGroups.filter(c => c.schoolId === schoolId || c.branchId === schoolId), [allClassGroups, schoolId]);
 
     useEffect(() => {
         if (isOpen) {
             setTargetDate('');
             setSelectedClassId('all');
+            setShiftMode('week_based');
             setPreviewData(null);
             setLoading(false);
             setConfirmStep(false);
@@ -41,6 +44,7 @@ export function ShiftScheduleModal({ isOpen, onClose, schoolId }: ShiftScheduleM
     useEffect(() => {
         if (!targetDate || !schoolId) return;
         setConfirmStep(false);
+        console.log(`[ShiftScheduleModal] Initializing preview for ID: ${schoolId} (Name: ${contextName})`);
 
         const calculatePreview = async () => {
             setLoading(true);
@@ -49,7 +53,7 @@ export function ShiftScheduleModal({ isOpen, onClose, schoolId }: ShiftScheduleM
                 let query = supabase
                     .from('lessons')
                     .select('id, date, status')
-                    .eq('school_id', schoolId)
+                    .or(`school_id.eq.${schoolId},branch_id.eq.${schoolId}`)
                     .eq('status', 'scheduled');
 
                 if (selectedClassId !== 'all') {
@@ -91,8 +95,20 @@ export function ShiftScheduleModal({ isOpen, onClose, schoolId }: ShiftScheduleM
 
                 // 4. Calculate Shift Logic
                 const targetD = new Date(targetDate);
-                const diffTime = targetD.getTime() - currentStartDate.getTime();
-                const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
+
+                let diffDays = 0;
+                if (shiftMode === 'exact') {
+                    const diffTime = targetD.getTime() - currentStartDate.getTime();
+                    diffDays = Math.round(diffTime / (1000 * 3600 * 24));
+                } else {
+                    // Week-based logic: Find how many weeks to shift
+                    // We calculate distance between "day of week" and targetDate
+                    // But simpler: find how many weeks targetDate is ahead of currentStartDate
+                    const diffTime = targetD.getTime() - currentStartDate.getTime();
+                    const rawDiffDays = diffTime / (1000 * 3600 * 24);
+                    const weeks = Math.round(rawDiffDays / 7);
+                    diffDays = weeks * 7;
+                }
 
                 setPreviewData({
                     count: lessonsToMove.length,
@@ -111,7 +127,7 @@ export function ShiftScheduleModal({ isOpen, onClose, schoolId }: ShiftScheduleM
         const timeoutId = setTimeout(calculatePreview, 500); // Debounce
         return () => clearTimeout(timeoutId);
 
-    }, [targetDate, selectedClassId, schoolId]);
+    }, [targetDate, selectedClassId, schoolId, shiftMode]);
 
     const handleShift = async () => {
         if (!previewData || previewData.count === 0) return;
@@ -127,7 +143,7 @@ export function ShiftScheduleModal({ isOpen, onClose, schoolId }: ShiftScheduleM
             let query = supabase
                 .from('lessons')
                 .select('id, date, status')
-                .eq('school_id', schoolId)
+                .or(`school_id.eq.${schoolId},branch_id.eq.${schoolId}`)
                 .eq('status', 'scheduled');
 
             if (selectedClassId !== 'all') {
@@ -186,10 +202,15 @@ export function ShiftScheduleModal({ isOpen, onClose, schoolId }: ShiftScheduleM
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden">
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <Calendar className="text-blue-600" size={20} />
-                        Ders Programını Taşı
-                    </h3>
+                    <div className="flex flex-col">
+                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <Calendar className="text-blue-600" size={20} />
+                            Ders Programını Taşı
+                        </h3>
+                        {contextName && (
+                            <span className="text-xs text-slate-500 font-medium ml-7">Kapsam: {contextName}</span>
+                        )}
+                    </div>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
                         <X size={20} />
                     </button>
@@ -217,7 +238,7 @@ export function ShiftScheduleModal({ isOpen, onClose, schoolId }: ShiftScheduleM
                                         onChange={(e) => setSelectedClassId(e.target.value)}
                                         className="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                                     >
-                                        <option value="all">Tüm Okul</option>
+                                        <option value="all">Tüm Grup ve Sınıflar</option>
                                         {classGroups.map(c => (
                                             <option key={c.id} value={c.id}>{c.name}</option>
                                         ))}
@@ -226,7 +247,7 @@ export function ShiftScheduleModal({ isOpen, onClose, schoolId }: ShiftScheduleM
 
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        Yeni Başlangıç Tarihi
+                                        Yeni Başlangıç Tarihi (Veya Hedef Hafta)
                                     </label>
                                     <input
                                         type="date"
@@ -235,8 +256,32 @@ export function ShiftScheduleModal({ isOpen, onClose, schoolId }: ShiftScheduleM
                                         className="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                                     />
                                     <p className="text-xs text-slate-500 mt-1">
-                                        İlk dersin başlayacağı yeni tarihi seçin. Diğer dersler buna göre hesaplanacaktır.
+                                        Derslerin taşınacağı yeni tarihi seçin.
                                     </p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                                        Taşıma Modu
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShiftMode('week_based')}
+                                            className={`p-3 rounded-lg border text-left transition-all ${shiftMode === 'week_based' ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
+                                        >
+                                            <div className={`text-sm font-bold ${shiftMode === 'week_based' ? 'text-blue-700' : 'text-slate-700'}`}>Haftalık Ötele</div>
+                                            <div className="text-[10px] text-slate-500 mt-0.5 leading-tight">Günleri korur. Cumartesi dersi yine Cumartesi kalır.</div>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShiftMode('exact')}
+                                            className={`p-3 rounded-lg border text-left transition-all ${shiftMode === 'exact' ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
+                                        >
+                                            <div className={`text-sm font-bold ${shiftMode === 'exact' ? 'text-blue-700' : 'text-slate-700'}`}>Tam Ötele (Serbest)</div>
+                                            <div className="text-[10px] text-slate-500 mt-0.5 leading-tight">Tüm programı seçtiğiniz günden itibaren başlatır.</div>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 

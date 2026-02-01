@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { Building2, Users, Banknote, Image as ImageIcon, Calendar, Plus, Tent } from 'lucide-react';
+import { Building2, Users, Banknote, Image as ImageIcon, Calendar, Plus, Tent, GitBranch } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import type { School } from '../types';
 
@@ -16,16 +16,21 @@ export function Dashboard() {
         return <Navigate to="/manager-dashboard" replace />;
     }
 
-    const { schools, students, payments, addSchool } = useStore();
+    // Redirect Teacher to Schools List
+    if (user?.role === 'teacher') {
+        return <Navigate to="/schools" replace />;
+    }
+
+    const { schools, students, payments, addSchool, branches } = useStore();
 
     const totalRevenue = payments.reduce((acc, p) => acc + p.amount, 0);
     const activeStudents = students.filter(s => s.status === 'Active').length;
 
     // Filter Lists
-    const regularSchools = schools.filter(s => s.type !== 'event');
+    const regularSchools = schools.filter(s => s.type !== 'event' && s.type !== 'branch');
     const events = schools.filter(s => s.type === 'event');
 
-    const [activeTab, setActiveTab] = useState<'schools' | 'events'>('schools');
+    const [activeTab, setActiveTab] = useState<'schools' | 'events' | 'branches'>('schools');
 
     // Add School/Event Modal
     const [isAddSchoolModalOpen, setIsAddSchoolModalOpen] = useState(false);
@@ -82,7 +87,7 @@ export function Dashboard() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 <StatCard
                     title="Toplam Okul"
                     value={regularSchools.length}
@@ -94,6 +99,12 @@ export function Dashboard() {
                     value={events.length}
                     icon={Tent}
                     color="bg-purple-500"
+                />
+                <StatCard
+                    title="Şubeler"
+                    value={branches.length}
+                    icon={GitBranch}
+                    color="bg-orange-500"
                 />
                 <StatCard
                     title="Toplam Kayıtlı Öğrenci"
@@ -130,14 +141,21 @@ export function Dashboard() {
                         Etkinlikler / Organizasyonlar
                         {activeTab === 'events' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 rounded-t-full" />}
                     </button>
+                    <button
+                        onClick={() => setActiveTab('branches')}
+                        className={`px-6 py-3 font-medium text-sm transition-colors relative ${activeTab === 'branches' ? 'text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        Şubeler
+                        {activeTab === 'branches' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-600 rounded-t-full" />}
+                    </button>
                 </div>
 
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-bold text-slate-800">
-                        {activeTab === 'schools' ? 'Kayıtlı Okullar' : 'Planlanan Etkinlikler'}
+                        {activeTab === 'schools' ? 'Kayıtlı Okullar' : activeTab === 'events' ? 'Planlanan Etkinlikler' : 'Kayıtlı Şubeler'}
                     </h3>
 
-                    {activeTab === 'schools' ? (
+                    {activeTab === 'schools' && (
                         <button
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
                             onClick={() => openModal('school')}
@@ -145,7 +163,8 @@ export function Dashboard() {
                             <Plus size={16} />
                             Yeni Okul Ekle
                         </button>
-                    ) : (
+                    )}
+                    {activeTab === 'events' && (
                         <button
                             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium flex items-center gap-2"
                             onClick={() => openModal('event')}
@@ -156,7 +175,7 @@ export function Dashboard() {
                     )}
                 </div>
 
-                {activeTab === 'schools' ? (
+                {activeTab === 'schools' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {regularSchools.map(school => (
                             <SchoolCard key={school.id} school={school} isEvent={false} />
@@ -167,7 +186,9 @@ export function Dashboard() {
                             </div>
                         )}
                     </div>
-                ) : (
+                )}
+
+                {activeTab === 'events' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {events.map(school => (
                             <SchoolCard key={school.id} school={school} isEvent={true} />
@@ -180,7 +201,21 @@ export function Dashboard() {
                     </div>
                 )}
 
+                {activeTab === 'branches' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {branches.map(branch => (
+                            <BranchCard key={branch.id} branch={branch} />
+                        ))}
+                        {branches.length === 0 && (
+                            <div className="col-span-3 text-center py-12 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                                Henüz şube kaydı yok. Okullar sayfasından şube ekleyebilirsiniz.
+                            </div>
+                        )}
+                    </div>
+                )}
+
             </div>
+
 
             <Modal
                 isOpen={isAddSchoolModalOpen}
@@ -437,4 +472,71 @@ function SchoolCard({ school, isEvent }: { school: any, isEvent: boolean }) {
             </div>
         </div>
     )
+}
+
+function BranchCard({ branch }: { branch: any }) {
+    const { students, classGroups, teachers } = useStore();
+    const navigate = useNavigate();
+
+    // Count students in branch classes
+    const branchClasses = classGroups.filter(c => c.branchId === branch.id);
+    const branchStudentCount = students.filter(s =>
+        branchClasses.some(bc => bc.id === s.classGroupId) && s.status === 'Active'
+    ).length;
+
+    // Get manager name
+    const manager = teachers.find(t => t.id === branch.managerId);
+
+    return (
+        <div
+            onClick={() => navigate(`/branch/${branch.id}`)}
+            className="bg-white rounded-xl shadow-sm border-2 overflow-hidden hover:shadow-md transition-all cursor-pointer group"
+            style={{ borderColor: `${branch.color || '#f97316'}40` }}
+        >
+            <div
+                className="h-32 flex items-center justify-center transition-colors"
+                style={{ backgroundColor: branch.color || '#f97316' }}
+            >
+                <GitBranch
+                    size={48}
+                    className="text-white/80 group-hover:scale-110 transition-transform duration-300"
+                />
+            </div>
+            <div className="p-5">
+                <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <span
+                            className="px-2 py-0.5 rounded text-xs font-bold uppercase bg-slate-100 text-slate-600"
+                            style={{ color: branch.color || '#f97316', backgroundColor: `${branch.color || '#f97316'}20` }}
+                        >
+                            Şube
+                        </span>
+                    </div>
+                    <h4
+                        className="font-bold text-lg mb-1"
+                        style={{ color: branch.color || '#f97316' }}
+                    >
+                        {branch.name}
+                    </h4>
+                    <p className="text-sm text-slate-500 mb-2 truncate">{branch.address || 'Adres belirtilmedi'}</p>
+                    {manager && (
+                        <p className="text-xs text-slate-400 truncate">
+                            Yönetici: {manager.name}
+                        </p>
+                    )}
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-slate-50 mt-3">
+                    <div className="flex items-center gap-2">
+                        <Users size={16} className="text-orange-500" />
+                        <span className="text-sm font-medium text-slate-700">{branchStudentCount} Öğrenci</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-slate-500">
+                        <Building2 size={14} />
+                        {branchClasses.length} Sınıf
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }

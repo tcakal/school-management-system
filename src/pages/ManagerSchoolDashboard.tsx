@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 
 import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
@@ -11,6 +12,11 @@ import { Modal } from '../components/Modal';
 export function ManagerSchoolDashboard() {
     const { user } = useAuth();
 
+    // Redirect Branch Manager to their Branch Page
+    if (user?.role === 'manager' && user?.branchId) {
+        return <Navigate to={`/branch/${user.branchId}`} replace />;
+    }
+
     const { schools, classGroups, students, attendance, lessons, payments, addPayment, updateStudent, seasons, fetchSeasons, fetchSchoolPeriods } = useStore();
 
     // Tab State
@@ -22,8 +28,15 @@ export function ManagerSchoolDashboard() {
 
 
     // Determine School
-    const schoolId = user?.role === 'manager' ? user.id : schools.find(s => s.id === user?.id)?.id || schools[0]?.id; // Fallback for testing
+    const schoolId = user?.role === 'manager'
+        ? (user.branchId || user.schoolId || user.id)
+        : schools.find(s => s.id === user?.id)?.id || schools[0]?.id;
     const school = useMemo(() => schools.find(s => s.id === schoolId), [schools, schoolId]);
+
+    // Redirect if this "School" is actually a Branch
+    if (user?.role === 'manager' && school?.type === 'branch') {
+        return <Navigate to={`/branch/${school.id}`} replace />;
+    }
 
     // Filters
     const [selectedClassGroupId, setSelectedClassGroupId] = useState<string>('all');

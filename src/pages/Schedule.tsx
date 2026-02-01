@@ -3,15 +3,17 @@ import { useStore } from '../store/useStore';
 import { useAuth } from '../store/useAuth';
 import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Wand2, Phone, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Wand2, Phone, Plus, MessageSquare } from 'lucide-react';
 import { LessonModal } from '../components/LessonModal';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { AddLessonModal } from '../components/AddLessonModal';
+import { MessageModal } from '../components/MessageModal';
+import { TelegramService } from '../services/TelegramService';
 
 import type { Lesson } from '../types';
 
 export function Schedule() {
-    const { lessons, classGroups, teachers, schools, generateLessons } = useStore();
+    const { lessons, classGroups, teachers, schools, branches, generateLessons } = useStore();
     const { user } = useAuth();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
@@ -19,6 +21,7 @@ export function Schedule() {
     const [generationWeeks, setGenerationWeeks] = useState(4);
     const [startDateGen, setStartDateGen] = useState(new Date().toISOString().split('T')[0]);
     const [isAddLessonModalOpen, setIsAddLessonModalOpen] = useState(false);
+    const [messageModalTeacherId, setMessageModalTeacherId] = useState<string | null>(null);
 
     // Generate Calendar Grid
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -127,26 +130,31 @@ export function Schedule() {
                                     {timeLabel}
                                 </div>
                                 {weekDays.map(day => {
-                                    const dayLessons = lessons.filter(l => {
+                                    const dayLessons = lessons.filter((l: Lesson) => {
                                         if (!isSameDay(parseISO(l.date), day)) return false;
                                         const lessonHour = parseInt(l.startTime.split(':')[0]);
                                         if (lessonHour !== hour) return false;
 
                                         // Manager Filter: Only show lessons for their school
                                         if (user?.role === 'manager') {
-                                            const group = classGroups.find(g => g.id === l.classGroupId);
-                                            if (group?.schoolId !== user.id) return false;
+                                            const group = classGroups.find((g: any) => g.id === l.classGroupId);
+                                            // Fix: Check against schoolId OR branchId, not user.id (which is teacherId)
+                                            if (group?.schoolId !== user.schoolId && group?.branchId !== user.branchId && group?.schoolId !== user.branchId) return false;
                                         }
 
                                         return true;
-                                    }).sort((a, b) => a.startTime.localeCompare(b.startTime));
+                                    }).sort((a: Lesson, b: Lesson) => a.startTime.localeCompare(b.startTime));
 
                                     return (
                                         <div key={day.toString()} className="p-2 border-r border-slate-100 relative group">
-                                            {dayLessons.map(lesson => {
-                                                const group = classGroups.find(g => g.id === lesson.classGroupId);
-                                                const teacher = teachers.find(t => t.id === lesson.teacherId);
-                                                const school = schools.find(s => s.id === group?.schoolId);
+                                            {dayLessons.map((lesson: Lesson) => {
+                                                const group = classGroups.find((g: any) => g.id === lesson.classGroupId);
+                                                const teacher = teachers.find((t: any) => t.id === lesson.teacherId);
+                                                const school = schools.find((s: any) => s.id === group?.schoolId);
+                                                // Fix: Also check if the group's schoolId matches a branch ID (for compatibility)
+                                                const branch = branches?.find((b: any) => b.id === group?.branchId || b.id === group?.schoolId);
+
+                                                const isBranchLesson = !!branch;
 
                                                 return (
                                                     <button
@@ -156,10 +164,19 @@ export function Schedule() {
                                                             ? 'bg-red-50 border-red-100 text-red-700 opacity-70 line-through decoration-red-500'
                                                             : school?.type === 'event'
                                                                 ? 'bg-purple-100 border-purple-200 text-purple-700 shadow-purple-100' // Event Highlighting
-                                                                : lesson.type === 'makeup'
-                                                                    ? 'bg-orange-50 border-orange-100 text-orange-700'
-                                                                    : 'bg-blue-50 border-blue-100 text-blue-700'
+                                                                : !isBranchLesson && lesson.type === 'makeup'
+                                                                    ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
+                                                                    : !isBranchLesson
+                                                                        ? 'bg-blue-50 border-blue-100 text-blue-700'
+                                                                        : '' // Branch style handled via inline styles below
                                                             }`}
+                                                        style={
+                                                            isBranchLesson && lesson.status !== 'cancelled' ? {
+                                                                backgroundColor: `${branch?.color || '#f97316'}15`, // 15% opacity hex
+                                                                borderColor: `${branch?.color || '#f97316'}40`, // 40% opacity hex
+                                                                color: branch?.color || '#f97316'
+                                                            } : {}
+                                                        }
                                                     >
                                                         {/* Time Display for Granular Lessons */}
                                                         <div className="flex items-center gap-1 text-[10px] font-mono opacity-70 mb-0.5">
@@ -169,6 +186,13 @@ export function Schedule() {
                                                         </div>
 
                                                         {school && <div className="text-[9px] text-slate-500 truncate font-semibold uppercase tracking-wider mb-0.5">{school.name}</div>}
+                                                        {branch && <div
+                                                            className="text-[9px] truncate font-semibold uppercase tracking-wider mb-0.5"
+                                                            style={{ color: branch.color || '#f97316' }}
+                                                        >
+                                                            {branch.name}
+                                                        </div>}
+
                                                         <div className="font-bold truncate">{group?.name}</div>
                                                         <div className="truncate opacity-80">{teacher?.name}</div>
 
@@ -186,11 +210,26 @@ export function Schedule() {
                                                                         const msg = `Merhaba, ${lesson.date} saat ${lesson.startTime} dersiniz için hatırlatmadır.`;
                                                                         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
                                                                     }}
-                                                                    className="p-1 rounded-full bg-green-100 text-green-600 hover:bg-green-200 shadow-sm"
+                                                                    className="p-1 rounded-full hover:bg-white/50 shadow-sm"
+                                                                    style={{ color: isBranchLesson ? (branch?.color || '#f97316') : undefined }}
                                                                     title="WhatsApp Hatırlatma Gönder"
                                                                 >
                                                                     <Phone size={12} />
                                                                 </div>
+                                                                {teacher?.telegramChatId && (
+                                                                    <div
+                                                                        role="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setMessageModalTeacherId(teacher.id);
+                                                                        }}
+                                                                        className="p-1 rounded-full hover:bg-white/50 shadow-sm"
+                                                                        style={{ color: isBranchLesson ? (branch?.color || '#f97316') : undefined }}
+                                                                        title="Telegram Mesajı Gönder"
+                                                                    >
+                                                                        <MessageSquare size={12} />
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         )}
 
@@ -198,12 +237,15 @@ export function Schedule() {
                                                             <div className="text-[10px] mt-1 font-bold">İPTAL EDİLDİ</div>
                                                         )}
                                                         {lesson.topic && (
-                                                            <div className="text-[10px] text-slate-500 italic truncate mt-0.5 border-t border-slate-200/50 pt-0.5">
+                                                            <div className="text-[10px] opacity-70 italic truncate mt-0.5 border-t border-current/20 pt-0.5">
                                                                 {lesson.topic}
                                                             </div>
                                                         )}
-                                                        {lesson.type === 'makeup' && (
+                                                        {lesson.type === 'makeup' && !isBranchLesson && (
                                                             <div className="text-[10px] mt-1 font-bold">TELAFİ</div>
+                                                        )}
+                                                        {lesson.type === 'makeup' && isBranchLesson && (
+                                                            <div className="text-[10px] mt-1 font-bold opacity-80">TELAFİ</div>
                                                         )}
                                                     </button>
                                                 );
@@ -229,6 +271,18 @@ export function Schedule() {
                 isOpen={isAddLessonModalOpen}
                 onClose={() => setIsAddLessonModalOpen(false)}
             />
+
+            {messageModalTeacherId && (
+                <MessageModal
+                    teacher={teachers.find(t => t.id === messageModalTeacherId)!}
+                    onClose={() => setMessageModalTeacherId(null)}
+                    onSend={async (msg: string) => {
+                        const t = teachers.find(t => t.id === messageModalTeacherId);
+                        if (!t?.telegramChatId) return { success: false, error: 'Chat ID bulunamadı.' };
+                        return await TelegramService.sendMessage(t.telegramChatId, `📩 *Yöneticinizden Mesaj Var*\n\n${msg}`);
+                    }}
+                />
+            )}
         </div>
     );
 }
