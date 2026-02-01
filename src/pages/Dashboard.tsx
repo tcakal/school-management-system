@@ -134,7 +134,7 @@ export function Dashboard() {
                         Okullar
                         {activeTab === 'schools' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full" />}
                     </button>
-                    {(user?.role === 'admin' || user?.role === 'manager') && (
+                    {user?.role === 'admin' && (
                         <button
                             onClick={() => setActiveTab('branches')}
                             className={`px-6 py-3 font-medium text-sm transition-colors relative ${activeTab === 'branches' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
