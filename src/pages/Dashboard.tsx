@@ -95,16 +95,16 @@ export function Dashboard() {
                     color="bg-blue-500"
                 />
                 <StatCard
-                    title="Aktif Etkinlik"
-                    value={events.length}
-                    icon={Tent}
-                    color="bg-purple-500"
-                />
-                <StatCard
                     title="Şubeler"
                     value={branches.length}
                     icon={GitBranch}
                     color="bg-orange-500"
+                />
+                <StatCard
+                    title="Aktif Etkinlik"
+                    value={events.length}
+                    icon={Tent}
+                    color="bg-purple-500"
                 />
                 <StatCard
                     title="Toplam Kayıtlı Öğrenci"
@@ -134,19 +134,21 @@ export function Dashboard() {
                         Okullar
                         {activeTab === 'schools' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full" />}
                     </button>
+                    {(user?.role === 'admin' || user?.role === 'manager') && (
+                        <button
+                            onClick={() => setActiveTab('branches')}
+                            className={`px-6 py-3 font-medium text-sm transition-colors relative ${activeTab === 'branches' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            Şubeler
+                            {activeTab === 'branches' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 rounded-t-full" />}
+                        </button>
+                    )}
                     <button
                         onClick={() => setActiveTab('events')}
                         className={`px-6 py-3 font-medium text-sm transition-colors relative ${activeTab === 'events' ? 'text-purple-600' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                         Etkinlikler / Organizasyonlar
                         {activeTab === 'events' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 rounded-t-full" />}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('branches')}
-                        className={`px-6 py-3 font-medium text-sm transition-colors relative ${activeTab === 'branches' ? 'text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                        Şubeler
-                        {activeTab === 'branches' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-600 rounded-t-full" />}
                     </button>
                 </div>
 
