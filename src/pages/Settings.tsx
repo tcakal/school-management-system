@@ -1005,10 +1005,10 @@ function DebugLogs() {
         setLoading(true);
         try {
             const { data, error } = await supabase
-                .from('debug_notification_logs')
+                .from('debug_trace_logs')
                 .select('*')
-                .order('id', { ascending: false })
-                .limit(20);
+                .order('log_time', { ascending: false })
+                .limit(50);
 
             if (error) throw error;
             setLogs(data || []);
@@ -1027,7 +1027,7 @@ function DebugLogs() {
     return (
         <div className="border border-slate-200 rounded-lg overflow-hidden">
             <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
-                <h5 className="font-bold text-xs text-slate-700">Sistem Logları (Son 20)</h5>
+                <h5 className="font-bold text-xs text-slate-700">Sistem Logları (Son 50)</h5>
                 <button
                     onClick={fetchLogs}
                     className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
