@@ -1282,7 +1282,8 @@ export const useStore = create<AppState>()(
                     return assignments.some(a =>
                         a.classGroupId === lesson.classGroupId &&
                         a.dayOfWeek === dayOfWeek &&
-                        a.startTime === lesson.startTime
+                        a.startTime === lesson.startTime &&
+                        a.teacherId === lesson.teacherId
                     );
                 };
 
@@ -1342,7 +1343,8 @@ export const useStore = create<AppState>()(
                         const exists = [...validFutureLessons, ...newLessons].some(l =>
                             l.classGroupId === assignment.classGroupId &&
                             l.date === dateStr &&
-                            l.startTime === assignment.startTime
+                            l.startTime === assignment.startTime &&
+                            l.teacherId === assignment.teacherId
                         );
 
                         if (!exists) {
