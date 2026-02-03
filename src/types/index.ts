@@ -201,6 +201,7 @@ export interface Lesson {
     schoolId?: string; // Made optional for custom events
     classGroupId?: string; // Made optional
     teacherId: string;
+    teacherIds: string[]; // Support multiple teachers
     date: string; // ISO Date "2024-02-14"
     startTime: string; // "10:00"
     endTime: string; // "11:00"

@@ -50,6 +50,7 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
     // Allow edit if Admin OR (Teacher AND (assigned to lesson OR assigned to class group))
     const canEdit = !!(user?.role === 'admin' || (user?.role === 'teacher' && lesson && (
         user.id === lesson.teacherId ||
+        (lesson.teacherIds && lesson.teacherIds.includes(user.id)) ||
         assignments.some(a => a.teacherId === user.id && a.classGroupId === lesson.classGroupId)
     )));
 
@@ -146,20 +147,26 @@ export function LessonModal({ isOpen, onClose, lesson }: LessonModalProps) {
                 schoolId: lesson.schoolId,
                 classGroupId: lesson.classGroupId,
                 teacherId: lesson.teacherId,
+                teacherIds: lesson.teacherIds || [lesson.teacherId],
                 date: rescheduleDate,
                 startTime: rescheduleTime,
                 endTime: lesson.endTime,
                 status: 'scheduled',
                 type: 'makeup',
-                topic: topic // carry over topic to makeup lesson
+                topic: topic, // carry over topic to makeup lesson
+                attachments: []
             });
         }
         onClose();
     };
 
 
+    const teacherNames = lesson?.teacherIds && lesson.teacherIds.length > 0
+        ? teachers.filter(t => lesson.teacherIds.includes(t.id)).map(t => t.name).join(', ')
+        : teacher?.name || 'Öğretmen Atanmamış';
+
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`${group?.name || 'Sınıf'} - ${teacher?.name || 'Öğretmen'}`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={`${group?.name || 'Sınıf'} - ${teacherNames}`}>
             <div className="mb-6">
                 {!canEdit && (
                     <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-center gap-2">

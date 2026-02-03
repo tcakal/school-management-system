@@ -194,7 +194,15 @@ export function Schedule() {
                                                         </div>}
 
                                                         <div className="font-bold truncate">{group?.name}</div>
-                                                        <div className="truncate opacity-80">{teacher?.name}</div>
+                                                        <div className="truncate opacity-80 flex flex-col">
+                                                            {Array.isArray(lesson.teacherIds) && lesson.teacherIds.length > 0
+                                                                ? teachers
+                                                                    .filter(t => lesson.teacherIds.includes(t.id))
+                                                                    .map(t => (
+                                                                        <div key={t.id} className="truncate">{t.name}</div>
+                                                                    ))
+                                                                : (teacher?.name || 'Öğretmen Atanmadı')}
+                                                        </div>
 
                                                         {lesson.status !== 'cancelled' && (
                                                             <div className="flex justify-end mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity gap-1">

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '../supabase';
 import { useAuth } from './useAuth';
 import type { School, Student, ClassGroup, Payment, Teacher, TeacherAssignment, ActivityLog, Lesson, Attendance, NotificationTemplate, TeacherLeave, SystemSettings, StudentEvaluation, TeacherEvaluation, InventoryItem, MakerProject, MakerProjectUpdate, MakerProjectDocument, MakerProjectStudent, Branch } from '../types';
-import { addWeeks, format, startOfWeek } from 'date-fns';
+import { addWeeks, format, startOfWeek, addDays } from 'date-fns';
 
 interface AppState {
     schools: School[];
@@ -359,11 +359,12 @@ export const useStore = create<AppState>()(
                         endTime: a.end_time
                     }));
 
-                    const lessons: Lesson[] = (lessonsRes.data || []).map(l => ({
+                    const lessons: Lesson[] = (lessonsRes.data || []).map((l: any) => ({
                         id: l.id,
                         schoolId: l.school_id,
                         classGroupId: l.class_group_id,
                         teacherId: l.teacher_id,
+                        teacherIds: l.teacher_ids || [l.teacher_id],
                         date: l.date,
                         startTime: l.start_time,
                         endTime: l.end_time,
@@ -1325,81 +1326,99 @@ export const useStore = create<AppState>()(
 
                 // 3. Generate New Lessons for REGULAR SCHOOLS (weekly recurring)
                 for (let i = 0; i < weeks; i++) {
-                    // If startDate is provided, use it. Otherwise use start of current week.
                     const startOfBaseWeek = startOfWeek(baseDate, { weekStartsOn: 1 });
                     const weekStart = addWeeks(startOfBaseWeek, i);
 
+                    // Group assignments by group + day + time to merge multiple teachers
+                    const groupedBySlot: Record<string, { assignments: TeacherAssignment[], dateStr: string }> = {};
+
                     schoolAssignments.forEach(assignment => {
                         const addDaysCount = assignment.dayOfWeek - 1;
-                        const lessonDate = new Date(weekStart);
-                        lessonDate.setDate(lessonDate.getDate() + addDaysCount);
-
+                        const lessonDate = addDays(weekStart, addDaysCount);
                         const dateStr = format(lessonDate, 'yyyy-MM-dd');
 
-                        // Skip if date is before today (unless we explicitly want to backfill, but usually we don't)
-                        // If startDate is future, this check passes.
                         if (dateStr < todayStr && !startDate) return;
 
+                        const slotKey = `${assignment.classGroupId}-${dateStr}-${assignment.startTime}`;
+                        if (!groupedBySlot[slotKey]) {
+                            groupedBySlot[slotKey] = { assignments: [], dateStr };
+                        }
+                        groupedBySlot[slotKey].assignments.push(assignment);
+                    });
+
+                    Object.values(groupedBySlot).forEach(({ assignments: slotAssignments, dateStr }) => {
+                        const first = slotAssignments[0];
+                        const teacherIds = Array.from(new Set(slotAssignments.map(a => a.teacherId)));
+
                         const exists = [...validFutureLessons, ...newLessons].some(l =>
-                            l.classGroupId === assignment.classGroupId &&
+                            l.classGroupId === first.classGroupId &&
                             l.date === dateStr &&
-                            l.startTime === assignment.startTime &&
-                            l.teacherId === assignment.teacherId
+                            l.startTime === first.startTime
                         );
 
                         if (!exists) {
                             newLessons.push({
                                 id: crypto.randomUUID(),
-                                schoolId: assignment.schoolId,
-                                classGroupId: assignment.classGroupId || '',
-                                teacherId: assignment.teacherId,
+                                schoolId: first.schoolId,
+                                classGroupId: first.classGroupId || '',
+                                teacherId: first.teacherId, // Keep for backward compat
+                                teacherIds: teacherIds,
                                 date: dateStr,
-                                startTime: assignment.startTime,
-                                endTime: assignment.endTime,
+                                startTime: first.startTime,
+                                endTime: first.endTime,
                                 status: 'scheduled',
-                                type: 'regular'
-                            });
+                                type: 'regular',
+                                attachments: []
+                            } as Lesson);
                         }
                     });
                 }
 
                 // 4. Generate Lessons for EVENTS (using classGroup schedule as the event date)
                 const allClassGroups = get().classGroups;
-                eventAssignments.forEach(assignment => {
-                    // Find the classGroup for this assignment to get its specific event date
-                    const classGroup = allClassGroups.find(cg => cg.id === assignment.classGroupId);
-                    const eventDateStr = classGroup?.schedule; // schedule contains the event date like "2026-01-30"
 
-                    // If no valid event date found, skip
+                // Group event assignments by (classGroupId, startTime) to merge teachers
+                const eventSlots = new Map<string, TeacherAssignment[]>();
+                eventAssignments.forEach(assignment => {
+                    const key = `${assignment.classGroupId}-${assignment.startTime}`;
+                    if (!eventSlots.has(key)) eventSlots.set(key, []);
+                    eventSlots.get(key)!.push(assignment);
+                });
+
+                eventSlots.forEach((slotAssignments) => {
+                    const first = slotAssignments[0];
+                    const classGroup = allClassGroups.find(cg => cg.id === first.classGroupId);
+                    const eventDateStr = classGroup?.schedule;
+
                     if (!eventDateStr || !/^\d{4}-\d{2}-\d{2}$/.test(eventDateStr)) {
-                        console.log(`Skipping event assignment - no valid schedule date for classGroup ${classGroup?.name}`);
                         return;
                     }
 
                     const dateStr = eventDateStr;
-
-                    // Skip if date is before today  
                     if (dateStr < todayStr && !startDate) return;
 
+                    const teacherIds = Array.from(new Set(slotAssignments.map(a => a.teacherId)));
+
                     const exists = [...validFutureLessons, ...newLessons].some(l =>
-                        l.classGroupId === assignment.classGroupId &&
+                        l.classGroupId === first.classGroupId &&
                         l.date === dateStr &&
-                        l.startTime === assignment.startTime
+                        l.startTime === first.startTime
                     );
 
                     if (!exists) {
-                        console.log(`Creating event lesson: ${classGroup?.name} on ${dateStr} at ${assignment.startTime}`);
                         newLessons.push({
                             id: crypto.randomUUID(),
-                            schoolId: assignment.schoolId,
-                            classGroupId: assignment.classGroupId || '',
-                            teacherId: assignment.teacherId,
+                            schoolId: first.schoolId,
+                            classGroupId: first.classGroupId || '',
+                            teacherId: first.teacherId, // legacy
+                            teacherIds: teacherIds,
                             date: dateStr,
-                            startTime: assignment.startTime,
-                            endTime: assignment.endTime,
+                            startTime: first.startTime,
+                            endTime: first.endTime,
                             status: 'scheduled',
-                            type: 'regular'
-                        });
+                            type: 'regular',
+                            attachments: []
+                        } as Lesson);
                     }
                 });
 
@@ -1412,12 +1431,14 @@ export const useStore = create<AppState>()(
                         school_id: l.schoolId,
                         class_group_id: l.classGroupId,
                         teacher_id: l.teacherId,
+                        teacher_ids: l.teacherIds,
                         date: l.date,
                         start_time: l.startTime,
                         end_time: l.endTime,
                         status: l.status,
                         type: l.type,
-                        cancel_reason: l.cancelReason
+                        cancel_reason: l.cancelReason,
+                        attachments: l.attachments || []
                     })));
 
                     if (error) {
@@ -1433,6 +1454,7 @@ export const useStore = create<AppState>()(
                     school_id: lesson.schoolId,
                     class_group_id: lesson.classGroupId,
                     teacher_id: lesson.teacherId,
+                    teacher_ids: lesson.teacherIds || [lesson.teacherId],
                     date: lesson.date,
                     start_time: lesson.startTime,
                     end_time: lesson.endTime,
@@ -1441,7 +1463,7 @@ export const useStore = create<AppState>()(
                     cancel_reason: lesson.cancelReason,
                     topic: lesson.topic,
                     notes: lesson.notes,
-                    attachments: lesson.attachments // JSONB
+                    attachments: lesson.attachments || [] // JSONB
                 }]);
             },
 
