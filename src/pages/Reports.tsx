@@ -69,7 +69,9 @@ export function Reports() {
             const eventLessons = lessons.filter(l => l.schoolId === event.id);
 
             // Calculate Stats
-            const uniqueTeacherIds = [...new Set(eventLessons.map(l => l.teacherId))];
+            const uniqueTeacherIds = [...new Set(eventLessons.flatMap(l =>
+                Array.isArray(l.teacherIds) && l.teacherIds.length > 0 ? l.teacherIds : [l.teacherId]
+            ))];
             const teacherNames = uniqueTeacherIds.map(tid => {
                 const t = teachers.find(teacher => teacher.id === tid);
                 return t ? t.name : 'Bilinmiyor';
@@ -270,7 +272,10 @@ export function Reports() {
 
             if (selectedSchoolId !== 'all' && l.schoolId !== selectedSchoolId) return false;
 
-            if (selectedTeacherId !== 'all' && l.teacherId !== selectedTeacherId) return false;
+            if (selectedTeacherId !== 'all') {
+                const lessonTeacherIds = Array.isArray(l.teacherIds) ? l.teacherIds : [l.teacherId];
+                if (!lessonTeacherIds.includes(selectedTeacherId)) return false;
+            }
 
             return true;
         });
@@ -279,7 +284,9 @@ export function Reports() {
     const attendanceData = useMemo(() => {
         return filteredLessons.map(lesson => {
             const school = schools.find(s => s.id === lesson.schoolId);
-            const teacher = teachers.find(t => t.id === lesson.teacherId);
+            const lessonTeacherIds = Array.isArray(lesson.teacherIds) && lesson.teacherIds.length > 0 ? lesson.teacherIds : [lesson.teacherId];
+            const lessonTeachers = teachers.filter(t => lessonTeacherIds.includes(t.id));
+            const teacherNames = lessonTeachers.length > 0 ? lessonTeachers.map(t => t.name) : ['Bilinmiyor'];
             const group = classGroups.find(c => c.id === lesson.classGroupId);
             const lessonAttendance = attendance.filter(a => a.lessonId === lesson.id);
 
@@ -298,7 +305,7 @@ export function Reports() {
                 startTime: lesson.startTime,
                 schoolName: school?.name || 'Bilinmiyor',
                 className: group?.name || 'Bilinmiyor',
-                teacherName: teacher?.name || 'Bilinmiyor',
+                teacherNames: teacherNames,
                 topic: lesson.topic || '-',
                 status: lesson.status,
                 isFuture: isFutureLesson,
@@ -313,7 +320,7 @@ export function Reports() {
                     Saat: lesson.startTime,
                     Okul: school?.name,
                     Sınıf: group?.name,
-                    Öğretmen: teacher?.name,
+                    Öğretmen: teacherNames.join(', '),
                     Konu: lesson.topic || '-',
                     Durum: statusLabel,
                     Var: presentCount,
@@ -321,7 +328,11 @@ export function Reports() {
                     Geç: lateCount
                 }
             };
-        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        }).sort((a, b) => {
+            const dateTimeA = `${a.date}T${a.startTime}`;
+            const dateTimeB = `${b.date}T${b.startTime}`;
+            return dateTimeB.localeCompare(dateTimeA);
+        });
     }, [filteredLessons, attendance, schools, teachers, classGroups]);
 
     const studentAttendanceStats = useMemo(() => {
@@ -942,7 +953,7 @@ export function Reports() {
                                     <tr className="bg-slate-50 border-b border-slate-200">
                                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Tarih</th>
                                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Okul / Sınıf</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Öğretmen</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase min-w-[150px]">Öğretmen</th>
                                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Konu</th>
                                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-center">Katılım</th>
                                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-center">Durum</th>
@@ -963,7 +974,11 @@ export function Reports() {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-600 text-sm">
-                                                    {item.teacherName}
+                                                    <div className="flex flex-col">
+                                                        {item.teacherNames.map((name, idx) => (
+                                                            <div key={idx} className="whitespace-nowrap">{name}</div>
+                                                        ))}
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-600 text-sm italic">
                                                     {item.topic}
@@ -1073,11 +1088,12 @@ export function Reports() {
                                             .filter(t => t.role === 'teacher')
                                             .map(teacher => {
                                                 // Get past lessons for this teacher
-                                                const teacherLessons = lessons.filter(l =>
-                                                    l.teacherId === teacher.id &&
-                                                    !isFuture(parseISO(`${l.date}T${l.startTime}`)) &&
-                                                    l.status !== 'cancelled'
-                                                );
+                                                const teacherLessons = lessons.filter(l => {
+                                                    const lessonTeacherIds = Array.isArray(l.teacherIds) ? l.teacherIds : [l.teacherId];
+                                                    return lessonTeacherIds.includes(teacher.id) &&
+                                                        !isFuture(parseISO(`${l.date}T${l.startTime}`)) &&
+                                                        l.status !== 'cancelled';
+                                                });
 
                                                 const totalLessons = teacherLessons.length;
 
@@ -1569,7 +1585,12 @@ export function Reports() {
                                         <tbody className="divide-y divide-slate-100">
                                             {(() => {
                                                 // Calculate Monthly Trends
-                                                const myLessons = lessons.filter(l => l.teacherId === selectedTeacherReport.id && l.status !== 'cancelled' && !isFuture(parseISO(`${l.date}T${l.startTime}`)));
+                                                const myLessons = lessons.filter(l => {
+                                                    const lessonTeacherIds = Array.isArray(l.teacherIds) ? l.teacherIds : [l.teacherId];
+                                                    return lessonTeacherIds.includes(selectedTeacherReport.id) &&
+                                                        l.status !== 'cancelled' &&
+                                                        !isFuture(parseISO(`${l.date}T${l.startTime}`));
+                                                });
 
                                                 // Group by Month
                                                 const months: Record<string, any> = {};
