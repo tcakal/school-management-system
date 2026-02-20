@@ -7,7 +7,7 @@ import { tr } from 'date-fns/locale';
 import { utils, writeFile } from 'xlsx';
 
 export function ActivityLog() {
-    const { logs, fetchMoreLogs, markActivityLogSeen, traceLogs, fetchTraceLogs, teachers, branches, schools } = useStore();
+    const { logs, fetchMoreLogs, markActivityLogSeen, traceLogs, fetchTraceLogs, teachers, branches, schools, students } = useStore();
     const [activeTab, setActiveTab] = useState<'all' | 'teacher' | 'branch_manager' | 'school_principal' | 'parent' | 'admin' | 'trace'>('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedEntityId, setSelectedEntityId] = useState<string>('all');
@@ -336,7 +336,34 @@ export function ActivityLog() {
                                                 {log.action}
                                             </div>
                                             <p className="text-sm text-slate-400 leading-relaxed">
-                                                {log.details}
+                                                {(() => {
+                                                    let schoolBadge = null;
+                                                    if (!log.details?.startsWith('[')) {
+                                                        if (log.entityType === 'student') {
+                                                            const student = students.find(s => s.id === log.entityId);
+                                                            if (student) {
+                                                                const school = schools.find(s => s.id === student.schoolId);
+                                                                if (school) schoolBadge = school.name;
+                                                            }
+                                                        } else if (log.entityType === 'teacher') {
+                                                            const teacher = teachers.find(t => t.id === log.entityId);
+                                                            if (teacher) {
+                                                                const school = schools.find(s => s.id === teacher.schoolId);
+                                                                if (school) schoolBadge = school.name;
+                                                            }
+                                                        }
+                                                    }
+                                                    return (
+                                                        <>
+                                                            {schoolBadge && (
+                                                                <span className="text-[11px] font-medium bg-slate-700/50 text-slate-300 px-2 py-0.5 rounded mr-1.5 border border-slate-600/50 inline-block align-middle mb-0.5">
+                                                                    {schoolBadge}
+                                                                </span>
+                                                            )}
+                                                            <span className="align-middle">{log.details}</span>
+                                                        </>
+                                                    );
+                                                })()}
                                             </p>
                                         </div>
                                     </div>

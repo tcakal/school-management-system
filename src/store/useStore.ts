@@ -688,7 +688,8 @@ export const useStore = create<AppState>()(
             addStudent: async (student) => {
                 const previousStudents = get().students;
                 set((state) => ({ students: [...state.students, student] }));
-                get().logAction('OGRENCI_EKLE', `${student.name} kayıt edildi.`, 'student', student.id);
+                const schoolName = get().schools.find(s => s.id === student.schoolId)?.name || 'Bilinmeyen Okul';
+                get().logAction('OGRENCI_EKLE', `[${schoolName}] ${student.name} kayıt edildi.`, 'student', student.id);
 
                 const { error } = await supabase.from('students').insert([{
                     id: student.id,
@@ -725,18 +726,34 @@ export const useStore = create<AppState>()(
                 }));
 
                 if (student) {
+                    const schoolName = get().schools.find(s => s.id === (updated.schoolId || student.schoolId))?.name || 'Bilinmeyen Okul';
+
                     let actionType = 'OGRENCI_GUNCELLE';
-                    let details = `${student.name} bilgileri güncellendi.`;
+                    let details = `[${schoolName}] ${student.name} bilgileri güncellendi.`;
+
+                    const changes: string[] = [];
+                    if (updated.name && updated.name !== student.name) changes.push(`adı`);
+                    if (updated.phone && updated.phone !== student.phone) changes.push(`telefonu`);
+                    if (updated.classGroupId !== undefined && updated.classGroupId !== student.classGroupId) changes.push(`sınıfı`);
+                    if (updated.address && updated.address !== student.address) changes.push(`adresi`);
+                    if (updated.parentName && updated.parentName !== student.parentName) changes.push(`veli adı`);
+                    if (updated.parentPhone && updated.parentPhone !== student.parentPhone) changes.push(`veli telefonu`);
+                    if (updated.parentEmail && updated.parentEmail !== student.parentEmail) changes.push(`veli e-postası`);
+                    if (updated.gradeLevel && updated.gradeLevel !== student.gradeLevel) changes.push(`sınıf kademesi`);
+                    if (updated.medicalNotes && updated.medicalNotes !== student.medicalNotes) changes.push(`sağlık bilgileri`);
+                    if (updated.discountPercentage !== undefined && updated.discountPercentage !== student.discountPercentage) changes.push(`indirim oranı`);
+                    if (updated.paymentStatus && updated.paymentStatus !== student.paymentStatus) changes.push(`ödeme durumu`);
+                    if (updated.status && updated.status !== student.status && updated.status !== 'Left') changes.push(`durumu "${updated.status}" oldu`);
+
+                    let changeString = changes.length > 0 ? ` (${changes.join(', ')} güncellendi/eklendi)` : '';
 
                     // Check for specific actions
                     if (updated.status === 'Left') {
                         actionType = 'OGRENCI_SIL'; // Keeping as SIL/AYRILDI logic in logs
                         const reason = updated.leftReason || 'Belirtilmedi';
-                        details = `${student.name} kaydı silindi/ayrıldı. Sebep: ${reason}`;
-                    } else if (updated.name && updated.name !== student.name) {
-                        details = `${student.name} adı ${updated.name} olarak değiştirildi.`;
-                    } else if (updated.classGroupId && updated.classGroupId !== student.classGroupId) {
-                        details = `${student.name} sınıfı değiştirildi.`;
+                        details = `[${schoolName}] ${student.name} kaydı silindi/ayrıldı. Sebep: ${reason}`;
+                    } else {
+                        details = `[${schoolName}] ${student.name} bilgileri güncellendi${changeString}.`;
                     }
 
                     get().logAction(actionType as any, details, 'student', id);
@@ -775,10 +792,11 @@ export const useStore = create<AppState>()(
             deleteStudent: async (id) => {
                 const student = get().students.find(s => s.id === id);
                 const studentName = student?.name || 'Bilinmeyen Öğrenci';
+                const schoolName = get().schools.find(school => school.id === student?.schoolId)?.name || 'Bilinmeyen Okul';
 
                 set((state) => ({ students: state.students.filter(s => s.id !== id) }));
 
-                get().logAction('OGRENCI_SIL', `${studentName} silindi.`, 'student', id);
+                get().logAction('OGRENCI_SIL', `[${schoolName}] ${studentName} silindi.`, 'student', id);
 
                 await supabase.from('students').delete().eq('id', id);
             },
